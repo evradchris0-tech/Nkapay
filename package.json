@@ -1,0 +1,31 @@
+{
+  "name": "nkapay",
+  "version": "1.0.0",
+  "description": "Systeme de gestion de tontines - Nkapay",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "backend:dev": "npm run dev --workspace=backend",
+    "backend:build": "npm run build --workspace=backend",
+    "backend:start": "npm run start --workspace=backend",
+    "backend:test": "npm run test --workspace=backend",
+    "backend:lint": "npm run lint --workspace=backend",
+    "db:migrate": "npm run migration:run --workspace=backend",
+    "db:seed": "npm run seed:run --workspace=backend",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/evradchris0-tech/Nkapay.git"
+  },
+  "author": "",
+  "license": "PROPRIETARY",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

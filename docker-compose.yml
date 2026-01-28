@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # Base de donnees MySQL
+  mysql:
+    image: mysql:8.0
+    container_name: nkapay_mysql
+    restart: unless-stopped
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-nkapay_root_2026}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-nkapay_db}
+      MYSQL_USER: ${MYSQL_USER:-nkapay_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-nkapay_pass_2026}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+    networks:
+      - nkapay_network
+
+  # Interface d'administration phpMyAdmin
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: nkapay_phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD:-nkapay_root_2026}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - nkapay_network
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  nkapay_network:
+    driver: bridge

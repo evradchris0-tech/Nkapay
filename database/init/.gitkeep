@@ -1,0 +1,2 @@
+# Dossier d'initialisation pour Docker
+# Les scripts SQL places ici seront executes au premier demarrage du conteneur MySQL
