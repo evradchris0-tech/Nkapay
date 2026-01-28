@@ -11,6 +11,8 @@ import swaggerUi from 'swagger-ui-express';
 
 import { env, initializeDatabase, swaggerSpec } from './config';
 import { errorHandler, requestLogger, ApiResponse, logger } from './shared';
+import { authRoutes } from './modules/auth/routes';
+import { utilisateurRoutes } from './modules/utilisateurs/routes';
 
 class App {
   public app: Application;
@@ -63,11 +65,9 @@ class App {
       );
     });
 
-    // Prefixe API pour toutes les routes metier
-    // Les routes des modules seront ajoutees ici
-    // this.app.use(env.apiPrefix, authRoutes);
-    // this.app.use(env.apiPrefix, utilisateurRoutes);
-    // this.app.use(env.apiPrefix, tontineRoutes);
+    // Routes metier avec prefixe API
+    this.app.use(`${env.apiPrefix}/auth`, authRoutes);
+    this.app.use(`${env.apiPrefix}/utilisateurs`, utilisateurRoutes);
 
     // Route par defaut pour les chemins non trouves
     this.app.use('*', (_req: Request, res: Response) => {
