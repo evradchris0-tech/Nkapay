@@ -1,1 +1,1 @@
-# Module Reunions
+export * from './entities';
