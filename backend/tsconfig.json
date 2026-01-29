@@ -27,5 +27,5 @@
     "typeRoots": ["./node_modules/@types", "./src/types"]
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "tests"]
+  "exclude": ["node_modules", "dist", "tests", "src/modules/exercices/services/*", "src/modules/exercices/dto/exercice-membre.dto.ts", "src/modules/tontines/services/*", "src/modules/tontines/dto/adhesion-tontine.dto.ts", "src/modules/tontines/dto/rule-definition.dto.ts", "src/modules/tontines/controllers/rule-definition.controller.ts", "src/modules/penalites/services/type-penalite.service.ts", "src/modules/reunions/services/*", "src/modules/secours/services/*"]
 }

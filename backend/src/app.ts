@@ -13,6 +13,15 @@ import { env, initializeDatabase, swaggerSpec } from './config';
 import { errorHandler, requestLogger, ApiResponse, logger } from './shared';
 import { authRoutes } from './modules/auth/routes';
 import { utilisateurRoutes } from './modules/utilisateurs/routes';
+import { tontineModuleRoutes } from './modules/tontines/routes';
+import { exerciceModuleRoutes } from './modules/exercices/routes';
+import { reunionModuleRoutes } from './modules/reunions/routes';
+import { penaliteModuleRoutes } from './modules/penalites/routes';
+import { secoursModuleRoutes } from './modules/secours/routes';
+import { transactionModuleRoutes } from './modules/transactions/routes';
+import { pretModuleRoutes } from './modules/prets/routes';
+import { distributionModuleRoutes } from './modules/distributions/routes';
+import { adhesionModuleRoutes } from './modules/adhesions/routes';
 
 class App {
   public app: Application;
@@ -68,6 +77,15 @@ class App {
     // Routes metier avec prefixe API
     this.app.use(`${env.apiPrefix}/auth`, authRoutes);
     this.app.use(`${env.apiPrefix}/utilisateurs`, utilisateurRoutes);
+    this.app.use(`${env.apiPrefix}/tontines`, tontineModuleRoutes);
+    this.app.use(env.apiPrefix, exerciceModuleRoutes);
+    this.app.use(env.apiPrefix, reunionModuleRoutes);
+    this.app.use(env.apiPrefix, penaliteModuleRoutes);
+    this.app.use(env.apiPrefix, secoursModuleRoutes);
+    this.app.use(env.apiPrefix, transactionModuleRoutes);
+    this.app.use(env.apiPrefix, pretModuleRoutes);
+    this.app.use(env.apiPrefix, distributionModuleRoutes);
+    this.app.use(env.apiPrefix, adhesionModuleRoutes);
 
     // Route par defaut pour les chemins non trouves
     this.app.use('*', (_req: Request, res: Response) => {
