@@ -34,14 +34,14 @@ export class SessionUtilisateur {
   @Column({ name: 'refresh_token_hash', type: 'varchar', length: 255, nullable: true })
   refreshTokenHash: string | null;
 
-  @CreateDateColumn({ name: 'cree_le', type: 'timestamp' })
+  @CreateDateColumn({ name: 'cree_le' })
   creeLe: Date;
 
   @Index()
-  @Column({ name: 'expire_le', type: 'timestamp' })
+  @Column({ name: 'expire_le', type: 'datetime' })
   expireLe: Date;
 
-  @Column({ name: 'derniere_activite', type: 'timestamp', nullable: true })
+  @Column({ name: 'derniere_activite', type: 'datetime', nullable: true })
   derniereActivite: Date | null;
 
   @Column({ name: 'adresse_ip', type: 'varchar', length: 45, nullable: true })
@@ -53,7 +53,7 @@ export class SessionUtilisateur {
   @Column({ name: 'est_revoquee', type: 'boolean', default: false })
   estRevoquee: boolean;
 
-  @Column({ name: 'revoquee_le', type: 'timestamp', nullable: true })
+  @Column({ name: 'revoquee_le', type: 'datetime', nullable: true })
   revoqueeLe: Date | null;
 
   @Column({ name: 'motif_revocation', type: 'varchar', length: 200, nullable: true })

@@ -31,7 +31,6 @@ export class Utilisateur {
   @Column({ type: 'varchar', length: 100 })
   nom: string;
 
-  @Index()
   @Column({ type: 'varchar', length: 20, unique: true })
   telephone1: string;
 
