@@ -1,27 +1,28 @@
-/**
- * Entite PaiementMobile
- * Suivi des paiements via mobile money
- */
-
 import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
+  CreateDateColumn,
   ManyToOne,
   JoinColumn,
-  Index,
 } from 'typeorm';
 import { Transaction } from './transaction.entity';
-import { OperateurPaiement } from './operateur-paiement.entity';
 
 export enum StatutPaiementMobile {
-  INITIEE = 'INITIEE',
   EN_ATTENTE = 'EN_ATTENTE',
-  CONFIRMEE = 'CONFIRMEE',
-  ECHOUEE = 'ECHOUEE',
-  ANNULEE = 'ANNULEE',
-  REMBOURSEE = 'REMBOURSEE',
-  EXPIREE = 'EXPIREE',
+  ENVOYE = 'ENVOYE',
+  CONFIRME = 'CONFIRME',
+  ECHOUE = 'ECHOUE',
+  ANNULE = 'ANNULE',
+}
+
+export enum OperateurMobile {
+  MTN_MOBILE_MONEY = 'MTN_MOBILE_MONEY',
+  ORANGE_MONEY = 'ORANGE_MONEY',
+  MOOV_MONEY = 'MOOV_MONEY',
+  WAVE = 'WAVE',
+  FREE_MONEY = 'FREE_MONEY',
+  AIRTEL_MONEY = 'AIRTEL_MONEY',
 }
 
 @Entity('paiement_mobile')
@@ -29,53 +30,44 @@ export class PaiementMobile {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Index()
-  @Column({ name: 'transaction_id', type: 'uuid' })
+  @Column({ name: 'transaction_id' })
   transactionId: string;
 
-  @ManyToOne(() => Transaction, (tx) => tx.paiementsMobiles, { onDelete: 'RESTRICT' })
+  @ManyToOne(() => Transaction)
   @JoinColumn({ name: 'transaction_id' })
   transaction: Transaction;
 
-  @Column({ name: 'operateur_id', type: 'uuid' })
-  operateurId: string;
+  @Column({
+    type: 'enum',
+    enum: OperateurMobile,
+  })
+  operateur: OperateurMobile;
 
-  @ManyToOne(() => OperateurPaiement, (op) => op.paiements)
-  @JoinColumn({ name: 'operateur_id' })
-  operateur: OperateurPaiement;
+  @Column({ name: 'numero_telephone', length: 20 })
+  numeroTelephone: string;
 
-  @Column({ name: 'numero_payeur', type: 'varchar', length: 20 })
-  numeroPayeur: string;
-
-  @Column({ type: 'decimal', precision: 15, scale: 2 })
-  montant: number;
-
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
-  frais: number;
-
-  @Index()
-  @Column({ name: 'reference_externe', type: 'varchar', length: 100, unique: true, nullable: true })
-  referenceExterne: string | null;
-
-  @Index()
-  @Column({ type: 'enum', enum: StatutPaiementMobile, default: StatutPaiementMobile.INITIEE })
+  @Column({
+    type: 'enum',
+    enum: StatutPaiementMobile,
+    default: StatutPaiementMobile.EN_ATTENTE,
+  })
   statut: StatutPaiementMobile;
 
-  @Column({ name: 'statut_operateur', type: 'varchar', length: 50, nullable: true })
-  statutOperateur: string | null;
+  @Column({ name: 'reference_externe', length: 100, nullable: true, unique: true })
+  referenceExterne: string;
 
-  @Column({ name: 'message_operateur', type: 'text', nullable: true })
-  messageOperateur: string | null;
+  @Column({ name: 'code_confirmation', length: 50, nullable: true })
+  codeConfirmation: string;
 
-  @Column({ name: 'initie_le', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  initieLe: Date;
+  @Column({ type: 'text', nullable: true })
+  erreur: string;
 
-  @Column({ name: 'confirme_le', type: 'timestamp', nullable: true })
-  confirmeLe: Date | null;
+  @CreateDateColumn({ name: 'date_initiation' })
+  dateInitiation: Date;
 
-  @Column({ name: 'echoue_le', type: 'timestamp', nullable: true })
-  echoueLe: Date | null;
+  @Column({ name: 'date_confirmation', type: 'timestamp', nullable: true })
+  dateConfirmation: Date;
 
-  @Column({ name: 'webhook_payload', type: 'json', nullable: true })
-  webhookPayload: Record<string, unknown> | null;
+  @Column({ type: 'json', nullable: true })
+  metadata: Record<string, any>;
 }

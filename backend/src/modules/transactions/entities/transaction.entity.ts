@@ -82,7 +82,6 @@ export class Transaction {
   @Column({ type: 'decimal', precision: 15, scale: 2 })
   montant: number;
 
-  @Index()
   @Column({ type: 'varchar', length: 50, unique: true })
   reference: string;
 
