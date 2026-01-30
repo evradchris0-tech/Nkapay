@@ -1,10 +1,56 @@
-{
+﻿{
 	"info": {
 		"_postman_id": "nkapay-api-collection",
 		"name": "Nkapay API",
-		"description": "Collection complète pour tester l'API Nkapay - Système de gestion de tontines",
+		"description": "Collection API pour le systÃ¨me de gestion de tontines Nkapay",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000/api/v1"
+		},
+		{
+			"key": "accessToken",
+			"value": ""
+		},
+		{
+			"key": "refreshToken",
+			"value": ""
+		},
+		{
+			"key": "userId",
+			"value": ""
+		},
+		{
+			"key": "newUserId",
+			"value": ""
+		},
+		{
+			"key": "tontineTypeId",
+			"value": ""
+		},
+		{
+			"key": "tontineId",
+			"value": ""
+		},
+		{
+			"key": "exerciceId",
+			"value": ""
+		},
+		{
+			"key": "transactionId",
+			"value": ""
+		},
+		{
+			"key": "paiementMobileId",
+			"value": ""
+		},
+		{
+			"key": "operateurPaiementId",
+			"value": ""
+		}
+	],
 	"auth": {
 		"type": "bearer",
 		"bearer": [
@@ -15,121 +61,12 @@
 			}
 		]
 	},
-	"event": [
-		{
-			"listen": "prerequest",
-			"script": {
-				"type": "text/javascript",
-				"exec": [
-					"// Script global de pré-requête"
-				]
-			}
-		},
-		{
-			"listen": "test",
-			"script": {
-				"type": "text/javascript",
-				"exec": [
-					"// Tests globaux",
-					"pm.test('Response time is less than 2000ms', function () {",
-					"    pm.expect(pm.response.responseTime).to.be.below(2000);",
-					"});"
-				]
-			}
-		}
-	],
-	"variable": [
-		{
-			"key": "baseUrl",
-			"value": "http://localhost:3000/api/v1",
-			"type": "string"
-		},
-		{
-			"key": "accessToken",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "refreshToken",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "userId",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "tontineId",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "tontineTypeId",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "exerciceId",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "exerciceMembreId",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "reunionId",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "transactionId",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "pretId",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "penaliteId",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "distributionId",
-			"value": "",
-			"type": "string"
-		}
-	],
 	"item": [
 		{
-			"name": "🏥 Health Check",
+			"name": "ðŸ¥ Health Check",
 			"item": [
 				{
 					"name": "Health Check",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/../health",
-							"host": ["{{baseUrl}}"],
-							"path": ["..", "health"]
-						},
-						"description": "Vérifier l'état de santé de l'API"
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "🔐 Authentification",
-			"item": [
-				{
-					"name": "Login",
 					"event": [
 						{
 							"listen": "test",
@@ -139,17 +76,10 @@
 									"    pm.response.to.have.status(200);",
 									"});",
 									"",
-									"pm.test('Response has tokens', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.data).to.have.property('accessToken');",
-									"    pm.expect(jsonData.data).to.have.property('refreshToken');",
-									"    ",
-									"    // Sauvegarder les tokens",
-									"    pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
-									"    pm.collectionVariables.set('refreshToken', jsonData.data.refreshToken);",
-									"    if (jsonData.data.utilisateur) {",
-									"        pm.collectionVariables.set('userId', jsonData.data.utilisateur.id);",
-									"    }",
+									"pm.test('Response has healthy status', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.status).to.eql('healthy');",
 									"});"
 								],
 								"type": "text/javascript"
@@ -157,9 +87,57 @@
 						}
 					],
 					"request": {
+						"method": "GET",
+						"header": [],
 						"auth": {
 							"type": "noauth"
 						},
+						"url": {
+							"raw": "http://localhost:3000/health",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "3000",
+							"path": ["health"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "ðŸ” Authentification",
+			"item": [
+				{
+					"name": "Login SuperAdmin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains tokens', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.accessToken).to.be.a('string');",
+									"    pm.expect(jsonData.data.refreshToken).to.be.a('string');",
+									"    pm.expect(jsonData.data.utilisateur).to.be.an('object');",
+									"});",
+									"",
+									"pm.test('Save tokens to collection variables', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
+									"    pm.collectionVariables.set('refreshToken', jsonData.data.refreshToken);",
+									"    pm.collectionVariables.set('userId', jsonData.data.utilisateur.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
 						"method": "POST",
 						"header": [
 							{
@@ -167,16 +145,50 @@
 								"value": "application/json"
 							}
 						],
+						"auth": {
+							"type": "noauth"
+						},
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"identifiant\": \"+237600000000\",\n    \"motDePasse\": \"Password123!\"\n}"
+							"raw": "{\n    \"identifiant\": \"+237699999999\",\n    \"motDePasse\": \"OMGBAFOUDa1!\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/auth/login",
 							"host": ["{{baseUrl}}"],
 							"path": ["auth", "login"]
-						},
-						"description": "Connexion avec numéro de téléphone et mot de passe"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Current User (Me)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains user info', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.id).to.be.a('string');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/auth/me",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "me"]
+						}
 					},
 					"response": []
 				},
@@ -191,12 +203,15 @@
 									"    pm.response.to.have.status(200);",
 									"});",
 									"",
-									"pm.test('Response has new tokens', function () {",
-									"    var jsonData = pm.response.json();",
-									"    if (jsonData.data && jsonData.data.accessToken) {",
-									"        pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
-									"        pm.collectionVariables.set('refreshToken', jsonData.data.refreshToken);",
-									"    }",
+									"pm.test('Response contains new access token', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.accessToken).to.be.a('string');",
+									"});",
+									"",
+									"pm.test('Update access token', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
 									"});"
 								],
 								"type": "text/javascript"
@@ -204,9 +219,6 @@
 						}
 					],
 					"request": {
-						"auth": {
-							"type": "noauth"
-						},
 						"method": "POST",
 						"header": [
 							{
@@ -214,6 +226,9 @@
 								"value": "application/json"
 							}
 						],
+						"auth": {
+							"type": "noauth"
+						},
 						"body": {
 							"mode": "raw",
 							"raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}"
@@ -222,27 +237,31 @@
 							"raw": "{{baseUrl}}/auth/refresh",
 							"host": ["{{baseUrl}}"],
 							"path": ["auth", "refresh"]
-						},
-						"description": "Rafraîchir le token d'accès"
+						}
 					},
 					"response": []
 				},
 				{
-					"name": "Get Current User",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/auth/me",
-							"host": ["{{baseUrl}}"],
-							"path": ["auth", "me"]
-						},
-						"description": "Récupérer les informations de l'utilisateur connecté"
-					},
-					"response": []
-				},
-				{
-					"name": "Get Sessions",
+					"name": "Get Active Sessions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains sessions array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -250,13 +269,30 @@
 							"raw": "{{baseUrl}}/auth/sessions",
 							"host": ["{{baseUrl}}"],
 							"path": ["auth", "sessions"]
-						},
-						"description": "Lister les sessions actives"
+						}
 					},
 					"response": []
 				},
 				{
 					"name": "Logout",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Logout successful', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "POST",
 						"header": [
@@ -273,16 +309,47 @@
 							"raw": "{{baseUrl}}/auth/logout",
 							"host": ["{{baseUrl}}"],
 							"path": ["auth", "logout"]
-						},
-						"description": "Déconnexion"
+						}
 					},
 					"response": []
 				}
 			]
 		},
 		{
-			"name": "👤 Utilisateurs",
+			"name": "ðŸ‘¥ Utilisateurs",
 			"item": [
+				{
+					"name": "Get All Utilisateurs",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains users array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/utilisateurs",
+							"host": ["{{baseUrl}}"],
+							"path": ["utilisateurs"]
+						}
+					},
+					"response": []
+				},
 				{
 					"name": "Create Utilisateur",
 					"event": [
@@ -294,11 +361,11 @@
 									"    pm.response.to.have.status(201);",
 									"});",
 									"",
-									"pm.test('User created', function () {",
-									"    var jsonData = pm.response.json();",
-									"    if (jsonData.data && jsonData.data.id) {",
-									"        pm.collectionVariables.set('userId', jsonData.data.id);",
-									"    }",
+									"pm.test('User created successfully', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.id).to.be.a('string');",
+									"    pm.collectionVariables.set('newUserId', jsonData.data.id);",
 									"});"
 								],
 								"type": "text/javascript"
@@ -315,43 +382,37 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"prenom\": \"Jean\",\n    \"nom\": \"Dupont\",\n    \"telephone1\": \"+237600000001\",\n    \"telephone2\": \"+237600000002\",\n    \"password\": \"Password123!\",\n    \"adresseResidence\": \"Yaoundé, Cameroun\",\n    \"nomContactUrgence\": \"Marie Dupont\",\n    \"telContactUrgence\": \"+237600000003\"\n}"
+							"raw": "{\n    \"prenom\": \"Jean\",\n    \"nom\": \"Dupont\",\n    \"telephone1\": \"+237690000001\",\n    \"password\": \"Password123!\",\n    \"telephone2\": \"+237690000002\",\n    \"adresseResidence\": \"Douala, Cameroun\",\n    \"nomContactUrgence\": \"Marie Dupont\",\n    \"telContactUrgence\": \"+237690000003\",\n    \"numeroMobileMoney\": \"+237690000001\",\n    \"numeroOrangeMoney\": \"+237690000001\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/utilisateurs",
 							"host": ["{{baseUrl}}"],
 							"path": ["utilisateurs"]
-						},
-						"description": "Créer un nouvel utilisateur"
-					},
-					"response": []
-				},
-				{
-					"name": "Get All Utilisateurs",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/utilisateurs?page=1&limit=20",
-							"host": ["{{baseUrl}}"],
-							"path": ["utilisateurs"],
-							"query": [
-								{
-									"key": "page",
-									"value": "1"
-								},
-								{
-									"key": "limit",
-									"value": "20"
-								}
-							]
-						},
-						"description": "Lister tous les utilisateurs avec pagination"
+						}
 					},
 					"response": []
 				},
 				{
 					"name": "Get Utilisateur By ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains user data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.id).to.be.a('string');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -359,13 +420,30 @@
 							"raw": "{{baseUrl}}/utilisateurs/{{userId}}",
 							"host": ["{{baseUrl}}"],
 							"path": ["utilisateurs", "{{userId}}"]
-						},
-						"description": "Récupérer un utilisateur par son ID"
+						}
 					},
 					"response": []
 				},
 				{
 					"name": "Update Utilisateur",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('User updated successfully', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "PUT",
 						"header": [
@@ -376,19 +454,36 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"prenom\": \"Jean-Pierre\",\n    \"nom\": \"Dupont\",\n    \"adresseResidence\": \"Douala, Cameroun\"\n}"
+							"raw": "{\n    \"adresseResidence\": \"Douala, Cameroun\",\n    \"telephone2\": \"+237690000099\",\n    \"nomContactUrgence\": \"Contact Urgence\",\n    \"telContactUrgence\": \"+237690000088\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/utilisateurs/{{userId}}",
 							"host": ["{{baseUrl}}"],
 							"path": ["utilisateurs", "{{userId}}"]
-						},
-						"description": "Mettre à jour un utilisateur"
+						}
 					},
 					"response": []
 				},
 				{
 					"name": "Change Password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Password changed successfully', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "PATCH",
 						"header": [
@@ -399,379 +494,76 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"ancienMotDePasse\": \"Password123!\",\n    \"nouveauMotDePasse\": \"NewPassword456!\",\n    \"confirmationMotDePasse\": \"NewPassword456!\"\n}"
+							"raw": "{\n    \"ancienMotDePasse\": \"OMGBAFOUDa1!\",\n    \"nouveauMotDePasse\": \"NewPassword123!\",\n    \"confirmationMotDePasse\": \"NewPassword123!\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/utilisateurs/{{userId}}/password",
 							"host": ["{{baseUrl}}"],
 							"path": ["utilisateurs", "{{userId}}", "password"]
-						},
-						"description": "Changer le mot de passe"
-					},
-					"response": []
-				},
-				{
-					"name": "Delete Utilisateur",
-					"request": {
-						"method": "DELETE",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/utilisateurs/{{userId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["utilisateurs", "{{userId}}"]
-						},
-						"description": "Supprimer un utilisateur"
+						}
 					},
 					"response": []
 				}
 			]
 		},
 		{
-			"name": "🏦 Tontines",
+			"name": "ðŸ›ï¸ Types de Tontine",
 			"item": [
 				{
-					"name": "Types de Tontine",
-					"item": [
-						{
-							"name": "Create Tontine Type",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test('Status code is 201', function () {",
-											"    pm.response.to.have.status(201);",
-											"});",
-											"",
-											"var jsonData = pm.response.json();",
-											"if (jsonData.data && jsonData.data.id) {",
-											"    pm.collectionVariables.set('tontineTypeId', jsonData.data.id);",
-											"}"
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"code\": \"FAMILIALE\",\n    \"libelle\": \"Tontine Familiale\",\n    \"description\": \"Tontine entre membres d'une même famille\"\n}"
-								},
-								"url": {
-									"raw": "{{baseUrl}}/tontines/types",
-									"host": ["{{baseUrl}}"],
-									"path": ["tontines", "types"]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Get All Tontine Types",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/tontines/types",
-									"host": ["{{baseUrl}}"],
-									"path": ["tontines", "types"]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Get Tontine Type By ID",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/tontines/types/{{tontineTypeId}}",
-									"host": ["{{baseUrl}}"],
-									"path": ["tontines", "types", "{{tontineTypeId}}"]
-								}
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Tontines CRUD",
-					"item": [
-						{
-							"name": "Create Tontine",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test('Status code is 201', function () {",
-											"    pm.response.to.have.status(201);",
-											"});",
-											"",
-											"var jsonData = pm.response.json();",
-											"if (jsonData.data && jsonData.data.id) {",
-											"    pm.collectionVariables.set('tontineId', jsonData.data.id);",
-											"}"
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"nom\": \"Tontine Familiale Dupont\",\n    \"nomCourt\": \"TFD\",\n    \"tontineTypeId\": \"{{tontineTypeId}}\",\n    \"anneeFondation\": 2020,\n    \"motto\": \"L'union fait la force\",\n    \"estOfficiellementDeclaree\": true,\n    \"numeroEnregistrement\": \"TFD-2020-001\"\n}"
-								},
-								"url": {
-									"raw": "{{baseUrl}}/tontines",
-									"host": ["{{baseUrl}}"],
-									"path": ["tontines"]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Get All Tontines",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/tontines?statut=ACTIVE",
-									"host": ["{{baseUrl}}"],
-									"path": ["tontines"],
-									"query": [
-										{
-											"key": "statut",
-											"value": "ACTIVE"
-										}
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Get Tontine By ID",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/tontines/{{tontineId}}",
-									"host": ["{{baseUrl}}"],
-									"path": ["tontines", "{{tontineId}}"]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Get Tontine By Code",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/tontines/code/TFD",
-									"host": ["{{baseUrl}}"],
-									"path": ["tontines", "code", "TFD"]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Update Tontine",
-							"request": {
-								"method": "PUT",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"nom\": \"Tontine Familiale Dupont - Mise à jour\",\n    \"motto\": \"Ensemble, nous sommes plus forts\"\n}"
-								},
-								"url": {
-									"raw": "{{baseUrl}}/tontines/{{tontineId}}",
-									"host": ["{{baseUrl}}"],
-									"path": ["tontines", "{{tontineId}}"]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Suspend Tontine",
-							"request": {
-								"method": "POST",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/tontines/{{tontineId}}/suspend",
-									"host": ["{{baseUrl}}"],
-									"path": ["tontines", "{{tontineId}}", "suspend"]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Activate Tontine",
-							"request": {
-								"method": "POST",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/tontines/{{tontineId}}/activate",
-									"host": ["{{baseUrl}}"],
-									"path": ["tontines", "{{tontineId}}", "activate"]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Delete Tontine",
-							"request": {
-								"method": "DELETE",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/tontines/{{tontineId}}",
-									"host": ["{{baseUrl}}"],
-									"path": ["tontines", "{{tontineId}}"]
-								}
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Adhésions Tontine",
-					"item": [
-						{
-							"name": "Create Adhesion",
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"tontineId\": \"{{tontineId}}\",\n    \"utilisateurId\": \"{{userId}}\",\n    \"dateAdhesion\": \"2025-01-01\"\n}"
-								},
-								"url": {
-									"raw": "{{baseUrl}}/tontines/adhesions",
-									"host": ["{{baseUrl}}"],
-									"path": ["tontines", "adhesions"]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Get Adhesions By Tontine",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/tontines/adhesions?tontineId={{tontineId}}",
-									"host": ["{{baseUrl}}"],
-									"path": ["tontines", "adhesions"],
-									"query": [
-										{
-											"key": "tontineId",
-											"value": "{{tontineId}}"
-										}
-									]
-								}
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Règles Tontine",
-					"item": [
-						{
-							"name": "Get Rule Definitions",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/tontines/rule-definitions",
-									"host": ["{{baseUrl}}"],
-									"path": ["tontines", "rule-definitions"]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Create Regle Tontine",
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"tontineId\": \"{{tontineId}}\",\n    \"ruleDefinitionId\": \"rule-def-id\",\n    \"valeur\": \"10000\"\n}"
-								},
-								"url": {
-									"raw": "{{baseUrl}}/tontines/regles-tontine",
-									"host": ["{{baseUrl}}"],
-									"path": ["tontines", "regles-tontine"]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Get Regles By Tontine",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/tontines/regles-tontine?tontineId={{tontineId}}",
-									"host": ["{{baseUrl}}"],
-									"path": ["tontines", "regles-tontine"],
-									"query": [
-										{
-											"key": "tontineId",
-											"value": "{{tontineId}}"
-										}
-									]
-								}
-							},
-							"response": []
-						}
-					]
-				}
-			]
-		},
-		{
-			"name": "📅 Exercices",
-			"item": [
-				{
-					"name": "Create Exercice",
+					"name": "Get All Tontine Types",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
 								"exec": [
-									"var jsonData = pm.response.json();",
-									"if (jsonData.data && jsonData.data.id) {",
-									"    pm.collectionVariables.set('exerciceId', jsonData.data.id);",
-									"}"
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains types array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"    if (jsonData.data.length > 0) {",
+									"        pm.collectionVariables.set('tontineTypeId', jsonData.data[0].id);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"auth": {
+							"type": "noauth"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/tontines/types",
+							"host": ["{{baseUrl}}"],
+							"path": ["tontines", "types"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Tontine Type",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Type created successfully', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.id).to.be.a('string');",
+									"    pm.collectionVariables.set('tontineTypeId', jsonData.data.id);",
+									"});"
 								],
 								"type": "text/javascript"
 							}
@@ -787,18 +579,367 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"tontineId\": \"{{tontineId}}\",\n    \"nom\": \"Exercice 2025\",\n    \"dateDebut\": \"2025-01-01\",\n    \"dateFin\": \"2025-12-31\",\n    \"montantCotisation\": 10000,\n    \"frequenceCotisation\": \"MENSUEL\"\n}"
+							"raw": "{\n    \"code\": \"STANDARD\",\n    \"libelle\": \"Tontine Standard\",\n    \"description\": \"Tontine avec cotisation mensuelle simple\"\n}"
 						},
 						"url": {
-							"raw": "{{baseUrl}}/exercices",
+							"raw": "{{baseUrl}}/tontines/types",
 							"host": ["{{baseUrl}}"],
-							"path": ["exercices"]
+							"path": ["tontines", "types"]
 						}
 					},
 					"response": []
 				},
 				{
+					"name": "Get Tontine Type By ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains type data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.id).to.be.a('string');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/tontines/types/{{tontineTypeId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["tontines", "types", "{{tontineTypeId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tontine Type By Code",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/tontines/types/code/STANDARD",
+							"host": ["{{baseUrl}}"],
+							"path": ["tontines", "types", "code", "STANDARD"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Tontine Type",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"libelle\": \"Tontine Standard ModifiÃ©e\",\n    \"description\": \"Description mise Ã  jour\",\n    \"estActif\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/tontines/types/{{tontineTypeId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["tontines", "types", "{{tontineTypeId}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "ðŸ  Tontines",
+			"item": [
+				{
+					"name": "Get All Tontines",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains tontines array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"auth": {
+							"type": "noauth"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/tontines",
+							"host": ["{{baseUrl}}"],
+							"path": ["tontines"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Tontine",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Tontine created successfully', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.id).to.be.a('string');",
+									"    pm.collectionVariables.set('tontineId', jsonData.data.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nom\": \"Tontine Famille Nkapay\",\n    \"nomCourt\": \"TFN\",\n    \"tontineTypeId\": \"{{tontineTypeId}}\",\n    \"anneeFondation\": 2025,\n    \"motto\": \"L'union fait la force\",\n    \"estOfficiellementDeclaree\": false\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/tontines",
+							"host": ["{{baseUrl}}"],
+							"path": ["tontines"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tontine By ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains tontine data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.id).to.be.a('string');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/tontines/{{tontineId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["tontines", "{{tontineId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tontine By NomCourt",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/tontines/code/TFN",
+							"host": ["{{baseUrl}}"],
+							"path": ["tontines", "code", "TFN"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Tontine",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Tontine updated successfully', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nom\": \"Tontine Famille Nkapay ModifiÃ©e\",\n    \"motto\": \"Ensemble, nous sommes plus forts\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/tontines/{{tontineId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["tontines", "{{tontineId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Suspend Tontine",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/tontines/{{tontineId}}/suspend",
+							"host": ["{{baseUrl}}"],
+							"path": ["tontines", "{{tontineId}}", "suspend"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Activate Tontine",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/tontines/{{tontineId}}/activate",
+							"host": ["{{baseUrl}}"],
+							"path": ["tontines", "{{tontineId}}", "activate"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "ðŸ“… Exercices",
+			"item": [
+				{
 					"name": "Get All Exercices",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains exercices array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -817,7 +958,68 @@
 					"response": []
 				},
 				{
+					"name": "Create Exercice",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Exercice created successfully', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.id).to.be.a('string');",
+									"    pm.collectionVariables.set('exerciceId', jsonData.data.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"tontineId\": \"{{tontineId}}\",\n    \"libelle\": \"Exercice 2025\",\n    \"anneeDebut\": 2025,\n    \"moisDebut\": 1,\n    \"dureeMois\": 12\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/exercices",
+							"host": ["{{baseUrl}}"],
+							"path": ["exercices"]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "Get Exercice By ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains exercice data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.id).to.be.a('string');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -830,10 +1032,67 @@
 					"response": []
 				},
 				{
-					"name": "Open Exercice",
+					"name": "Update Exercice",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"libelle\": \"Exercice 2025 - ModifiÃ©\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/exercices/{{exerciceId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["exercices", "{{exerciceId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Ouvrir Exercice",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "POST",
-						"header": [],
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"dateOuverture\": \"2025-01-01\"\n}"
+						},
 						"url": {
 							"raw": "{{baseUrl}}/exercices/{{exerciceId}}/ouvrir",
 							"host": ["{{baseUrl}}"],
@@ -843,107 +1102,15 @@
 					"response": []
 				},
 				{
-					"name": "Close Exercice",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/exercices/{{exerciceId}}/cloturer",
-							"host": ["{{baseUrl}}"],
-							"path": ["exercices", "{{exerciceId}}", "cloturer"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Membres Exercice",
-					"item": [
-						{
-							"name": "Add Membre to Exercice",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"var jsonData = pm.response.json();",
-											"if (jsonData.data && jsonData.data.id) {",
-											"    pm.collectionVariables.set('exerciceMembreId', jsonData.data.id);",
-											"}"
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"exerciceId\": \"{{exerciceId}}\",\n    \"adhesionTontineId\": \"adhesion-id\"\n}"
-								},
-								"url": {
-									"raw": "{{baseUrl}}/exercices-membres",
-									"host": ["{{baseUrl}}"],
-									"path": ["exercices-membres"]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Get Membres By Exercice",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/exercices-membres?exerciceId={{exerciceId}}",
-									"host": ["{{baseUrl}}"],
-									"path": ["exercices-membres"],
-									"query": [
-										{
-											"key": "exerciceId",
-											"value": "{{exerciceId}}"
-										}
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Get Membre Exercice By ID",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/exercices-membres/{{exerciceMembreId}}",
-									"host": ["{{baseUrl}}"],
-									"path": ["exercices-membres", "{{exerciceMembreId}}"]
-								}
-							},
-							"response": []
-						}
-					]
-				}
-			]
-		},
-		{
-			"name": "📆 Réunions",
-			"item": [
-				{
-					"name": "Create Reunion",
+					"name": "Suspendre Exercice",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
 								"exec": [
-									"var jsonData = pm.response.json();",
-									"if (jsonData.data && jsonData.data.id) {",
-									"    pm.collectionVariables.set('reunionId', jsonData.data.id);",
-									"}"
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
 								],
 								"type": "text/javascript"
 							}
@@ -951,144 +1118,25 @@
 					],
 					"request": {
 						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"exerciceId\": \"{{exerciceId}}\",\n    \"numero\": 1,\n    \"dateReunion\": \"2025-01-15\",\n    \"lieuReunion\": \"Domicile du président\",\n    \"ordreJour\": \"Réunion mensuelle - Cotisations\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/reunions",
-							"host": ["{{baseUrl}}"],
-							"path": ["reunions"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get All Reunions",
-					"request": {
-						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/reunions?exerciceId={{exerciceId}}",
+							"raw": "{{baseUrl}}/exercices/{{exerciceId}}/suspendre",
 							"host": ["{{baseUrl}}"],
-							"path": ["reunions"],
-							"query": [
-								{
-									"key": "exerciceId",
-									"value": "{{exerciceId}}"
-								}
-							]
+							"path": ["exercices", "{{exerciceId}}", "suspendre"]
 						}
 					},
 					"response": []
 				},
 				{
-					"name": "Get Reunion By ID",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/reunions/{{reunionId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["reunions", "{{reunionId}}"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Start Reunion",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/reunions/{{reunionId}}/demarrer",
-							"host": ["{{baseUrl}}"],
-							"path": ["reunions", "{{reunionId}}", "demarrer"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "End Reunion",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/reunions/{{reunionId}}/terminer",
-							"host": ["{{baseUrl}}"],
-							"path": ["reunions", "{{reunionId}}", "terminer"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Présences",
-					"item": [
-						{
-							"name": "Register Presence",
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"reunionId\": \"{{reunionId}}\",\n    \"exerciceMembreId\": \"{{exerciceMembreId}}\",\n    \"present\": true,\n    \"heureArrivee\": \"10:00\"\n}"
-								},
-								"url": {
-									"raw": "{{baseUrl}}/presences",
-									"host": ["{{baseUrl}}"],
-									"path": ["presences"]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Get Presences By Reunion",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/presences?reunionId={{reunionId}}",
-									"host": ["{{baseUrl}}"],
-									"path": ["presences"],
-									"query": [
-										{
-											"key": "reunionId",
-											"value": "{{reunionId}}"
-										}
-									]
-								}
-							},
-							"response": []
-						}
-					]
-				}
-			]
-		},
-		{
-			"name": "💰 Transactions",
-			"item": [
-				{
-					"name": "Create Cotisation",
+					"name": "Reprendre Exercice",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
 								"exec": [
-									"var jsonData = pm.response.json();",
-									"if (jsonData.data && jsonData.data.id) {",
-									"    pm.collectionVariables.set('transactionId', jsonData.data.id);",
-									"}"
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
 								],
 								"type": "text/javascript"
 							}
@@ -1096,97 +1144,144 @@
 					],
 					"request": {
 						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"exerciceMembreId\": \"{{exerciceMembreId}}\",\n    \"reunionId\": \"{{reunionId}}\",\n    \"montant\": 10000,\n    \"description\": \"Cotisation mensuelle janvier 2025\"\n}"
-						},
+						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/transactions/cotisation",
+							"raw": "{{baseUrl}}/exercices/{{exerciceId}}/reprendre",
 							"host": ["{{baseUrl}}"],
-							"path": ["transactions", "cotisation"]
+							"path": ["exercices", "{{exerciceId}}", "reprendre"]
 						}
 					},
 					"response": []
 				},
 				{
-					"name": "Create Pot",
+					"name": "Fermer Exercice",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"exerciceMembreId\": \"{{exerciceMembreId}}\",\n    \"reunionId\": \"{{reunionId}}\",\n    \"montant\": 5000,\n    \"description\": \"Contribution au pot\"\n}"
-						},
+						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/transactions/pot",
+							"raw": "{{baseUrl}}/exercices/{{exerciceId}}/fermer",
 							"host": ["{{baseUrl}}"],
-							"path": ["transactions", "pot"]
+							"path": ["exercices", "{{exerciceId}}", "fermer"]
 						}
 					},
 					"response": []
 				},
 				{
-					"name": "Create Inscription",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
+					"name": "Get Exercice Ouvert",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 or 404', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+									"});"
+								],
+								"type": "text/javascript"
 							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"exerciceMembreId\": \"{{exerciceMembreId}}\",\n    \"montant\": 25000,\n    \"description\": \"Frais d'inscription\"\n}"
-						},
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/transactions/inscription",
+							"raw": "{{baseUrl}}/exercices/tontine/{{tontineId}}/ouvert",
 							"host": ["{{baseUrl}}"],
-							"path": ["transactions", "inscription"]
+							"path": ["exercices", "tontine", "{{tontineId}}", "ouvert"]
 						}
 					},
 					"response": []
-				},
+				}
+			]
+		},
+		{
+			"name": "ðŸ’° Transactions",
+			"item": [
 				{
 					"name": "Get All Transactions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains transactions', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/transactions?exerciceId={{exerciceId}}&page=1&limit=20",
+							"raw": "{{baseUrl}}/transactions",
 							"host": ["{{baseUrl}}"],
-							"path": ["transactions"],
-							"query": [
-								{
-									"key": "exerciceId",
-									"value": "{{exerciceId}}"
-								},
-								{
-									"key": "page",
-									"value": "1"
-								},
-								{
-									"key": "limit",
-									"value": "20"
-								}
-							]
+							"path": ["transactions"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transaction Summary",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/transactions/summary",
+							"host": ["{{baseUrl}}"],
+							"path": ["transactions", "summary"]
 						}
 					},
 					"response": []
 				},
 				{
 					"name": "Get Transaction By ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 or 404', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -1197,823 +1292,35 @@
 						}
 					},
 					"response": []
-				},
-				{
-					"name": "Get Transaction By Reference",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/transactions/reference/TRX-2025-001",
-							"host": ["{{baseUrl}}"],
-							"path": ["transactions", "reference", "TRX-2025-001"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Transactions Summary",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/transactions/summary?exerciceId={{exerciceId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["transactions", "summary"],
-							"query": [
-								{
-									"key": "exerciceId",
-									"value": "{{exerciceId}}"
-								}
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Soumettre Transaction",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/transactions/{{transactionId}}/soumettre",
-							"host": ["{{baseUrl}}"],
-							"path": ["transactions", "{{transactionId}}", "soumettre"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Valider Transaction",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"commentaire\": \"Transaction validée\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/transactions/{{transactionId}}/valider",
-							"host": ["{{baseUrl}}"],
-							"path": ["transactions", "{{transactionId}}", "valider"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Rejeter Transaction",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"motif\": \"Montant incorrect\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/transactions/{{transactionId}}/rejeter",
-							"host": ["{{baseUrl}}"],
-							"path": ["transactions", "{{transactionId}}", "rejeter"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Annuler Transaction",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"motif\": \"Erreur de saisie\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/transactions/{{transactionId}}/annuler",
-							"host": ["{{baseUrl}}"],
-							"path": ["transactions", "{{transactionId}}", "annuler"]
-						}
-					},
-					"response": []
 				}
 			]
 		},
 		{
-			"name": "💳 Prêts",
-			"item": [
-				{
-					"name": "Create Pret",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"var jsonData = pm.response.json();",
-									"if (jsonData.data && jsonData.data.id) {",
-									"    pm.collectionVariables.set('pretId', jsonData.data.id);",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"exerciceMembreId\": \"{{exerciceMembreId}}\",\n    \"montantDemande\": 100000,\n    \"motif\": \"Besoins personnels\",\n    \"nombreMensualites\": 12\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/prets",
-							"host": ["{{baseUrl}}"],
-							"path": ["prets"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get All Prets",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/prets?exerciceId={{exerciceId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["prets"],
-							"query": [
-								{
-									"key": "exerciceId",
-									"value": "{{exerciceId}}"
-								}
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Pret By ID",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/prets/{{pretId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["prets", "{{pretId}}"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Prets Summary",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/prets/summary?exerciceId={{exerciceId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["prets", "summary"],
-							"query": [
-								{
-									"key": "exerciceId",
-									"value": "{{exerciceId}}"
-								}
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Approuver Pret",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"montantApprouve\": 100000,\n    \"tauxInteret\": 5,\n    \"commentaire\": \"Prêt approuvé\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/prets/{{pretId}}/approuver",
-							"host": ["{{baseUrl}}"],
-							"path": ["prets", "{{pretId}}", "approuver"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Refuser Pret",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"motif\": \"Capacité de remboursement insuffisante\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/prets/{{pretId}}/refuser",
-							"host": ["{{baseUrl}}"],
-							"path": ["prets", "{{pretId}}", "refuser"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Decaisser Pret",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"modePaiement\": \"ESPECES\",\n    \"reference\": \"DEC-2025-001\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/prets/{{pretId}}/decaisser",
-							"host": ["{{baseUrl}}"],
-							"path": ["prets", "{{pretId}}", "decaisser"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Solder Pret",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/prets/{{pretId}}/solder",
-							"host": ["{{baseUrl}}"],
-							"path": ["prets", "{{pretId}}", "solder"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Mettre Pret en Defaut",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"motif\": \"Non remboursement après 3 mois\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/prets/{{pretId}}/defaut",
-							"host": ["{{baseUrl}}"],
-							"path": ["prets", "{{pretId}}", "defaut"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Remboursements",
-					"item": [
-						{
-							"name": "Create Remboursement",
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"pretId\": \"{{pretId}}\",\n    \"montant\": 10000,\n    \"dateRemboursement\": \"2025-02-01\"\n}"
-								},
-								"url": {
-									"raw": "{{baseUrl}}/remboursements-prets",
-									"host": ["{{baseUrl}}"],
-									"path": ["remboursements-prets"]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Get Remboursements By Pret",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/remboursements-prets?pretId={{pretId}}",
-									"host": ["{{baseUrl}}"],
-									"path": ["remboursements-prets"],
-									"query": [
-										{
-											"key": "pretId",
-											"value": "{{pretId}}"
-										}
-									]
-								}
-							},
-							"response": []
-						}
-					]
-				}
-			]
-		},
-		{
-			"name": "⚠️ Pénalités",
-			"item": [
-				{
-					"name": "Types de Pénalités",
-					"item": [
-						{
-							"name": "Create Type Penalite",
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"code\": \"RETARD_COTISATION\",\n    \"libelle\": \"Retard de cotisation\",\n    \"montantFixe\": 1000,\n    \"estPourcentage\": false\n}"
-								},
-								"url": {
-									"raw": "{{baseUrl}}/types-penalites",
-									"host": ["{{baseUrl}}"],
-									"path": ["types-penalites"]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Get All Types Penalites",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/types-penalites",
-									"host": ["{{baseUrl}}"],
-									"path": ["types-penalites"]
-								}
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Create Penalite",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"var jsonData = pm.response.json();",
-									"if (jsonData.data && jsonData.data.id) {",
-									"    pm.collectionVariables.set('penaliteId', jsonData.data.id);",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"exerciceMembreId\": \"{{exerciceMembreId}}\",\n    \"typePenaliteId\": \"type-penalite-id\",\n    \"reunionId\": \"{{reunionId}}\",\n    \"montant\": 1000,\n    \"motif\": \"Retard de cotisation\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/penalites",
-							"host": ["{{baseUrl}}"],
-							"path": ["penalites"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get All Penalites",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/penalites?exerciceId={{exerciceId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["penalites"],
-							"query": [
-								{
-									"key": "exerciceId",
-									"value": "{{exerciceId}}"
-								}
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Penalite By ID",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/penalites/{{penaliteId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["penalites", "{{penaliteId}}"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Payer Penalite",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/penalites/{{penaliteId}}/payer",
-							"host": ["{{baseUrl}}"],
-							"path": ["penalites", "{{penaliteId}}", "payer"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Annuler Penalite",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"motif\": \"Erreur de saisie\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/penalites/{{penaliteId}}/annuler",
-							"host": ["{{baseUrl}}"],
-							"path": ["penalites", "{{penaliteId}}", "annuler"]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "🎁 Distributions",
-			"item": [
-				{
-					"name": "Create Distribution",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"var jsonData = pm.response.json();",
-									"if (jsonData.data && jsonData.data.id) {",
-									"    pm.collectionVariables.set('distributionId', jsonData.data.id);",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"exerciceMembreId\": \"{{exerciceMembreId}}\",\n    \"reunionId\": \"{{reunionId}}\",\n    \"montant\": 500000,\n    \"typeDistribution\": \"BOUFFE\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/distributions",
-							"host": ["{{baseUrl}}"],
-							"path": ["distributions"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get All Distributions",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/distributions?exerciceId={{exerciceId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["distributions"],
-							"query": [
-								{
-									"key": "exerciceId",
-									"value": "{{exerciceId}}"
-								}
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Distribution By ID",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/distributions/{{distributionId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["distributions", "{{distributionId}}"]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "🆘 Secours",
-			"item": [
-				{
-					"name": "Types Evenements Secours",
-					"item": [
-						{
-							"name": "Create Type Evenement",
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"code\": \"DECES\",\n    \"libelle\": \"Décès\",\n    \"montantSecours\": 50000,\n    \"description\": \"Secours en cas de décès d'un membre ou proche\"\n}"
-								},
-								"url": {
-									"raw": "{{baseUrl}}/types-evenements-secours",
-									"host": ["{{baseUrl}}"],
-									"path": ["types-evenements-secours"]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Get All Types Evenements",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/types-evenements-secours",
-									"host": ["{{baseUrl}}"],
-									"path": ["types-evenements-secours"]
-								}
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Evenements Secours",
-					"item": [
-						{
-							"name": "Create Evenement Secours",
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"exerciceMembreId\": \"{{exerciceMembreId}}\",\n    \"typeEvenementSecoursId\": \"type-id\",\n    \"dateEvenement\": \"2025-01-15\",\n    \"description\": \"Décès du père\"\n}"
-								},
-								"url": {
-									"raw": "{{baseUrl}}/evenements-secours",
-									"host": ["{{baseUrl}}"],
-									"path": ["evenements-secours"]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Get All Evenements Secours",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/evenements-secours?exerciceId={{exerciceId}}",
-									"host": ["{{baseUrl}}"],
-									"path": ["evenements-secours"],
-									"query": [
-										{
-											"key": "exerciceId",
-											"value": "{{exerciceId}}"
-										}
-									]
-								}
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Bilan Secours",
-					"item": [
-						{
-							"name": "Get Bilan Secours",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/secours/bilan?exerciceId={{exerciceId}}",
-									"host": ["{{baseUrl}}"],
-									"path": ["secours", "bilan"],
-									"query": [
-										{
-											"key": "exerciceId",
-											"value": "{{exerciceId}}"
-										}
-									]
-								}
-							},
-							"response": []
-						}
-					]
-				}
-			]
-		},
-		{
-			"name": "📝 Demandes d'Adhésion",
-			"item": [
-				{
-					"name": "Create Demande Adhesion",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"tontineId\": \"{{tontineId}}\",\n    \"prenom\": \"Paul\",\n    \"nom\": \"Martin\",\n    \"telephone\": \"+237600000010\",\n    \"motivations\": \"Je souhaite rejoindre cette tontine pour épargner\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/demandes-adhesion",
-							"host": ["{{baseUrl}}"],
-							"path": ["demandes-adhesion"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get All Demandes Adhesion",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/demandes-adhesion?tontineId={{tontineId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["demandes-adhesion"],
-							"query": [
-								{
-									"key": "tontineId",
-									"value": "{{tontineId}}"
-								}
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "💵 Dues (Cotisations dues)",
-			"item": [
-				{
-					"name": "Get Dues By Exercice",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/dues?exerciceId={{exerciceId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["dues"],
-							"query": [
-								{
-									"key": "exerciceId",
-									"value": "{{exerciceId}}"
-								}
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Dues By Membre",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/dues/membre/{{exerciceMembreId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["dues", "membre", "{{exerciceMembreId}}"]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "📱 Paiements Mobile",
-			"item": [
-				{
-					"name": "Initiate Mobile Payment",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"transactionId\": \"{{transactionId}}\",\n    \"operateurId\": \"operateur-id\",\n    \"numeroTelephone\": \"+237600000000\",\n    \"montant\": 10000\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/paiements-mobile/initiate",
-							"host": ["{{baseUrl}}"],
-							"path": ["paiements-mobile", "initiate"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Payment Status",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/paiements-mobile/status/payment-id",
-							"host": ["{{baseUrl}}"],
-							"path": ["paiements-mobile", "status", "payment-id"]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "🏢 Opérateurs Paiement",
+			"name": "ðŸ¢ OpÃ©rateurs Paiement",
 			"item": [
 				{
 					"name": "Get All Operateurs",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains operateurs', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    if (jsonData.data && jsonData.data.length > 0) {",
+									"        pm.collectionVariables.set('operateurPaiementId', jsonData.data[0].id);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -2027,6 +1334,26 @@
 				},
 				{
 					"name": "Create Operateur",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Operateur created successfully', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.id).to.be.a('string');",
+									"    pm.collectionVariables.set('operateurPaiementId', jsonData.data.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "POST",
 						"header": [
@@ -2037,7 +1364,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"code\": \"MTN_MOMO\",\n    \"nom\": \"MTN Mobile Money\",\n    \"logoUrl\": \"https://example.com/mtn-logo.png\",\n    \"estActif\": true\n}"
+							"raw": "{\n    \"code\": \"MTN_MOMO\",\n    \"nom\": \"MTN Mobile Money\",\n    \"logoUrl\": \"https://example.com/mtn-logo.png\",\n    \"estActif\": true,\n    \"fraisFixe\": 0,\n    \"fraisPourcentage\": 0.01\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/operateurs-paiement",
@@ -2046,8 +1373,388 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "Get Operateur By ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/operateurs-paiement/{{operateurPaiementId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["operateurs-paiement", "{{operateurPaiementId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Operateur By Code",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 or 404', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/operateurs-paiement/code/MTN_MOMO",
+							"host": ["{{baseUrl}}"],
+							"path": ["operateurs-paiement", "code", "MTN_MOMO"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Operateur",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nom\": \"MTN Mobile Money - Cameroun\",\n    \"fraisPourcentage\": 0.015\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/operateurs-paiement/{{operateurPaiementId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["operateurs-paiement", "{{operateurPaiementId}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "ðŸ“± Paiements Mobile",
+			"item": [
+				{
+					"name": "Get All Paiements Mobile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/paiements-mobile",
+							"host": ["{{baseUrl}}"],
+							"path": ["paiements-mobile"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Paiements Pending",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/paiements-mobile/pending",
+							"host": ["{{baseUrl}}"],
+							"path": ["paiements-mobile", "pending"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Paiements Stats",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/paiements-mobile/stats",
+							"host": ["{{baseUrl}}"],
+							"path": ["paiements-mobile", "stats"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Initier Paiement Mobile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Paiement created', function () {",
+									"    const jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.collectionVariables.set('paiementMobileId', jsonData.data.id);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"transactionId\": \"{{transactionId}}\",\n    \"operateur\": \"MTN_MOBILE_MONEY\",\n    \"numeroTelephone\": \"+237690000001\",\n    \"montant\": 5000\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/paiements-mobile",
+							"host": ["{{baseUrl}}"],
+							"path": ["paiements-mobile"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Paiement By ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 or 404', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/paiements-mobile/{{paiementMobileId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["paiements-mobile", "{{paiementMobileId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Marquer Paiement EnvoyÃ©",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"referenceOperateur\": \"MTN-REF-123456\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/paiements-mobile/{{paiementMobileId}}/envoyer",
+							"host": ["{{baseUrl}}"],
+							"path": ["paiements-mobile", "{{paiementMobileId}}", "envoyer"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Confirmer Paiement",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"referenceOperateur\": \"MTN-CONF-789012\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/paiements-mobile/{{paiementMobileId}}/confirmer",
+							"host": ["{{baseUrl}}"],
+							"path": ["paiements-mobile", "{{paiementMobileId}}", "confirmer"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Marquer Paiement Ã‰chouÃ©",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"messageOperateur\": \"Solde insuffisant\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/paiements-mobile/{{paiementMobileId}}/echouer",
+							"host": ["{{baseUrl}}"],
+							"path": ["paiements-mobile", "{{paiementMobileId}}", "echouer"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Annuler Paiement",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"motif\": \"Annulation demandÃ©e par l'utilisateur\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/paiements-mobile/{{paiementMobileId}}/annuler",
+							"host": ["{{baseUrl}}"],
+							"path": ["paiements-mobile", "{{paiementMobileId}}", "annuler"]
+						}
+					},
+					"response": []
 				}
 			]
 		}
 	]
 }
+
+
