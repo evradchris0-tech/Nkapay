@@ -62,7 +62,7 @@ export class BilanSecoursService {
       queryBuilder.andWhere('exercice.tontineId = :tontineId', { tontineId });
     }
 
-    queryBuilder.orderBy('exercice.annee', 'DESC');
+    queryBuilder.orderBy('exercice.anneeDebut', 'DESC');
 
     const bilans = await queryBuilder.getMany();
     return bilans.map((b: BilanSecoursExercice) => this.formatResponse(b));

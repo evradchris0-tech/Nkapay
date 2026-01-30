@@ -235,7 +235,7 @@ export class EvenementSecoursService {
         libelle: entity.typeEvenementSecours.libelle,
         montantParDefaut: entity.typeEvenementSecours.montantParDefaut ? Number(entity.typeEvenementSecours.montantParDefaut) : undefined,
       } : undefined,
-      dateEvenement: entity.dateEvenement.toISOString().split('T')[0],
+      dateEvenement: new Date(entity.dateEvenement).toISOString().split('T')[0],
       description: entity.description,
       montantDemande: entity.montantDemande ? Number(entity.montantDemande) : null,
       montantApprouve: entity.montantApprouve ? Number(entity.montantApprouve) : null,
@@ -250,3 +250,5 @@ export class EvenementSecoursService {
 }
 
 export const evenementSecoursService = new EvenementSecoursService();
+
+

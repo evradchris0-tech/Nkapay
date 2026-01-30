@@ -62,7 +62,7 @@ export class SecoursDuAnnuelService {
     const queryBuilder = this.secoursDuRepository
       .createQueryBuilder('secoursDu')
       .leftJoinAndSelect('secoursDu.exerciceMembre', 'exerciceMembre')
-      .leftJoinAndSelect('exerciceMembre.membre', 'membre')
+      .leftJoinAndSelect('exerciceMembre.adhesionTontine', 'adhesionTontine')
       .leftJoinAndSelect('exerciceMembre.exercice', 'exercice');
 
     if (filters?.exerciceMembreId) {
@@ -89,7 +89,7 @@ export class SecoursDuAnnuelService {
   async findById(id: string): Promise<SecoursDuAnnuelResponseDto> {
     const secoursDu = await this.secoursDuRepository.findOne({
       where: { id },
-      relations: ['exerciceMembre', 'exerciceMembre.membre']
+      relations: ['exerciceMembre', 'exerciceMembre.adhesionTontine']
     });
 
     if (!secoursDu) {
@@ -106,7 +106,7 @@ export class SecoursDuAnnuelService {
     const secoursDus = await this.secoursDuRepository
       .createQueryBuilder('secoursDu')
       .leftJoinAndSelect('secoursDu.exerciceMembre', 'exerciceMembre')
-      .leftJoinAndSelect('exerciceMembre.membre', 'membre')
+      .leftJoinAndSelect('exerciceMembre.adhesionTontine', 'adhesionTontine')
       .where('exerciceMembre.exerciceId = :exerciceId', { exerciceId })
       .orderBy('secoursDu.creeLe', 'ASC')
       .getMany();
@@ -121,7 +121,7 @@ export class SecoursDuAnnuelService {
     const queryBuilder = this.secoursDuRepository
       .createQueryBuilder('secoursDu')
       .leftJoinAndSelect('secoursDu.exerciceMembre', 'exerciceMembre')
-      .leftJoinAndSelect('exerciceMembre.membre', 'membre')
+      .leftJoinAndSelect('exerciceMembre.adhesionTontine', 'adhesionTontine')
       .where('secoursDu.statut = :statut', { statut: StatutDu.EN_RETARD });
 
     if (exerciceId) {
