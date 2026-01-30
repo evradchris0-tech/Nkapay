@@ -61,7 +61,7 @@ export class InscriptionDueService {
     const queryBuilder = this.inscriptionDueRepository
       .createQueryBuilder('inscription')
       .leftJoinAndSelect('inscription.exerciceMembre', 'exerciceMembre')
-      .leftJoinAndSelect('exerciceMembre.membre', 'membre')
+      .leftJoinAndSelect('exerciceMembre.adhesionTontine', 'membre')
       .leftJoinAndSelect('exerciceMembre.exercice', 'exercice');
 
     if (filters?.exerciceMembreId) {
@@ -88,7 +88,7 @@ export class InscriptionDueService {
   async findById(id: string): Promise<InscriptionDueResponseDto> {
     const inscriptionDue = await this.inscriptionDueRepository.findOne({
       where: { id },
-      relations: ['exerciceMembre', 'exerciceMembre.membre']
+      relations: ['exerciceMembre', 'exerciceMembre.adhesionTontine']
     });
 
     if (!inscriptionDue) {
@@ -105,7 +105,7 @@ export class InscriptionDueService {
     const inscriptions = await this.inscriptionDueRepository
       .createQueryBuilder('inscription')
       .leftJoinAndSelect('inscription.exerciceMembre', 'exerciceMembre')
-      .leftJoinAndSelect('exerciceMembre.membre', 'membre')
+      .leftJoinAndSelect('exerciceMembre.adhesionTontine', 'membre')
       .where('exerciceMembre.exerciceId = :exerciceId', { exerciceId })
       .orderBy('inscription.creeLe', 'ASC')
       .getMany();
@@ -120,7 +120,7 @@ export class InscriptionDueService {
     const queryBuilder = this.inscriptionDueRepository
       .createQueryBuilder('inscription')
       .leftJoinAndSelect('inscription.exerciceMembre', 'exerciceMembre')
-      .leftJoinAndSelect('exerciceMembre.membre', 'membre')
+      .leftJoinAndSelect('exerciceMembre.adhesionTontine', 'membre')
       .where('inscription.statut = :statut', { statut: StatutDu.EN_RETARD });
 
     if (exerciceId) {

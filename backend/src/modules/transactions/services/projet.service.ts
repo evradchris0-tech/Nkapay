@@ -60,7 +60,7 @@ export class ProjetService {
       .createQueryBuilder('projet')
       .leftJoinAndSelect('projet.exercice', 'exercice')
       .leftJoinAndSelect('projet.creeParExerciceMembre', 'createur')
-      .leftJoinAndSelect('createur.membre', 'membreCreateur');
+      .leftJoinAndSelect('createur.adhesionTontine', 'adhesionCreateur');
 
     if (filters?.exerciceId) {
       queryBuilder.andWhere('projet.exerciceId = :exerciceId', { exerciceId: filters.exerciceId });
@@ -82,7 +82,7 @@ export class ProjetService {
   async findByExercice(exerciceId: string): Promise<ProjetResponseDto[]> {
     const projets = await this.projetRepository.find({
       where: { exerciceId },
-      relations: ['exercice', 'creeParExerciceMembre', 'creeParExerciceMembre.membre'],
+      relations: ['exercice', 'creeParExerciceMembre', 'creeParExerciceMembre.adhesionTontine'],
       order: { creeLe: 'DESC' }
     });
     return projets.map((p: Projet) => this.formatResponse(p));
@@ -94,7 +94,7 @@ export class ProjetService {
   async findById(id: string): Promise<ProjetResponseDto> {
     const projet = await this.projetRepository.findOne({
       where: { id },
-      relations: ['exercice', 'creeParExerciceMembre', 'creeParExerciceMembre.membre']
+      relations: ['exercice', 'creeParExerciceMembre', 'creeParExerciceMembre.adhesionTontine']
     });
 
     if (!projet) {
@@ -233,3 +233,4 @@ export class ProjetService {
 }
 
 export const projetService = new ProjetService();
+

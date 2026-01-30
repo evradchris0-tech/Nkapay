@@ -1,21 +1,19 @@
 /**
- * Entité CotisationDueMensuelle
+ * Entité EpargneDueMensuelle
  * 
- * Représente la COTISATION que chaque membre doit payer lors d'une réunion.
+ * Représente l'ÉPARGNE que chaque membre doit verser lors d'une réunion.
  * 
  * LOGIQUE MÉTIER TONTINE:
- * - La COTISATION est le cœur de la tontine
- * - Chaque membre cotise un montant fixe (ex: 10 000 FCFA/mois)
- * - Le TOTAL des cotisations du mois est DISTRIBUÉ à UN bénéficiaire
- * - Chaque membre sera bénéficiaire une fois dans l'exercice
+ * - L'ÉPARGNE est un montant mis de côté INDIVIDUELLEMENT par chaque membre
+ * - Contrairement à la cotisation (redistribuée), l'épargne est CONSERVÉE
+ * - À la fin de l'exercice (CASSATION), chaque membre récupère SON épargne
  * 
- * FLUX MENSUEL:
- * 1. Réunion ouverte → cotisations générées pour chaque membre
- * 2. Membres paient leurs cotisations
- * 3. À la clôture, total cotisations → distribué au bénéficiaire du mois
+ * DIFFÉRENCE CLÉ:
+ * - COTISATION: Mutualisée → 1 bénéficiaire par mois
+ * - ÉPARGNE: Individuelle → Chacun récupère la sienne à la cassation
  * 
  * @example
- * 4 membres × 10 000 FCFA = 40 000 FCFA distribués au bénéficiaire
+ * Épargne de 5 000 FCFA/mois × 12 mois = 60 000 FCFA récupérés à la cassation
  */
 
 import {
@@ -33,9 +31,9 @@ import { Reunion } from '../../reunions/entities/reunion.entity';
 import { ExerciceMembre } from '../../exercices/entities/exercice-membre.entity';
 import { StatutDu } from './inscription-due-exercice.entity';
 
-@Entity('cotisation_due_mensuelle')
+@Entity('epargne_due_mensuelle')
 @Unique(['reunionId', 'exerciceMembreId'])
-export class CotisationDueMensuelle {
+export class EpargneDueMensuelle {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -43,7 +41,7 @@ export class CotisationDueMensuelle {
   @Column({ name: 'reunion_id', type: 'uuid' })
   reunionId: string;
 
-  @ManyToOne(() => Reunion, (reunion) => reunion.cotisationsDues, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Reunion, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'reunion_id' })
   reunion: Reunion;
 
@@ -55,16 +53,19 @@ export class CotisationDueMensuelle {
   @JoinColumn({ name: 'exercice_membre_id' })
   exerciceMembre: ExerciceMembre;
 
+  /** Montant d'épargne dû pour ce mois */
   @Column({ name: 'montant_du', type: 'decimal', precision: 15, scale: 2 })
   montantDu: number;
 
+  /** Montant effectivement payé */
   @Column({ name: 'montant_paye', type: 'decimal', precision: 15, scale: 2, default: 0 })
   montantPaye: number;
 
+  /** Solde restant à payer */
   @Column({ name: 'solde_restant', type: 'decimal', precision: 15, scale: 2 })
   soldeRestant: number;
 
-  @Column({ type: 'enum', enum: StatutDu, default: StatutDu.A_JOUR })
+  @Column({ type: 'enum', enum: StatutDu, default: StatutDu.EN_RETARD })
   statut: StatutDu;
 
   @CreateDateColumn({ name: 'cree_le', type: 'timestamp' })

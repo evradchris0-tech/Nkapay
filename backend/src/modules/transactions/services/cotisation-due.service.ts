@@ -67,7 +67,7 @@ export class CotisationDueService {
       .createQueryBuilder('cotisation')
       .leftJoinAndSelect('cotisation.reunion', 'reunion')
       .leftJoinAndSelect('cotisation.exerciceMembre', 'exerciceMembre')
-      .leftJoinAndSelect('exerciceMembre.membre', 'membre');
+      .leftJoinAndSelect('exerciceMembre.adhesionTontine', 'membre');
 
     if (filters?.reunionId) {
       queryBuilder.andWhere('cotisation.reunionId = :reunionId', {
@@ -99,7 +99,7 @@ export class CotisationDueService {
   async findById(id: string): Promise<CotisationDueResponseDto> {
     const cotisationDue = await this.cotisationDueRepository.findOne({
       where: { id },
-      relations: ['reunion', 'exerciceMembre', 'exerciceMembre.membre']
+      relations: ['reunion', 'exerciceMembre', 'exerciceMembre.adhesionTontine']
     });
 
     if (!cotisationDue) {
@@ -115,7 +115,7 @@ export class CotisationDueService {
   async findByReunion(reunionId: string): Promise<CotisationDueResponseDto[]> {
     const cotisations = await this.cotisationDueRepository.find({
       where: { reunionId },
-      relations: ['reunion', 'exerciceMembre', 'exerciceMembre.membre'],
+      relations: ['reunion', 'exerciceMembre', 'exerciceMembre.adhesionTontine'],
       order: { creeLe: 'ASC' }
     });
     return cotisations.map((c: CotisationDueMensuelle) => this.formatResponse(c));

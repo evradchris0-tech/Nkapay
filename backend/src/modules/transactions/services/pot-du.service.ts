@@ -60,78 +60,21 @@ export class PotDuService {
   }
 
   /**
-   * Récupérer tous les pots dus avec filtres
-   */
-  async findAll(filters?: DueFiltersDto): Promise<PotDuMensuelResponseDto[]> {
-    const queryBuilder = this.potDuRepository
-      .createQueryBuilder('potDu')
-      .leftJoinAndSelect('potDu.reunion', 'reunion')
-      .leftJoinAndSelect('potDu.exerciceMembre', 'exerciceMembre')
-      .leftJoinAndSelect('exerciceMembre.membre', 'membre');
-
-    if (filters?.reunionId) {
-      queryBuilder.andWhere('potDu.reunionId = :reunionId', {
-        reunionId: filters.reunionId
-      });
-    }
-
-    if (filters?.exerciceMembreId) {
-      queryBuilder.andWhere('potDu.exerciceMembreId = :exerciceMembreId', {
-        exerciceMembreId: filters.exerciceMembreId
-      });
-    }
-
-    if (filters?.statut) {
-      queryBuilder.andWhere('potDu.statut = :statut', {
-        statut: filters.statut
-      });
-    }
-
-    queryBuilder.orderBy('potDu.creeLe', 'DESC');
-
-    const potsDus = await queryBuilder.getMany();
-    return potsDus.map((p: PotDuMensuel) => this.formatResponse(p));
-  }
-
-  /**
-   * Récupérer un pot dû par ID
-   */
-  async findById(id: string): Promise<PotDuMensuelResponseDto> {
-    const potDu = await this.potDuRepository.findOne({
-      where: { id },
-      relations: ['reunion', 'exerciceMembre', 'exerciceMembre.membre']
-    });
-
-    if (!potDu) {
-      throw new NotFoundError('Pot dû non trouvé');
-    }
-
-    return this.formatResponse(potDu);
-  }
-
-  /**
    * Récupérer les pots dus d'une réunion
    */
   async findByReunion(reunionId: string): Promise<PotDuMensuelResponseDto[]> {
-    const potsDus = await this.potDuRepository.find({
+    const pots = await this.potDuRepository.find({
       where: { reunionId },
-      relations: ['reunion', 'exerciceMembre', 'exerciceMembre.membre'],
+      relations: ['reunion', 'exerciceMembre', 'exerciceMembre.adhesionTontine'],
       order: { creeLe: 'ASC' }
     });
-    return potsDus.map((p: PotDuMensuel) => this.formatResponse(p));
-  }
-
-  /**
-   * Enregistrer un paiement de pot (alias)
-   */
-  async enregistrerPaiement(id: string, data: UpdateDuePaymentDto): Promise<PotDuMensuelResponseDto> {
-    return this.payer(id, data);
+    return pots.map((p: PotDuMensuel) => this.formatResponse(p));
   }
 
   /**
    * Enregistrer un paiement de pot
    */
-  async payer(id: string, data: UpdateDuePaymentDto): Promise<PotDuMensuelResponseDto> {
+  async enregistrerPaiement(id: string, data: UpdateDuePaymentDto): Promise<PotDuMensuelResponseDto> {
     const potDu = await this.potDuRepository.findOne({
       where: { id }
     });
@@ -154,11 +97,11 @@ export class PotDuService {
     }
 
     await this.potDuRepository.save(potDu);
-    return this.findById(id);
+    return this.formatResponse(potDu);
   }
 
   /**
-   * Statistiques des pots d'une réunion (alias)
+   * Statistiques des pots d'une réunion
    */
   async getStatsByReunion(reunionId: string): Promise<{
     total: number;
@@ -168,64 +111,12 @@ export class PotDuService {
     aJour: number;
     enRetard: number;
   }> {
-    return this.getReunionStats(reunionId);
-  }
-
-  /**
-   * Calculer le total des pots d'une réunion (alias)
-   */
-  async getPotTotalReunion(reunionId: string): Promise<{
-    totalDu: number;
-    totalPaye: number;
-    totalRestant: number;
-  }> {
-    return this.getTotal(reunionId);
-  }
-
-  /**
-   * Calculer le total des pots d'une réunion
-   */
-  async getTotal(reunionId: string): Promise<{
-    totalDu: number;
-    totalPaye: number;
-    totalRestant: number;
-  }> {
-    const potsDus = await this.potDuRepository.find({
-      where: { reunionId }
-    });
-
-    let totalDu = 0;
-    let totalPaye = 0;
-
-    potsDus.forEach((p: PotDuMensuel) => {
-      totalDu += Number(p.montantDu);
-      totalPaye += Number(p.montantPaye);
-    });
-
-    return {
-      totalDu,
-      totalPaye,
-      totalRestant: totalDu - totalPaye
-    };
-  }
-
-  /**
-   * Statistiques des pots d'une réunion
-   */
-  async getReunionStats(reunionId: string): Promise<{
-    total: number;
-    totalMontantDu: number;
-    totalMontantPaye: number;
-    tauxRecouvrement: number;
-    aJour: number;
-    enRetard: number;
-  }> {
-    const potsDus = await this.potDuRepository.find({
+    const pots = await this.potDuRepository.find({
       where: { reunionId }
     });
 
     const stats = {
-      total: potsDus.length,
+      total: pots.length,
       totalMontantDu: 0,
       totalMontantPaye: 0,
       tauxRecouvrement: 0,
@@ -233,7 +124,7 @@ export class PotDuService {
       enRetard: 0
     };
 
-    potsDus.forEach((p: PotDuMensuel) => {
+    pots.forEach((p: PotDuMensuel) => {
       stats.totalMontantDu += Number(p.montantDu);
       stats.totalMontantPaye += Number(p.montantPaye);
       if (p.statut === StatutDu.A_JOUR || p.statut === StatutDu.SURPAYE) {
@@ -248,6 +139,19 @@ export class PotDuService {
     }
 
     return stats;
+  }
+
+  /**
+   * Pot total collecté pour une réunion
+   */
+  async getPotTotalReunion(reunionId: string): Promise<number> {
+    const result = await this.potDuRepository
+      .createQueryBuilder('pot')
+      .select('SUM(pot.montantPaye)', 'total')
+      .where('pot.reunionId = :reunionId', { reunionId })
+      .getRawOne();
+
+    return Number(result?.total) || 0;
   }
 
   private formatResponse(potDu: PotDuMensuel): PotDuMensuelResponseDto {
