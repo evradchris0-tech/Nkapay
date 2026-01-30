@@ -19,6 +19,7 @@
     "seed:run": "ts-node src/database/seeds/index.ts"
   },
   "dependencies": {
+    "@types/pdfkit": "^0.17.4",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
@@ -28,6 +29,8 @@
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.6.5",
+    "pdfkit": "^0.17.2",
+    "pg": "^8.17.2",
     "reflect-metadata": "^0.2.1",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0",
