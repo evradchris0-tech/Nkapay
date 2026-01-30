@@ -264,7 +264,7 @@ export class ReunionService {
       id: entity.id,
       exerciceId: entity.exerciceId,
       numeroReunion: entity.numeroReunion,
-      dateReunion: entity.dateReunion.toISOString().split('T')[0],
+      dateReunion: entity.dateReunion instanceof Date ? entity.dateReunion.toISOString().split('T')[0] : String(entity.dateReunion),
       heureDebut: entity.heureDebut,
       lieu: entity.lieu,
       hoteExerciceMembreId: entity.hoteExerciceMembreId,
