@@ -11,8 +11,9 @@ import swaggerUi from 'swagger-ui-express';
 
 import { env, initializeDatabase, swaggerSpec } from './config';
 import { errorHandler, requestLogger, ApiResponse, logger } from './shared';
+import { seedSuperAdmin } from './scripts/seed-superadmin';
 import { authRoutes } from './modules/auth/routes';
-import { utilisateurRoutes } from './modules/utilisateurs/routes';
+import { utilisateurRoutes, langueRoutes } from './modules/utilisateurs/routes';
 import { tontineModuleRoutes } from './modules/tontines/routes';
 import { exerciceModuleRoutes } from './modules/exercices/routes';
 import { reunionModuleRoutes } from './modules/reunions/routes';
@@ -22,6 +23,7 @@ import { transactionModuleRoutes } from './modules/transactions/routes';
 import { pretModuleRoutes } from './modules/prets/routes';
 import { distributionModuleRoutes } from './modules/distributions/routes';
 import { adhesionModuleRoutes } from './modules/adhesions/routes';
+import { exportRoutes } from './modules/exports/routes';
 
 class App {
   public app: Application;
@@ -77,6 +79,7 @@ class App {
     // Routes metier avec prefixe API
     this.app.use(`${env.apiPrefix}/auth`, authRoutes);
     this.app.use(`${env.apiPrefix}/utilisateurs`, utilisateurRoutes);
+    this.app.use(`${env.apiPrefix}/langues`, langueRoutes);
     this.app.use(`${env.apiPrefix}/tontines`, tontineModuleRoutes);
     this.app.use(env.apiPrefix, exerciceModuleRoutes);
     this.app.use(env.apiPrefix, reunionModuleRoutes);
@@ -86,6 +89,7 @@ class App {
     this.app.use(env.apiPrefix, pretModuleRoutes);
     this.app.use(env.apiPrefix, distributionModuleRoutes);
     this.app.use(env.apiPrefix, adhesionModuleRoutes);
+    this.app.use(`${env.apiPrefix}/exports`, exportRoutes);
 
     // Route par defaut pour les chemins non trouves
     this.app.use('*', (_req: Request, res: Response) => {
@@ -124,6 +128,9 @@ class App {
       await initializeDatabase();
       logger.info('Connexion a la base de donnees etablie');
 
+      // Création du super administrateur si nécessaire
+      await seedSuperAdmin();
+
       // Demarrage du serveur HTTP
       this.app.listen(env.port, () => {
         logger.info(`Serveur demarre sur le port ${env.port}`);
@@ -142,3 +149,4 @@ const application = new App();
 application.start();
 
 export default application.app;
+
