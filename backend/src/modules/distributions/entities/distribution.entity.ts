@@ -1,6 +1,22 @@
 /**
- * Entite Distribution
- * Distributions de pot aux membres (bouffe)
+ * Entité Distribution
+ * 
+ * Représente la DISTRIBUTION MENSUELLE DES COTISATIONS au bénéficiaire.
+ * 
+ * LOGIQUE MÉTIER TONTINE:
+ * - Chaque mois, lors d'une réunion, les membres cotisent
+ * - Le total des cotisations est remis à UN bénéficiaire (tirage au sort ou ordre défini)
+ * - Chaque membre bénéficie UNE FOIS par exercice (1 membre = 1 mois)
+ * 
+ * NE PAS CONFONDRE AVEC:
+ * - POT: Argent collecté pour les DÉPENSES (collation, boissons, nourriture de la réunion)
+ * - CASSATION: Distribution finale du capital restant à la CLÔTURE de l'exercice
+ * 
+ * @example
+ * Exercice 12 mois, 4 membres cotisant 10 000 FCFA/mois:
+ * - Réunion 1: Marie reçoit 40 000 FCFA (4 membres × 10 000)
+ * - Réunion 2: Pierre reçoit 40 000 FCFA
+ * - ... et ainsi de suite
  */
 
 import {
