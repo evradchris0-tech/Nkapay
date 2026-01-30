@@ -9,9 +9,23 @@ import { env } from '../../config';
 import { UnauthorizedError } from '../errors';
 import { logger } from '../utils/logger.util';
 
-export interface JwtPayload {
-  userId: string;
-  telephone: string;
+/**
+ * Payload brut du JWT tel que genere par jwt.util.ts
+ */
+interface JwtTokenPayload {
+  sub: string; // utilisateurId
+  type: 'access' | 'refresh';
+  iat: number;
+  exp: number;
+}
+
+/**
+ * Interface exposee sur req.user pour faciliter l'acces
+ */
+export interface AuthUser {
+  id: string;       // alias pour sub (utilisateurId)
+  sub: string;      // utilisateurId original
+  type: 'access' | 'refresh';
   iat: number;
   exp: number;
 }
@@ -19,7 +33,7 @@ export interface JwtPayload {
 declare global {
   namespace Express {
     interface Request {
-      user?: JwtPayload;
+      user?: AuthUser;
     }
   }
 }
@@ -37,8 +51,16 @@ export function authenticate(req: Request, _res: Response, next: NextFunction): 
 
     const token = authHeader.substring(7);
 
-    const decoded = jwt.verify(token, env.jwt.secret) as JwtPayload;
-    req.user = decoded;
+    const decoded = jwt.verify(token, env.jwt.secret) as JwtTokenPayload;
+    
+    // Mapper le payload JWT vers AuthUser avec id comme alias de sub
+    req.user = {
+      id: decoded.sub,
+      sub: decoded.sub,
+      type: decoded.type,
+      iat: decoded.iat,
+      exp: decoded.exp,
+    };
 
     next();
   } catch (error) {
@@ -71,8 +93,15 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction): 
 
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
-      const decoded = jwt.verify(token, env.jwt.secret) as JwtPayload;
-      req.user = decoded;
+      const decoded = jwt.verify(token, env.jwt.secret) as JwtTokenPayload;
+      
+      req.user = {
+        id: decoded.sub,
+        sub: decoded.sub,
+        type: decoded.type,
+        iat: decoded.iat,
+        exp: decoded.exp,
+      };
     }
 
     next();
