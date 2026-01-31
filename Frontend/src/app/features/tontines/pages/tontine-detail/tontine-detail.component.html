@@ -1,0 +1,132 @@
+<div class="page">
+  <a routerLink="/dashboard/tontines" class="back-link">
+    <span class="material-icons">arrow_back</span>
+    Retour aux tontines
+  </a>
+
+  <ng-container *ngIf="isLoading(); else detailTpl">
+    <div class="loading-container">
+      <div class="spinner"></div>
+      <p>Chargement...</p>
+    </div>
+  </ng-container>
+  <ng-template #detailTpl>
+    <ng-container *ngIf="tontine() as t">
+    <!-- Header -->
+    <div class="page-header">
+          <div class="header-left">
+        <h1>{{ t.nom }}</h1>
+        <div class="header-meta">
+          <span class="type-badge">{{ getTypeLabel(t) }}</span>
+          <span class="status-badge" [class]="getStatusColor(t.statut)">
+            {{ getStatusLabel(t.statut) }}
+          </span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="dropdown">
+          <button class="btn-secondary dropdown-toggle">
+            <span class="material-icons">download</span>
+            Exporter PDF
+          </button>
+          <div class="dropdown-menu">
+            <button (click)="exportPdf('fiche')">Fiche complète</button>
+            <button (click)="exportPdf('membres')">Liste des membres</button>
+            <button (click)="exportPdf('cotisations')">État des cotisations</button>
+            <button (click)="exportPdf('prets')">Liste des prêts</button>
+          </div>
+        </div>
+        <a [routerLink]="['edit']" class="btn-primary">
+          <span class="material-icons">edit</span>
+          Modifier
+        </a>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button [class.active]="activeTab() === 'overview'" (click)="setTab('overview')">
+        <span class="material-icons">dashboard</span>
+        Aperçu
+      </button>
+      <button [class.active]="activeTab() === 'membres'" (click)="setTab('membres')">
+        <span class="material-icons">people</span>
+        Membres
+      </button>
+      <button [class.active]="activeTab() === 'exercices'" (click)="setTab('exercices')">
+        <span class="material-icons">calendar_month</span>
+        Exercices
+      </button>
+      <button [class.active]="activeTab() === 'regles'" (click)="setTab('regles')">
+        <span class="material-icons">rule</span>
+        Règles
+      </button>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="tab-content" [ngSwitch]="activeTab()">
+      <ng-container *ngSwitchCase="'overview'">
+        <div class="overview-grid">
+            <div class="info-card">
+              <h3>Informations générales</h3>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="label">Description</span>
+                  <span class="value">{{ t.description || 'Non renseignée' }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Montant cotisation</span>
+                  <span class="value">{{ t.montantCotisation | currency:'XAF':'symbol':'1.0-0':'fr' }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Périodicité</span>
+                  <span class="value">{{ t.periodicite }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Date de création</span>
+                  <span class="value">{{ t.dateCreation | date:'dd MMMM yyyy':'':'fr' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="stats-card">
+              <h3>Statistiques</h3>
+              <div class="stats-grid">
+                <div class="stat">
+                  <span class="stat-value">--</span>
+                  <span class="stat-label">Membres</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-value">--</span>
+                  <span class="stat-label">Exercices</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-value">--</span>
+                  <span class="stat-label">Réunions</span>
+                </div>
+              </div>
+            </div>
+          </div>
+      </ng-container>
+      <ng-container *ngSwitchCase="'membres'">
+        <div class="placeholder-content">
+          <span class="material-icons">people</span>
+          <p>Liste des membres à implémenter</p>
+        </div>
+      </ng-container>
+      <ng-container *ngSwitchCase="'exercices'">
+        <div class="placeholder-content">
+          <span class="material-icons">calendar_month</span>
+          <p>Liste des exercices à implémenter</p>
+        </div>
+      </ng-container>
+      <ng-container *ngSwitchCase="'regles'">
+        <div class="placeholder-content">
+          <span class="material-icons">rule</span>
+          <p>Gestion des règles à implémenter</p>
+        </div>
+      </ng-container>
+    </div>
+    </ng-container>
+  </ng-template>
+</div>

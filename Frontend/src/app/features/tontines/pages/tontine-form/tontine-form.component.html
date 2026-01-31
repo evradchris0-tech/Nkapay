@@ -1,0 +1,96 @@
+<div class="page">
+  <a routerLink="/dashboard/tontines" class="back-link">
+    <span class="material-icons">arrow_back</span>
+    Retour aux tontines
+  </a>
+
+  <div class="form-card">
+    <h1>{{ isEditMode() ? 'Modifier la tontine' : 'Nouvelle tontine' }}</h1>
+
+    <ng-container *ngIf="isLoading() && isEditMode(); else formTpl">
+      <div class="loading-container">
+        <div class="spinner"></div>
+        <p>Chargement...</p>
+      </div>
+    </ng-container>
+    <ng-template #formTpl>
+      <form [formGroup]="tontineForm" (ngSubmit)="onSubmit()">
+        <div class="form-group">
+          <label for="nom">Nom de la tontine *</label>
+          <input 
+            type="text" 
+            id="nom" 
+            formControlName="nom"
+            placeholder="Ex: Tontine Familiale"
+            [class.invalid]="f['nom'].invalid && f['nom'].touched"
+          />
+          <ng-container *ngIf="f['nom'].invalid && f['nom'].touched">
+            <span class="error-message">
+              <ng-container *ngIf="f['nom'].errors?.['required']">Le nom est requis</ng-container>
+              <ng-container *ngIf="f['nom'].errors?.['minlength']">Au moins 3 caractères</ng-container>
+              <ng-container *ngIf="f['nom'].errors?.['maxlength']">Maximum 100 caractères</ng-container>
+            </span>
+          </ng-container>
+        </div>
+
+        <div class="form-group">
+          <label for="description">Description</label>
+          <textarea 
+            id="description" 
+            formControlName="description"
+            rows="3"
+            placeholder="Description optionnelle de la tontine..."
+          ></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="type">Type de tontine *</label>
+            <select id="type" formControlName="type">
+              <option *ngFor="let type of tontineTypes" [value]="type">{{ typeLabels[type] }}</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="periodicite">Périodicité *</label>
+            <select id="periodicite" formControlName="periodicite">
+              <option *ngFor="let p of periodicites" [value]="p">{{ periodiciteLabels[p] }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="montantCotisation">Montant de cotisation (FCFA) *</label>
+          <input 
+            type="number" 
+            id="montantCotisation" 
+            formControlName="montantCotisation"
+            min="1000"
+            step="1000"
+            [class.invalid]="f['montantCotisation'].invalid && f['montantCotisation'].touched"
+          />
+          <ng-container *ngIf="f['montantCotisation'].invalid && f['montantCotisation'].touched">
+            <span class="error-message">
+              <ng-container *ngIf="f['montantCotisation'].errors?.['required']">Le montant est requis</ng-container>
+              <ng-container *ngIf="f['montantCotisation'].errors?.['min']">Minimum 1 000 FCFA</ng-container>
+            </span>
+          </ng-container>
+        </div>
+
+        <div class="form-actions">
+          <a routerLink="/dashboard/tontines" class="btn-secondary">Annuler</a>
+          <button type="submit" class="btn-primary" [disabled]="isLoading()">
+            <ng-container *ngIf="isLoading(); else saveLabel">
+              <span class="spinner-small"></span>
+              Enregistrement...
+            </ng-container>
+            <ng-template #saveLabel>
+              <span class="material-icons">save</span>
+              {{ isEditMode() ? 'Modifier' : 'Créer' }}
+            </ng-template>
+          </button>
+        </div>
+      </form>
+    </ng-template>
+  </div>
+</div>

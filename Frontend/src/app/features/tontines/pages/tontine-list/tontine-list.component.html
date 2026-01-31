@@ -1,0 +1,89 @@
+<div class="page-header">
+  <div class="header-left">
+    <h1>Tontines</h1>
+    <p>Gérez vos tontines et leurs membres</p>
+  </div>
+  <a routerLink="create" class="btn-primary">
+    <span class="material-icons">add</span>
+    Nouvelle tontine
+  </a>
+</div>
+
+<!-- Filters -->
+<div class="filters-bar">
+  <div class="search-box">
+    <span class="material-icons">search</span>
+    <input 
+      type="text" 
+      [(ngModel)]="searchTerm" 
+      (input)="onSearch()"
+      placeholder="Rechercher une tontine..."
+    />
+  </div>
+  
+  <div class="filter-group">
+    <select [(ngModel)]="selectedType" (change)="onFilterChange()">
+      <option value="">Tous les types</option>
+      <option *ngFor="let type of tontineTypes" [value]="type">{{ typeLabels[type] }}</option>
+    </select>
+  </div>
+</div>
+
+<!-- Content -->
+<ng-container *ngIf="isLoading(); else listTpl">
+  <div class="loading-container">
+    <div class="spinner"></div>
+    <p>Chargement des tontines...</p>
+  </div>
+</ng-container>
+<ng-template #listTpl>
+  <div class="tontines-grid">
+    <div *ngFor="let tontine of tontines()" class="tontine-card" [routerLink]="[tontine.id]">
+        <div class="card-header">
+            <div class="tontine-info">
+            <h3>{{ tontine.nom }}</h3>
+            <span class="type-badge">{{ getTypeLabel(tontine) }}</span>
+          </div>
+          <span class="status-badge" [class]="getStatusColor(tontine.statut)">
+            {{ getStatusLabel(tontine.statut) }}
+          </span>
+        </div>
+        
+        <p class="description">{{ tontine.description || 'Aucune description' }}</p>
+        
+        <div class="card-stats">
+          <div class="stat">
+            <span class="material-icons">payments</span>
+            <span class="value">{{ tontine.montantCotisation | currency:'XAF':'symbol':'1.0-0':'fr' }}</span>
+            <span class="label">/ {{ tontine.periodicite === 'MENSUELLE' ? 'mois' : tontine.periodicite === 'BI_MENSUELLE' ? '2 sem' : 'sem' }}</span>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <span class="date">
+            <span class="material-icons">calendar_today</span>
+            Créée le {{ tontine.dateCreation | date:'dd/MM/yyyy' }}
+          </span>
+          <div class="actions">
+            <a [routerLink]="[tontine.id, 'edit']" class="btn-icon" (click)="$event.stopPropagation()" title="Modifier">
+              <span class="material-icons">edit</span>
+            </a>
+            <button class="btn-icon danger" (click)="deleteTontine(tontine.id!, $event)" title="Supprimer">
+              <span class="material-icons">delete</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <ng-container *ngIf="tontines().length === 0">
+      <div class="empty-state">
+        <span class="material-icons">account_balance</span>
+        <h3>Aucune tontine</h3>
+        <p>Créez votre première tontine pour commencer</p>
+        <a routerLink="create" class="btn-primary">
+          <span class="material-icons">add</span>
+          Créer une tontine
+        </a>
+      </div>
+    </ng-container>
+</ng-template>
