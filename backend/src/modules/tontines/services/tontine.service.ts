@@ -2,6 +2,7 @@
  * Service pour la gestion des tontines
  */
 
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
 import { Tontine, StatutTontine } from '../entities/tontine.entity';
@@ -14,16 +15,26 @@ import {
   TontineListItemDto,
 } from '../dto/tontine.dto';
 
-const tontineRepository = AppDataSource.getRepository(Tontine);
-const tontineTypeRepository = AppDataSource.getRepository(TontineType);
-
 export class TontineService {
+  private _tontineRepo?: Repository<Tontine>;
+  private _tontineTypeRepo?: Repository<TontineType>;
+
+  private get tontineRepository(): Repository<Tontine> {
+    if (!this._tontineRepo) this._tontineRepo = AppDataSource.getRepository(Tontine);
+    return this._tontineRepo;
+  }
+
+  private get tontineTypeRepository(): Repository<TontineType> {
+    if (!this._tontineTypeRepo) this._tontineTypeRepo = AppDataSource.getRepository(TontineType);
+    return this._tontineTypeRepo;
+  }
+
   /**
    * Creer une nouvelle tontine
    */
   async create(dto: CreateTontineDto): Promise<TontineResponseDto> {
     // Verifier que le type de tontine existe
-    const tontineType = await tontineTypeRepository.findOne({
+    const tontineType = await this.tontineTypeRepository.findOne({
       where: { id: dto.tontineTypeId },
     });
     if (!tontineType) {
@@ -31,14 +42,14 @@ export class TontineService {
     }
 
     // Verifier l'unicite du nom court
-    const existing = await tontineRepository.findOne({
+    const existing = await this.tontineRepository.findOne({
       where: { nomCourt: dto.nomCourt },
     });
     if (existing) {
       throw new BadRequestError(`Le nom court "${dto.nomCourt}" existe deja`);
     }
 
-    const tontine = tontineRepository.create({
+    const tontine = this.tontineRepository.create({
       nom: dto.nom,
       nomCourt: dto.nomCourt,
       tontineTypeId: dto.tontineTypeId,
@@ -51,10 +62,10 @@ export class TontineService {
       statut: StatutTontine.ACTIVE,
     });
 
-    const saved = await tontineRepository.save(tontine);
+    const saved = await this.tontineRepository.save(tontine);
 
     // Recharger avec les relations
-    const reloaded = await tontineRepository.findOne({
+    const reloaded = await this.tontineRepository.findOne({
       where: { id: saved.id },
       relations: ['tontineType', 'adhesions'],
     });
@@ -66,7 +77,7 @@ export class TontineService {
    * Lister toutes les tontines
    */
   async findAll(filters?: { statut?: StatutTontine }): Promise<TontineListItemDto[]> {
-    const queryBuilder = tontineRepository
+    const queryBuilder = this.tontineRepository
       .createQueryBuilder('tontine')
       .leftJoinAndSelect('tontine.tontineType', 'tontineType')
       .leftJoin('tontine.adhesions', 'adhesions')
@@ -81,7 +92,7 @@ export class TontineService {
 
     const tontines = await queryBuilder.orderBy('tontine.nom', 'ASC').getRawAndEntities();
 
-    return tontines.entities.map((tontine, index) => this.toListItemDto(
+    return tontines.entities.map((tontine: Tontine, index: number) => this.toListItemDto(
       tontine,
       parseInt(tontines.raw[index].nombreMembres) || 0
     ));
@@ -91,7 +102,7 @@ export class TontineService {
    * Trouver une tontine par ID
    */
   async findById(id: string): Promise<TontineResponseDto> {
-    const tontine = await tontineRepository.findOne({
+    const tontine = await this.tontineRepository.findOne({
       where: { id },
       relations: ['tontineType', 'adhesions', 'exercices'],
     });
@@ -107,7 +118,7 @@ export class TontineService {
    * Trouver une tontine par nom court
    */
   async findByNomCourt(nomCourt: string): Promise<TontineResponseDto> {
-    const tontine = await tontineRepository.findOne({
+    const tontine = await this.tontineRepository.findOne({
       where: { nomCourt },
       relations: ['tontineType', 'adhesions', 'exercices'],
     });
@@ -123,7 +134,7 @@ export class TontineService {
    * Mettre a jour une tontine
    */
   async update(id: string, dto: UpdateTontineDto): Promise<TontineResponseDto> {
-    const tontine = await tontineRepository.findOne({
+    const tontine = await this.tontineRepository.findOne({
       where: { id },
       relations: ['tontineType'],
     });
@@ -134,7 +145,7 @@ export class TontineService {
 
     // Verifier l'unicite du nouveau nom court si change
     if (dto.nomCourt && dto.nomCourt !== tontine.nomCourt) {
-      const existing = await tontineRepository.findOne({
+      const existing = await this.tontineRepository.findOne({
         where: { nomCourt: dto.nomCourt },
       });
       if (existing) {
@@ -152,9 +163,9 @@ export class TontineService {
     if (dto.documentStatuts !== undefined) tontine.documentStatuts = dto.documentStatuts;
     if (dto.statut !== undefined) tontine.statut = dto.statut;
 
-    const updated = await tontineRepository.save(tontine);
+    const updated = await this.tontineRepository.save(tontine);
 
-    const reloaded = await tontineRepository.findOne({
+    const reloaded = await this.tontineRepository.findOne({
       where: { id: updated.id },
       relations: ['tontineType', 'adhesions', 'exercices'],
     });
@@ -180,22 +191,18 @@ export class TontineService {
    * Supprimer une tontine (soft delete)
    */
   async delete(id: string): Promise<void> {
-    const tontine = await tontineRepository.findOne({ where: { id } });
+    const tontine = await this.tontineRepository.findOne({ where: { id } });
     if (!tontine) {
       throw new NotFoundError(`Tontine non trouvee: ${id}`);
     }
 
-    await tontineRepository.softRemove(tontine);
+    await this.tontineRepository.softRemove(tontine);
   }
 
   /**
    * Transformer en DTO de reponse
    */
   private toResponseDto(entity: Tontine): TontineResponseDto {
-    const exerciceActif = entity.exercices?.find(
-      (e) => e.statut === StatutExercice.OUVERT
-    );
-
     return {
       id: entity.id,
       nom: entity.nom,

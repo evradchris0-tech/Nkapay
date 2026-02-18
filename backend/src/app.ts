@@ -24,6 +24,7 @@ import { pretModuleRoutes } from './modules/prets/routes';
 import { distributionModuleRoutes } from './modules/distributions/routes';
 import { adhesionModuleRoutes } from './modules/adhesions/routes';
 import { exportRoutes } from './modules/exports/routes';
+import { dashboardRoutes } from './modules/dashboard/routes';
 
 class App {
   public app: Application;
@@ -89,6 +90,7 @@ class App {
     this.app.use(env.apiPrefix, pretModuleRoutes);
     this.app.use(env.apiPrefix, distributionModuleRoutes);
     this.app.use(env.apiPrefix, adhesionModuleRoutes);
+    this.app.use(`${env.apiPrefix}/dashboard`, dashboardRoutes);
     this.app.use(`${env.apiPrefix}/exports`, exportRoutes);
 
     // Route par defaut pour les chemins non trouves

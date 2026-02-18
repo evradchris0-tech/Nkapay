@@ -2,6 +2,7 @@
  * Service pour la gestion des remboursements de prets
  */
 
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
 import { RemboursementPret } from '../entities/remboursement-pret.entity';
@@ -12,17 +13,32 @@ import {
   RemboursementPretResponseDto,
 } from '../dto/pret.dto';
 
-const remboursementRepository = AppDataSource.getRepository(RemboursementPret);
-const pretRepository = AppDataSource.getRepository(Pret);
-const reunionRepository = AppDataSource.getRepository(Reunion);
-
 export class RemboursementPretService {
+  private _remboursementRepo?: Repository<RemboursementPret>;
+  private _pretRepo?: Repository<Pret>;
+  private _reunionRepo?: Repository<Reunion>;
+
+  private get remboursementRepository(): Repository<RemboursementPret> {
+    if (!this._remboursementRepo) this._remboursementRepo = AppDataSource.getRepository(RemboursementPret);
+    return this._remboursementRepo;
+  }
+
+  private get pretRepository(): Repository<Pret> {
+    if (!this._pretRepo) this._pretRepo = AppDataSource.getRepository(Pret);
+    return this._pretRepo;
+  }
+
+  private get reunionRepository(): Repository<Reunion> {
+    if (!this._reunionRepo) this._reunionRepo = AppDataSource.getRepository(Reunion);
+    return this._reunionRepo;
+  }
+
   /**
    * Creer un remboursement
    */
   async create(dto: CreateRemboursementDto): Promise<RemboursementPretResponseDto> {
     // Verifier le pret
-    const pret = await pretRepository.findOne({ where: { id: dto.pretId } });
+    const pret = await this.pretRepository.findOne({ where: { id: dto.pretId } });
     if (!pret) {
       throw new NotFoundError(`Pret non trouve: ${dto.pretId}`);
     }
@@ -32,7 +48,7 @@ export class RemboursementPretService {
     }
 
     // Verifier la reunion
-    const reunion = await reunionRepository.findOne({ where: { id: dto.reunionId } });
+    const reunion = await this.reunionRepository.findOne({ where: { id: dto.reunionId } });
     if (!reunion) {
       throw new NotFoundError(`Reunion non trouvee: ${dto.reunionId}`);
     }
@@ -46,7 +62,7 @@ export class RemboursementPretService {
     const montantTotal = dto.montantCapital + montantInteret;
     const capitalRestantApres = Number(pret.capitalRestant) - dto.montantCapital;
 
-    const remboursement = remboursementRepository.create({
+    const remboursement = this.remboursementRepository.create({
       pretId: dto.pretId,
       reunionId: dto.reunionId,
       transactionId: dto.transactionId || null,
@@ -57,7 +73,7 @@ export class RemboursementPretService {
       commentaire: dto.commentaire || null,
     });
 
-    const saved = await remboursementRepository.save(remboursement);
+    const saved = await this.remboursementRepository.save(remboursement);
 
     // Mettre a jour le capital restant du pret
     pret.capitalRestant = capitalRestantApres;
@@ -74,7 +90,7 @@ export class RemboursementPretService {
       pret.dateSolde = new Date();
     }
 
-    await pretRepository.save(pret);
+    await this.pretRepository.save(pret);
 
     return this.toResponseDto(saved);
   }
@@ -83,7 +99,7 @@ export class RemboursementPretService {
    * Lister les remboursements d'un pret
    */
   async findByPret(pretId: string): Promise<RemboursementPretResponseDto[]> {
-    const remboursements = await remboursementRepository.find({
+    const remboursements = await this.remboursementRepository.find({
       where: { pretId },
       order: { dateRemboursement: 'DESC' },
     });
@@ -94,7 +110,7 @@ export class RemboursementPretService {
    * Lister les remboursements d'une reunion
    */
   async findByReunion(reunionId: string): Promise<RemboursementPretResponseDto[]> {
-    const remboursements = await remboursementRepository.find({
+    const remboursements = await this.remboursementRepository.find({
       where: { reunionId },
       relations: ['pret'],
       order: { dateRemboursement: 'DESC' },
@@ -106,7 +122,7 @@ export class RemboursementPretService {
    * Trouver un remboursement par ID
    */
   async findById(id: string): Promise<RemboursementPretResponseDto> {
-    const remboursement = await remboursementRepository.findOne({ where: { id } });
+    const remboursement = await this.remboursementRepository.findOne({ where: { id } });
     if (!remboursement) {
       throw new NotFoundError(`Remboursement non trouve: ${id}`);
     }
@@ -117,13 +133,13 @@ export class RemboursementPretService {
    * Supprimer un remboursement
    */
   async delete(id: string): Promise<void> {
-    const remboursement = await remboursementRepository.findOne({ where: { id } });
+    const remboursement = await this.remboursementRepository.findOne({ where: { id } });
     if (!remboursement) {
       throw new NotFoundError(`Remboursement non trouve: ${id}`);
     }
 
     // Recuperer le pret pour restaurer le capital
-    const pret = await pretRepository.findOne({ where: { id: remboursement.pretId } });
+    const pret = await this.pretRepository.findOne({ where: { id: remboursement.pretId } });
     if (pret) {
       pret.capitalRestant = Number(pret.capitalRestant) + Number(remboursement.montantCapital);
 
@@ -133,10 +149,10 @@ export class RemboursementPretService {
         pret.dateSolde = null;
       }
 
-      await pretRepository.save(pret);
+      await this.pretRepository.save(pret);
     }
 
-    await remboursementRepository.remove(remboursement);
+    await this.remboursementRepository.remove(remboursement);
   }
 
   /**

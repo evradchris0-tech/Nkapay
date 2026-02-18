@@ -2,6 +2,7 @@
  * Service pour la gestion des penalites
  */
 
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
 import { Penalite, StatutPenalite } from '../entities/penalite.entity';
@@ -15,18 +16,34 @@ import {
   PenaliteFiltersDto,
   PenalitesSummaryDto,
 } from '../dto/penalite.dto';
-
-const penaliteRepository = AppDataSource.getRepository(Penalite);
-const typePenaliteRepository = AppDataSource.getRepository(TypePenalite);
-const exerciceMembreRepository = AppDataSource.getRepository(ExerciceMembre);
+import { regleExerciceService } from '../../exercices/services/regle-exercice.service';
 
 export class PenaliteService {
+  private _penaliteRepo?: Repository<Penalite>;
+  private _typePenaliteRepo?: Repository<TypePenalite>;
+  private _exerciceMembreRepo?: Repository<ExerciceMembre>;
+
+  private get penaliteRepository(): Repository<Penalite> {
+    if (!this._penaliteRepo) this._penaliteRepo = AppDataSource.getRepository(Penalite);
+    return this._penaliteRepo;
+  }
+
+  private get typePenaliteRepository(): Repository<TypePenalite> {
+    if (!this._typePenaliteRepo) this._typePenaliteRepo = AppDataSource.getRepository(TypePenalite);
+    return this._typePenaliteRepo;
+  }
+
+  private get exerciceMembreRepository(): Repository<ExerciceMembre> {
+    if (!this._exerciceMembreRepo) this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
+    return this._exerciceMembreRepo;
+  }
+
   /**
    * Appliquer une penalite
    */
   async create(dto: CreatePenaliteDto): Promise<PenaliteResponseDto> {
     // Verifier que le membre existe
-    const membre = await exerciceMembreRepository.findOne({
+    const membre = await this.exerciceMembreRepository.findOne({
       where: { id: dto.exerciceMembreId },
       relations: ['adhesionTontine', 'adhesionTontine.utilisateur'],
     });
@@ -35,22 +52,35 @@ export class PenaliteService {
     }
 
     // Verifier que le type de penalite existe
-    const typePenalite = await typePenaliteRepository.findOne({ where: { id: dto.typePenaliteId } });
+    const typePenalite = await this.typePenaliteRepository.findOne({ where: { id: dto.typePenaliteId } });
     if (!typePenalite) {
       throw new NotFoundError(`Type de penalite non trouve: ${dto.typePenaliteId}`);
     }
 
-    const penalite = penaliteRepository.create({
+    // Determiner le montant
+    let montant = dto.montant;
+    if (montant === undefined || montant === null) {
+      // 1. Essayer de trouver une règle avec le CODE du type de pénalité (ex: 'PENALITE_RETARD_REUNION')
+      const ruleValue = await regleExerciceService.getEffectiveValueByCle(membre.exerciceId, typePenalite.code);
+      if (ruleValue) {
+        montant = parseFloat(ruleValue);
+      } else {
+        // 2. Sinon, utiliser la valeur par défaut définie dans le TypePenalite
+        montant = typePenalite.valeurDefaut || 0;
+      }
+    }
+
+    const penalite = this.penaliteRepository.create({
       exerciceMembreId: dto.exerciceMembreId,
       reunionId: dto.reunionId || null,
       typePenaliteId: dto.typePenaliteId,
-      montant: dto.montant,
+      montant: montant,
       motif: dto.motif || null,
       statut: StatutPenalite.EN_ATTENTE,
       appliqueParExerciceMembreId: dto.appliqueParExerciceMembreId || null,
     });
 
-    const saved = await penaliteRepository.save(penalite);
+    const saved = await this.penaliteRepository.save(penalite);
     return this.findById(saved.id);
   }
 
@@ -58,7 +88,7 @@ export class PenaliteService {
    * Payer une penalite
    */
   async payer(id: string, dto: PayerPenaliteDto): Promise<PenaliteResponseDto> {
-    const penalite = await penaliteRepository.findOne({ where: { id } });
+    const penalite = await this.penaliteRepository.findOne({ where: { id } });
     if (!penalite) {
       throw new NotFoundError(`Penalite non trouvee: ${id}`);
     }
@@ -71,7 +101,7 @@ export class PenaliteService {
     penalite.transactionId = dto.transactionId;
     penalite.datePaiement = new Date();
 
-    await penaliteRepository.save(penalite);
+    await this.penaliteRepository.save(penalite);
     return this.findById(id);
   }
 
@@ -79,7 +109,7 @@ export class PenaliteService {
    * Annuler une penalite
    */
   async annuler(id: string, dto: AnnulerPenaliteDto): Promise<PenaliteResponseDto> {
-    const penalite = await penaliteRepository.findOne({ where: { id } });
+    const penalite = await this.penaliteRepository.findOne({ where: { id } });
     if (!penalite) {
       throw new NotFoundError(`Penalite non trouvee: ${id}`);
     }
@@ -92,7 +122,7 @@ export class PenaliteService {
     penalite.dateAnnulation = new Date();
     penalite.motifAnnulation = dto.motifAnnulation;
 
-    await penaliteRepository.save(penalite);
+    await this.penaliteRepository.save(penalite);
     return this.findById(id);
   }
 
@@ -100,7 +130,7 @@ export class PenaliteService {
    * Pardonner une penalite
    */
   async pardonner(id: string, motif: string): Promise<PenaliteResponseDto> {
-    const penalite = await penaliteRepository.findOne({ where: { id } });
+    const penalite = await this.penaliteRepository.findOne({ where: { id } });
     if (!penalite) {
       throw new NotFoundError(`Penalite non trouvee: ${id}`);
     }
@@ -112,7 +142,7 @@ export class PenaliteService {
     penalite.statut = StatutPenalite.PARDONNEE;
     penalite.motifAnnulation = motif;
 
-    await penaliteRepository.save(penalite);
+    await this.penaliteRepository.save(penalite);
     return this.findById(id);
   }
 
@@ -120,7 +150,7 @@ export class PenaliteService {
    * Lister les penalites
    */
   async findAll(filters?: PenaliteFiltersDto): Promise<PenaliteResponseDto[]> {
-    const queryBuilder = penaliteRepository
+    const queryBuilder = this.penaliteRepository
       .createQueryBuilder('p')
       .leftJoinAndSelect('p.exerciceMembre', 'em')
       .leftJoinAndSelect('em.adhesionTontine', 'adhesion')
@@ -160,7 +190,7 @@ export class PenaliteService {
    * Trouver une penalite par ID
    */
   async findById(id: string): Promise<PenaliteResponseDto> {
-    const penalite = await penaliteRepository.findOne({
+    const penalite = await this.penaliteRepository.findOne({
       where: { id },
       relations: ['exerciceMembre', 'exerciceMembre.adhesionTontine', 'exerciceMembre.adhesionTontine.utilisateur', 'typePenalite'],
     });
@@ -202,7 +232,7 @@ export class PenaliteService {
    */
   private toResponseDto(entity: Penalite): PenaliteResponseDto {
     const utilisateur = entity.exerciceMembre?.adhesionTontine?.utilisateur;
-    
+
     return {
       id: entity.id,
       exerciceMembreId: entity.exerciceMembreId,

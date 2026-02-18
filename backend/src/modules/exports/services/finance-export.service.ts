@@ -2,6 +2,7 @@
  * Service d'export des rapports financiers en PDF
  */
 
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError } from '../../../shared';
 import { Transaction, TypeTransaction, StatutTransaction } from '../../transactions/entities/transaction.entity';
@@ -20,17 +21,37 @@ function formatDate(date: Date | string | null | undefined): string {
   return d.toLocaleDateString('fr-FR');
 }
 
-const transactionRepository = AppDataSource.getRepository(Transaction);
-const exerciceRepository = AppDataSource.getRepository(Exercice);
-const pretRepository = AppDataSource.getRepository(Pret);
-const penaliteRepository = AppDataSource.getRepository(Penalite);
-
 export class FinanceExportService {
+  private _transactionRepo?: Repository<Transaction>;
+  private _exerciceRepo?: Repository<Exercice>;
+  private _pretRepo?: Repository<Pret>;
+  private _penaliteRepo?: Repository<Penalite>;
+
+  private get transactionRepository(): Repository<Transaction> {
+    if (!this._transactionRepo) this._transactionRepo = AppDataSource.getRepository(Transaction);
+    return this._transactionRepo;
+  }
+
+  private get exerciceRepository(): Repository<Exercice> {
+    if (!this._exerciceRepo) this._exerciceRepo = AppDataSource.getRepository(Exercice);
+    return this._exerciceRepo;
+  }
+
+  private get pretRepository(): Repository<Pret> {
+    if (!this._pretRepo) this._pretRepo = AppDataSource.getRepository(Pret);
+    return this._pretRepo;
+  }
+
+  private get penaliteRepository(): Repository<Penalite> {
+    if (!this._penaliteRepo) this._penaliteRepo = AppDataSource.getRepository(Penalite);
+    return this._penaliteRepo;
+  }
+
   /**
    * Exporter le rapport financier d'un exercice
    */
   async exportRapportFinancier(exerciceId: string): Promise<Buffer> {
-    const exercice = await exerciceRepository.findOne({
+    const exercice = await this.exerciceRepository.findOne({
       where: { id: exerciceId },
       relations: ['tontine', 'reunions'],
     });
@@ -42,9 +63,9 @@ export class FinanceExportService {
     // Récupérer les transactions via les réunions
     const reunionIds = exercice.reunions?.map(r => r.id) || [];
     let transactions: Transaction[] = [];
-    
+
     if (reunionIds.length > 0) {
-      transactions = await transactionRepository
+      transactions = await this.transactionRepository
         .createQueryBuilder('t')
         .leftJoinAndSelect('t.exerciceMembre', 'em')
         .leftJoinAndSelect('em.adhesionTontine', 'at')
@@ -75,7 +96,7 @@ export class FinanceExportService {
 
     // Calculs financiers
     const transactionsValidees = transactions.filter(t => t.statut === StatutTransaction.VALIDE);
-    
+
     const cotisations = transactionsValidees.filter(t => t.typeTransaction === TypeTransaction.COTISATION);
     const pots = transactionsValidees.filter(t => t.typeTransaction === TypeTransaction.POT);
     const pretsDecaisses = transactionsValidees.filter(t => t.typeTransaction === TypeTransaction.DECAISSEMENT_PRET);
@@ -157,7 +178,7 @@ export class FinanceExportService {
    * Exporter le relevé d'un membre
    */
   async exportReleveMembre(exerciceId: string, membreId: string): Promise<Buffer> {
-    const exercice = await exerciceRepository.findOne({
+    const exercice = await this.exerciceRepository.findOne({
       where: { id: exerciceId },
       relations: ['tontine', 'membres', 'membres.adhesionTontine', 'membres.adhesionTontine.utilisateur'],
     });
@@ -174,7 +195,7 @@ export class FinanceExportService {
       throw new NotFoundError(`Membre non trouvé dans cet exercice`);
     }
 
-    const transactions = await transactionRepository.find({
+    const transactions = await this.transactionRepository.find({
       where: { exerciceMembreId: exerciceMembre.id },
       order: { creeLe: 'ASC' },
     });
@@ -260,7 +281,7 @@ export class FinanceExportService {
    * Exporter le rapport des prêts
    */
   async exportRapportPrets(exerciceId: string): Promise<Buffer> {
-    const exercice = await exerciceRepository.findOne({
+    const exercice = await this.exerciceRepository.findOne({
       where: { id: exerciceId },
       relations: ['tontine', 'reunions'],
     });
@@ -273,7 +294,7 @@ export class FinanceExportService {
     let prets: Pret[] = [];
 
     if (reunionIds.length > 0) {
-      prets = await pretRepository
+      prets = await this.pretRepository
         .createQueryBuilder('p')
         .leftJoinAndSelect('p.exerciceMembre', 'em')
         .leftJoinAndSelect('em.adhesionTontine', 'at')
@@ -294,10 +315,10 @@ export class FinanceExportService {
     pdf.addHeader();
 
     // Statistiques des prêts
-    const pretsApprouves = prets.filter(p => 
-      p.statut === StatutPret.APPROUVE || 
-      p.statut === StatutPret.DECAISSE || 
-      p.statut === StatutPret.EN_COURS || 
+    const pretsApprouves = prets.filter(p =>
+      p.statut === StatutPret.APPROUVE ||
+      p.statut === StatutPret.DECAISSE ||
+      p.statut === StatutPret.EN_COURS ||
       p.statut === StatutPret.SOLDE
     );
     const pretsEnCours = prets.filter(p => p.statut === StatutPret.EN_COURS);
@@ -365,7 +386,7 @@ export class FinanceExportService {
    * Exporter le rapport des pénalités
    */
   async exportRapportPenalites(exerciceId: string): Promise<Buffer> {
-    const exercice = await exerciceRepository.findOne({
+    const exercice = await this.exerciceRepository.findOne({
       where: { id: exerciceId },
       relations: ['tontine', 'membres'],
     });
@@ -378,7 +399,7 @@ export class FinanceExportService {
     let penalites: Penalite[] = [];
 
     if (exerciceMembreIds.length > 0) {
-      penalites = await penaliteRepository
+      penalites = await this.penaliteRepository
         .createQueryBuilder('p')
         .leftJoinAndSelect('p.exerciceMembre', 'em')
         .leftJoinAndSelect('em.adhesionTontine', 'at')

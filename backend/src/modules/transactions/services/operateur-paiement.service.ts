@@ -1,7 +1,4 @@
-/**
- * Service pour la gestion des operateurs de paiement
- */
-
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
 import { OperateurPaiement } from '../entities/operateur-paiement.entity';
@@ -11,20 +8,24 @@ import {
   OperateurPaiementResponseDto,
 } from '../dto/operateur-paiement.dto';
 
-const operateurRepository = AppDataSource.getRepository(OperateurPaiement);
-
 export class OperateurPaiementService {
+  private _repo?: Repository<OperateurPaiement>;
+
+  private get operateurRepository(): Repository<OperateurPaiement> {
+    if (!this._repo) this._repo = AppDataSource.getRepository(OperateurPaiement);
+    return this._repo;
+  }
   /**
    * Creer un operateur de paiement
    */
   async create(dto: CreateOperateurPaiementDto): Promise<OperateurPaiementResponseDto> {
     // Verifier l'unicite du code
-    const existing = await operateurRepository.findOne({ where: { code: dto.code } });
+    const existing = await this.operateurRepository.findOne({ where: { code: dto.code } });
     if (existing) {
       throw new BadRequestError(`Un operateur avec le code "${dto.code}" existe deja`);
     }
 
-    const operateur = operateurRepository.create({
+    const operateur = this.operateurRepository.create({
       code: dto.code.toUpperCase(),
       nom: dto.nom,
       logoUrl: dto.logoUrl || null,
@@ -34,7 +35,7 @@ export class OperateurPaiementService {
       fraisPourcentage: dto.fraisPourcentage || 0,
     });
 
-    const saved = await operateurRepository.save(operateur);
+    const saved = await this.operateurRepository.save(operateur);
     return this.toResponseDto(saved);
   }
 
@@ -43,7 +44,7 @@ export class OperateurPaiementService {
    */
   async findAll(actifSeulement: boolean = false): Promise<OperateurPaiementResponseDto[]> {
     const where = actifSeulement ? { estActif: true } : {};
-    const operateurs = await operateurRepository.find({
+    const operateurs = await this.operateurRepository.find({
       where,
       order: { nom: 'ASC' },
     });
@@ -54,7 +55,7 @@ export class OperateurPaiementService {
    * Trouver un operateur par ID
    */
   async findById(id: string): Promise<OperateurPaiementResponseDto> {
-    const operateur = await operateurRepository.findOne({ where: { id } });
+    const operateur = await this.operateurRepository.findOne({ where: { id } });
     if (!operateur) {
       throw new NotFoundError(`Operateur non trouve: ${id}`);
     }
@@ -65,7 +66,7 @@ export class OperateurPaiementService {
    * Trouver un operateur par code
    */
   async findByCode(code: string): Promise<OperateurPaiementResponseDto> {
-    const operateur = await operateurRepository.findOne({ where: { code: code.toUpperCase() } });
+    const operateur = await this.operateurRepository.findOne({ where: { code: code.toUpperCase() } });
     if (!operateur) {
       throw new NotFoundError(`Operateur non trouve: ${code}`);
     }
@@ -76,7 +77,7 @@ export class OperateurPaiementService {
    * Mettre a jour un operateur
    */
   async update(id: string, dto: UpdateOperateurPaiementDto): Promise<OperateurPaiementResponseDto> {
-    const operateur = await operateurRepository.findOne({ where: { id } });
+    const operateur = await this.operateurRepository.findOne({ where: { id } });
     if (!operateur) {
       throw new NotFoundError(`Operateur non trouve: ${id}`);
     }
@@ -88,7 +89,7 @@ export class OperateurPaiementService {
     if (dto.fraisFixe !== undefined) operateur.fraisFixe = dto.fraisFixe;
     if (dto.fraisPourcentage !== undefined) operateur.fraisPourcentage = dto.fraisPourcentage;
 
-    const saved = await operateurRepository.save(operateur);
+    const saved = await this.operateurRepository.save(operateur);
     return this.toResponseDto(saved);
   }
 
@@ -96,11 +97,11 @@ export class OperateurPaiementService {
    * Supprimer un operateur
    */
   async delete(id: string): Promise<void> {
-    const operateur = await operateurRepository.findOne({ where: { id } });
+    const operateur = await this.operateurRepository.findOne({ where: { id } });
     if (!operateur) {
       throw new NotFoundError(`Operateur non trouve: ${id}`);
     }
-    await operateurRepository.remove(operateur);
+    await this.operateurRepository.remove(operateur);
   }
 
   /**

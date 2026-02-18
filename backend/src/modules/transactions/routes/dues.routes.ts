@@ -30,4 +30,10 @@ router.get('/inscriptions/exercice/:exerciceId', (req, res, next) => duesControl
 router.get('/inscriptions/exercice/:exerciceId/stats', (req, res, next) => duesController.getInscriptionStats(req, res, next));
 router.get('/inscriptions/en-retard', (req, res, next) => duesController.findInscriptionsEnRetard(req, res, next));
 
+// === EPARGNES DUES ===
+router.post('/epargnes/reunion/:reunionId/generer', (req, res, next) => duesController.genererEpargnes(req, res, next));
+router.post('/epargnes/:id/payer', (req, res, next) => duesController.payerEpargne(req, res, next));
+router.get('/epargnes/reunion/:reunionId', (req, res, next) => duesController.findEpargnesByReunion(req, res, next));
+router.get('/epargnes/reunion/:reunionId/stats', (req, res, next) => duesController.getEpargneStats(req, res, next));
+
 export const duesRoutes = router;

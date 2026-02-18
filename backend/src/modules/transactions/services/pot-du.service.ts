@@ -2,6 +2,7 @@
  * Service pour la gestion des pots dus mensuels
  */
 
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
 import { PotDuMensuel } from '../entities/pot-du-mensuel.entity';
@@ -15,9 +16,24 @@ import {
 } from '../dto/dues.dto';
 
 export class PotDuService {
-  private potDuRepository = AppDataSource.getRepository(PotDuMensuel);
-  private reunionRepository = AppDataSource.getRepository(Reunion);
-  private exerciceMembreRepository = AppDataSource.getRepository(ExerciceMembre);
+  private _potDuRepo?: Repository<PotDuMensuel>;
+  private _reunionRepo?: Repository<Reunion>;
+  private _exerciceMembreRepo?: Repository<ExerciceMembre>;
+
+  private get potDuRepository(): Repository<PotDuMensuel> {
+    if (!this._potDuRepo) this._potDuRepo = AppDataSource.getRepository(PotDuMensuel);
+    return this._potDuRepo;
+  }
+
+  private get reunionRepository(): Repository<Reunion> {
+    if (!this._reunionRepo) this._reunionRepo = AppDataSource.getRepository(Reunion);
+    return this._reunionRepo;
+  }
+
+  private get exerciceMembreRepository(): Repository<ExerciceMembre> {
+    if (!this._exerciceMembreRepo) this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
+    return this._exerciceMembreRepo;
+  }
 
   /**
    * Générer les pots dus pour une réunion

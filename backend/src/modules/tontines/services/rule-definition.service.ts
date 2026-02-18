@@ -2,18 +2,24 @@
  * Service pour la gestion du catalogue des définitions de règles
  */
 
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
 import { RuleDefinition, CategorieRegle, TypeValeurRegle } from '../entities/rule-definition.entity';
-import { 
-  CreateRuleDefinitionDto, 
-  UpdateRuleDefinitionDto, 
+import {
+  CreateRuleDefinitionDto,
+  UpdateRuleDefinitionDto,
   RuleDefinitionResponseDto,
-  RuleDefinitionFiltersDto 
+  RuleDefinitionFiltersDto
 } from '../dto/rule-definition.dto';
 
 export class RuleDefinitionService {
-  private ruleDefinitionRepository = AppDataSource.getRepository(RuleDefinition);
+  private _repo?: Repository<RuleDefinition>;
+
+  private get ruleDefinitionRepository(): Repository<RuleDefinition> {
+    if (!this._repo) this._repo = AppDataSource.getRepository(RuleDefinition);
+    return this._repo;
+  }
 
   /**
    * Créer une nouvelle définition de règle
@@ -66,8 +72,8 @@ export class RuleDefinitionService {
     }
 
     if (filters?.estObligatoire !== undefined) {
-      queryBuilder.andWhere('rd.estObligatoire = :estObligatoire', { 
-        estObligatoire: filters.estObligatoire 
+      queryBuilder.andWhere('rd.estObligatoire = :estObligatoire', {
+        estObligatoire: filters.estObligatoire
       });
     }
 

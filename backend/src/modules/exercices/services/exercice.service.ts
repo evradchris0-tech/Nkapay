@@ -2,6 +2,7 @@
  * Service pour la gestion des exercices
  */
 
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
 import { Exercice, StatutExercice } from '../entities/exercice.entity';
@@ -16,32 +17,53 @@ import {
   ExerciceListItemDto,
   ExerciceFiltersDto,
 } from '../dto/exercice.dto';
-
-const exerciceRepository = AppDataSource.getRepository(Exercice);
-const exerciceMembreRepository = AppDataSource.getRepository(ExerciceMembre);
-const tontineRepository = AppDataSource.getRepository(Tontine);
-const adhesionRepository = AppDataSource.getRepository(AdhesionTontine);
+import { regleExerciceService } from './regle-exercice.service';
 
 export class ExerciceService {
+  private _exerciceRepo?: Repository<Exercice>;
+  private _exerciceMembreRepo?: Repository<ExerciceMembre>;
+  private _tontineRepo?: Repository<Tontine>;
+  private _adhesionRepo?: Repository<AdhesionTontine>;
+
+  private get exerciceRepository(): Repository<Exercice> {
+    if (!this._exerciceRepo) this._exerciceRepo = AppDataSource.getRepository(Exercice);
+    return this._exerciceRepo;
+  }
+
+  private get exerciceMembreRepository(): Repository<ExerciceMembre> {
+    if (!this._exerciceMembreRepo) this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
+    return this._exerciceMembreRepo;
+  }
+
+  private get tontineRepository(): Repository<Tontine> {
+    if (!this._tontineRepo) this._tontineRepo = AppDataSource.getRepository(Tontine);
+    return this._tontineRepo;
+  }
+
+  private get adhesionRepository(): Repository<AdhesionTontine> {
+    if (!this._adhesionRepo) this._adhesionRepo = AppDataSource.getRepository(AdhesionTontine);
+    return this._adhesionRepo;
+  }
+
   /**
    * Creer un nouvel exercice (en mode brouillon)
    */
   async create(dto: CreateExerciceDto): Promise<ExerciceResponseDto> {
     // Verifier que la tontine existe
-    const tontine = await tontineRepository.findOne({ where: { id: dto.tontineId } });
+    const tontine = await this.tontineRepository.findOne({ where: { id: dto.tontineId } });
     if (!tontine) {
       throw new NotFoundError(`Tontine non trouvee: ${dto.tontineId}`);
     }
 
     // Verifier l'unicite du libelle dans la tontine
-    const existing = await exerciceRepository.findOne({
+    const existing = await this.exerciceRepository.findOne({
       where: { tontineId: dto.tontineId, libelle: dto.libelle },
     });
     if (existing) {
       throw new BadRequestError(`Un exercice avec le libelle "${dto.libelle}" existe deja pour cette tontine`);
     }
 
-    const exercice = exerciceRepository.create({
+    const exercice = this.exerciceRepository.create({
       tontineId: dto.tontineId,
       libelle: dto.libelle,
       anneeDebut: dto.anneeDebut,
@@ -52,9 +74,9 @@ export class ExerciceService {
       statut: StatutExercice.BROUILLON,
     });
 
-    const saved = await exerciceRepository.save(exercice);
+    const saved = await this.exerciceRepository.save(exercice);
 
-    const reloaded = await exerciceRepository.findOne({
+    const reloaded = await this.exerciceRepository.findOne({
       where: { id: saved.id },
       relations: ['tontine', 'membres', 'reunions'],
     });
@@ -66,7 +88,7 @@ export class ExerciceService {
    * Ouvrir un exercice (passer de BROUILLON a OUVERT)
    */
   async ouvrir(id: string, dto?: OuvrirExerciceDto): Promise<ExerciceResponseDto> {
-    const exercice = await exerciceRepository.findOne({
+    const exercice = await this.exerciceRepository.findOne({
       where: { id },
       relations: ['tontine'],
     });
@@ -80,7 +102,7 @@ export class ExerciceService {
     }
 
     // Verifier qu'il n'y a pas deja un exercice ouvert pour cette tontine
-    const exerciceOuvert = await exerciceRepository.findOne({
+    const exerciceOuvert = await this.exerciceRepository.findOne({
       where: { tontineId: exercice.tontineId, statut: StatutExercice.OUVERT },
     });
     if (exerciceOuvert) {
@@ -91,10 +113,10 @@ export class ExerciceService {
     exercice.statut = StatutExercice.OUVERT;
     exercice.ouvertLe = new Date();
 
-    await exerciceRepository.save(exercice);
+    await this.exerciceRepository.save(exercice);
 
     // Ajouter automatiquement les membres actifs de la tontine
-    const adhesions = await adhesionRepository.find({
+    const adhesions = await this.adhesionRepository.find({
       where: { tontineId: exercice.tontineId, statut: StatutAdhesion.ACTIVE },
     });
 
@@ -102,7 +124,7 @@ export class ExerciceService {
     const adhesionsToAdd = adhesions.filter((a) => adhesionIds.includes(a.id));
 
     const exerciceMembres = adhesionsToAdd.map((adhesion) =>
-      exerciceMembreRepository.create({
+      this.exerciceMembreRepository.create({
         exerciceId: exercice.id,
         adhesionTontineId: adhesion.id,
         typeMembre: TypeMembre.ANCIEN, // A ajuster selon la logique metier
@@ -114,10 +136,17 @@ export class ExerciceService {
     );
 
     if (exerciceMembres.length > 0) {
-      await exerciceMembreRepository.save(exerciceMembres);
+      await this.exerciceMembreRepository.save(exerciceMembres);
     }
 
-    const reloaded = await exerciceRepository.findOne({
+    // Initialiser automatiquement les règles depuis la tontine
+    try {
+      await regleExerciceService.initializeFromTontine(exercice.id, exercice.tontineId);
+    } catch {
+      // Ne pas bloquer l'ouverture si l'initialisation des règles échoue
+    }
+
+    const reloaded = await this.exerciceRepository.findOne({
       where: { id: exercice.id },
       relations: ['tontine', 'membres', 'reunions'],
     });
@@ -129,7 +158,7 @@ export class ExerciceService {
    * Suspendre un exercice
    */
   async suspendre(id: string): Promise<ExerciceResponseDto> {
-    const exercice = await exerciceRepository.findOne({
+    const exercice = await this.exerciceRepository.findOne({
       where: { id },
       relations: ['tontine', 'membres', 'reunions'],
     });
@@ -143,7 +172,7 @@ export class ExerciceService {
     }
 
     exercice.statut = StatutExercice.SUSPENDU;
-    await exerciceRepository.save(exercice);
+    await this.exerciceRepository.save(exercice);
 
     return this.toResponseDto(exercice);
   }
@@ -152,7 +181,7 @@ export class ExerciceService {
    * Reprendre un exercice suspendu
    */
   async reprendre(id: string): Promise<ExerciceResponseDto> {
-    const exercice = await exerciceRepository.findOne({
+    const exercice = await this.exerciceRepository.findOne({
       where: { id },
       relations: ['tontine', 'membres', 'reunions'],
     });
@@ -166,7 +195,7 @@ export class ExerciceService {
     }
 
     exercice.statut = StatutExercice.OUVERT;
-    await exerciceRepository.save(exercice);
+    await this.exerciceRepository.save(exercice);
 
     return this.toResponseDto(exercice);
   }
@@ -175,7 +204,7 @@ export class ExerciceService {
    * Fermer un exercice
    */
   async fermer(id: string): Promise<ExerciceResponseDto> {
-    const exercice = await exerciceRepository.findOne({
+    const exercice = await this.exerciceRepository.findOne({
       where: { id },
       relations: ['tontine', 'membres', 'reunions'],
     });
@@ -190,7 +219,7 @@ export class ExerciceService {
 
     exercice.statut = StatutExercice.FERME;
     exercice.fermeLe = new Date();
-    await exerciceRepository.save(exercice);
+    await this.exerciceRepository.save(exercice);
 
     return this.toResponseDto(exercice);
   }
@@ -199,7 +228,7 @@ export class ExerciceService {
    * Lister les exercices
    */
   async findAll(filters?: ExerciceFiltersDto): Promise<ExerciceListItemDto[]> {
-    const queryBuilder = exerciceRepository
+    const queryBuilder = this.exerciceRepository
       .createQueryBuilder('exercice')
       .leftJoin('exercice.membres', 'membres')
       .addSelect('COUNT(membres.id)', 'nombreMembres')
@@ -217,7 +246,7 @@ export class ExerciceService {
 
     const result = await queryBuilder.orderBy('exercice.anneeDebut', 'DESC').getRawAndEntities();
 
-    return result.entities.map((exercice, index) => ({
+    return result.entities.map((exercice: Exercice, index: number) => ({
       id: exercice.id,
       libelle: exercice.libelle,
       anneeDebut: exercice.anneeDebut,
@@ -233,7 +262,7 @@ export class ExerciceService {
    * Trouver un exercice par ID
    */
   async findById(id: string): Promise<ExerciceResponseDto> {
-    const exercice = await exerciceRepository.findOne({
+    const exercice = await this.exerciceRepository.findOne({
       where: { id },
       relations: ['tontine', 'membres', 'reunions'],
     });
@@ -249,7 +278,7 @@ export class ExerciceService {
    * Trouver l'exercice ouvert d'une tontine
    */
   async findExerciceOuvert(tontineId: string): Promise<ExerciceResponseDto | null> {
-    const exercice = await exerciceRepository.findOne({
+    const exercice = await this.exerciceRepository.findOne({
       where: { tontineId, statut: StatutExercice.OUVERT },
       relations: ['tontine', 'membres', 'reunions'],
     });
@@ -261,7 +290,7 @@ export class ExerciceService {
    * Mettre a jour un exercice
    */
   async update(id: string, dto: UpdateExerciceDto): Promise<ExerciceResponseDto> {
-    const exercice = await exerciceRepository.findOne({
+    const exercice = await this.exerciceRepository.findOne({
       where: { id },
       relations: ['tontine', 'membres', 'reunions'],
     });
@@ -281,7 +310,7 @@ export class ExerciceService {
     if (dto.moisFin !== undefined) exercice.moisFin = dto.moisFin;
     if (dto.dureeMois !== undefined) exercice.dureeMois = dto.dureeMois;
 
-    await exerciceRepository.save(exercice);
+    await this.exerciceRepository.save(exercice);
 
     return this.toResponseDto(exercice);
   }
@@ -290,7 +319,7 @@ export class ExerciceService {
    * Supprimer un exercice (seulement en brouillon)
    */
   async delete(id: string): Promise<void> {
-    const exercice = await exerciceRepository.findOne({ where: { id } });
+    const exercice = await this.exerciceRepository.findOne({ where: { id } });
     if (!exercice) {
       throw new NotFoundError(`Exercice non trouve: ${id}`);
     }
@@ -299,7 +328,7 @@ export class ExerciceService {
       throw new BadRequestError('Seul un exercice en brouillon peut etre supprime');
     }
 
-    await exerciceRepository.remove(exercice);
+    await this.exerciceRepository.remove(exercice);
   }
 
   /**

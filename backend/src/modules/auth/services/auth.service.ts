@@ -37,11 +37,20 @@ export class AuthService {
    * Authentification d'un utilisateur
    */
   async login(dto: LoginDto, adresseIp: string, userAgent?: string): Promise<LoginResponseDto> {
-    // Recherche de l'utilisateur par telephone
+    // Normaliser le numéro de téléphone (supporter les formats avec et sans +237)
+    const identifiant = dto.identifiant.trim();
+    const identifiantAvecPrefixe = identifiant.startsWith('+') ? identifiant : `+237${identifiant}`;
+    const identifiantSansPrefixe = identifiant.startsWith('+237') ? identifiant.substring(4) : identifiant;
+
+    // Recherche de l'utilisateur par telephone (avec les deux formats)
     const utilisateur = await this.utilisateurRepository.findOne({
       where: [
-        { telephone1: dto.identifiant },
-        { telephone2: dto.identifiant },
+        { telephone1: identifiant },
+        { telephone2: identifiant },
+        { telephone1: identifiantAvecPrefixe },
+        { telephone2: identifiantAvecPrefixe },
+        { telephone1: identifiantSansPrefixe },
+        { telephone2: identifiantSansPrefixe },
       ],
     });
 
@@ -169,6 +178,13 @@ export class AuthService {
         { id: sessionId, utilisateurId },
         { estRevoquee: true, revoqueeLe: new Date(), motifRevocation: 'LOGOUT' }
       );
+    } else {
+      // Aucun parametre fourni : revoquer toutes les sessions par defaut
+      await this.sessionRepository.update(
+        { utilisateurId, estRevoquee: false },
+        { estRevoquee: true, revoqueeLe: new Date(), motifRevocation: 'LOGOUT' }
+      );
+      logger.info(`Sessions revoquees pour l'utilisateur ${utilisateurId} (aucun sessionId fourni)`);
     }
   }
 

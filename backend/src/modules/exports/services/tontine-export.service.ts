@@ -2,6 +2,7 @@
  * Service d'export des rapports de tontine en PDF
  */
 
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError } from '../../../shared';
 import { Tontine } from '../../tontines/entities/tontine.entity';
@@ -21,17 +22,37 @@ function formatDate(date: Date | string | null | undefined): string {
   return d.toLocaleDateString('fr-FR');
 }
 
-const tontineRepository = AppDataSource.getRepository(Tontine);
-const exerciceRepository = AppDataSource.getRepository(Exercice);
-const reunionRepository = AppDataSource.getRepository(Reunion);
-const transactionRepository = AppDataSource.getRepository(Transaction);
-
 export class TontineExportService {
+  private _tontineRepo?: Repository<Tontine>;
+  private _exerciceRepo?: Repository<Exercice>;
+  private _reunionRepo?: Repository<Reunion>;
+  private _transactionRepo?: Repository<Transaction>;
+
+  private get tontineRepository(): Repository<Tontine> {
+    if (!this._tontineRepo) this._tontineRepo = AppDataSource.getRepository(Tontine);
+    return this._tontineRepo;
+  }
+
+  private get exerciceRepository(): Repository<Exercice> {
+    if (!this._exerciceRepo) this._exerciceRepo = AppDataSource.getRepository(Exercice);
+    return this._exerciceRepo;
+  }
+
+  private get reunionRepository(): Repository<Reunion> {
+    if (!this._reunionRepo) this._reunionRepo = AppDataSource.getRepository(Reunion);
+    return this._reunionRepo;
+  }
+
+  private get transactionRepository(): Repository<Transaction> {
+    if (!this._transactionRepo) this._transactionRepo = AppDataSource.getRepository(Transaction);
+    return this._transactionRepo;
+  }
+
   /**
    * Exporter la fiche d'une tontine
    */
   async exportTontineFiche(tontineId: string): Promise<Buffer> {
-    const tontine = await tontineRepository.findOne({
+    const tontine = await this.tontineRepository.findOne({
       where: { id: tontineId },
       relations: ['tontineType', 'adhesions', 'adhesions.utilisateur', 'exercices'],
     });
@@ -124,7 +145,7 @@ export class TontineExportService {
    * Exporter le bilan d'un exercice
    */
   async exportExerciceBilan(exerciceId: string): Promise<Buffer> {
-    const exercice = await exerciceRepository.findOne({
+    const exercice = await this.exerciceRepository.findOne({
       where: { id: exerciceId },
       relations: ['tontine', 'reunions', 'membres', 'membres.adhesionTontine', 'membres.adhesionTontine.utilisateur'],
     });
@@ -165,7 +186,7 @@ export class TontineExportService {
     let totalDistributions = 0;
 
     if (reunionIds.length > 0) {
-      const transactions = await transactionRepository
+      const transactions = await this.transactionRepository
         .createQueryBuilder('t')
         .where('t.reunionId IN (:...reunionIds)', { reunionIds })
         .andWhere('t.statut = :statut', { statut: StatutTransaction.VALIDE })
@@ -257,7 +278,7 @@ export class TontineExportService {
    * Exporter le rapport d'une réunion
    */
   async exportReunionRapport(reunionId: string): Promise<Buffer> {
-    const reunion = await reunionRepository.findOne({
+    const reunion = await this.reunionRepository.findOne({
       where: { id: reunionId },
       relations: ['exercice', 'exercice.tontine', 'presences', 'presences.exerciceMembre', 'presences.exerciceMembre.adhesionTontine', 'presences.exerciceMembre.adhesionTontine.utilisateur'],
     });
@@ -330,7 +351,7 @@ export class TontineExportService {
    * Exporter la liste des membres d'une tontine
    */
   async exportMembresListe(tontineId: string): Promise<Buffer> {
-    const tontine = await tontineRepository.findOne({
+    const tontine = await this.tontineRepository.findOne({
       where: { id: tontineId },
       relations: ['adhesions', 'adhesions.utilisateur'],
     });

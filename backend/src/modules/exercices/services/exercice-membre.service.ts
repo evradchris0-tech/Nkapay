@@ -2,6 +2,7 @@
  * Service pour la gestion des membres d'exercice
  */
 
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
 import { ExerciceMembre, TypeMembre, StatutExerciceMembre } from '../entities/exercice-membre.entity';
@@ -15,17 +16,32 @@ import {
   ExerciceMembreFiltersDto,
 } from '../dto/exercice-membre.dto';
 
-const exerciceMembreRepository = AppDataSource.getRepository(ExerciceMembre);
-const exerciceRepository = AppDataSource.getRepository(Exercice);
-const adhesionRepository = AppDataSource.getRepository(AdhesionTontine);
-
 export class ExerciceMembreService {
+  private _exerciceMembreRepo?: Repository<ExerciceMembre>;
+  private _exerciceRepo?: Repository<Exercice>;
+  private _adhesionRepo?: Repository<AdhesionTontine>;
+
+  private get exerciceMembreRepository(): Repository<ExerciceMembre> {
+    if (!this._exerciceMembreRepo) this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
+    return this._exerciceMembreRepo;
+  }
+
+  private get exerciceRepository(): Repository<Exercice> {
+    if (!this._exerciceRepo) this._exerciceRepo = AppDataSource.getRepository(Exercice);
+    return this._exerciceRepo;
+  }
+
+  private get adhesionRepository(): Repository<AdhesionTontine> {
+    if (!this._adhesionRepo) this._adhesionRepo = AppDataSource.getRepository(AdhesionTontine);
+    return this._adhesionRepo;
+  }
+
   /**
    * Ajouter un membre a un exercice
    */
   async create(dto: CreateExerciceMembreDto): Promise<ExerciceMembreResponseDto> {
     // Verifier que l'exercice existe et est ouvert
-    const exercice = await exerciceRepository.findOne({ where: { id: dto.exerciceId } });
+    const exercice = await this.exerciceRepository.findOne({ where: { id: dto.exerciceId } });
     if (!exercice) {
       throw new NotFoundError(`Exercice non trouve: ${dto.exerciceId}`);
     }
@@ -34,7 +50,7 @@ export class ExerciceMembreService {
     }
 
     // Verifier que l'adhesion existe
-    const adhesion = await adhesionRepository.findOne({
+    const adhesion = await this.adhesionRepository.findOne({
       where: { id: dto.adhesionTontineId },
       relations: ['utilisateur'],
     });
@@ -48,14 +64,14 @@ export class ExerciceMembreService {
     }
 
     // Verifier que le membre n'est pas deja dans l'exercice
-    const existing = await exerciceMembreRepository.findOne({
+    const existing = await this.exerciceMembreRepository.findOne({
       where: { exerciceId: dto.exerciceId, adhesionTontineId: dto.adhesionTontineId },
     });
     if (existing) {
       throw new BadRequestError('Ce membre est deja inscrit a cet exercice');
     }
 
-    const exerciceMembre = exerciceMembreRepository.create({
+    const exerciceMembre = this.exerciceMembreRepository.create({
       exerciceId: dto.exerciceId,
       adhesionTontineId: dto.adhesionTontineId,
       typeMembre: dto.typeMembre,
@@ -66,9 +82,9 @@ export class ExerciceMembreService {
       parrainExerciceMembreId: dto.parrainExerciceMembreId || null,
     });
 
-    const saved = await exerciceMembreRepository.save(exerciceMembre);
+    const saved = await this.exerciceMembreRepository.save(exerciceMembre);
 
-    const reloaded = await exerciceMembreRepository.findOne({
+    const reloaded = await this.exerciceMembreRepository.findOne({
       where: { id: saved.id },
       relations: ['exercice', 'adhesionTontine', 'adhesionTontine.utilisateur', 'parrain', 'parrain.adhesionTontine'],
     });
@@ -80,7 +96,7 @@ export class ExerciceMembreService {
    * Lister les membres d'un exercice
    */
   async findByExercice(exerciceId: string, filters?: ExerciceMembreFiltersDto): Promise<ExerciceMembreListItemDto[]> {
-    const queryBuilder = exerciceMembreRepository
+    const queryBuilder = this.exerciceMembreRepository
       .createQueryBuilder('em')
       .leftJoinAndSelect('em.adhesionTontine', 'adhesion')
       .leftJoinAndSelect('adhesion.utilisateur', 'utilisateur')
@@ -104,7 +120,7 @@ export class ExerciceMembreService {
    * Trouver un membre d'exercice par ID
    */
   async findById(id: string): Promise<ExerciceMembreResponseDto> {
-    const membre = await exerciceMembreRepository.findOne({
+    const membre = await this.exerciceMembreRepository.findOne({
       where: { id },
       relations: ['exercice', 'adhesionTontine', 'adhesionTontine.utilisateur', 'parrain', 'parrain.adhesionTontine'],
     });
@@ -120,7 +136,7 @@ export class ExerciceMembreService {
    * Mettre a jour un membre d'exercice
    */
   async update(id: string, dto: UpdateExerciceMembreDto): Promise<ExerciceMembreResponseDto> {
-    const membre = await exerciceMembreRepository.findOne({
+    const membre = await this.exerciceMembreRepository.findOne({
       where: { id },
       relations: ['exercice', 'adhesionTontine', 'adhesionTontine.utilisateur', 'parrain', 'parrain.adhesionTontine'],
     });
@@ -135,9 +151,9 @@ export class ExerciceMembreService {
     if (dto.statut !== undefined) membre.statut = dto.statut;
     if (dto.parrainExerciceMembreId !== undefined) membre.parrainExerciceMembreId = dto.parrainExerciceMembreId;
 
-    await exerciceMembreRepository.save(membre);
+    await this.exerciceMembreRepository.save(membre);
 
-    const reloaded = await exerciceMembreRepository.findOne({
+    const reloaded = await this.exerciceMembreRepository.findOne({
       where: { id: membre.id },
       relations: ['exercice', 'adhesionTontine', 'adhesionTontine.utilisateur', 'parrain', 'parrain.adhesionTontine'],
     });
@@ -163,12 +179,12 @@ export class ExerciceMembreService {
    * Supprimer un membre d'exercice (soft delete)
    */
   async delete(id: string): Promise<void> {
-    const membre = await exerciceMembreRepository.findOne({ where: { id } });
+    const membre = await this.exerciceMembreRepository.findOne({ where: { id } });
     if (!membre) {
       throw new NotFoundError(`Membre d'exercice non trouve: ${id}`);
     }
 
-    await exerciceMembreRepository.softRemove(membre);
+    await this.exerciceMembreRepository.softRemove(membre);
   }
 
   /**

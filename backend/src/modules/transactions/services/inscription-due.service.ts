@@ -2,6 +2,7 @@
  * Service pour la gestion des inscriptions dues par exercice
  */
 
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
 import { InscriptionDueExercice, StatutDu } from '../entities/inscription-due-exercice.entity';
@@ -14,9 +15,24 @@ import {
 } from '../dto/dues.dto';
 
 export class InscriptionDueService {
-  private inscriptionDueRepository = AppDataSource.getRepository(InscriptionDueExercice);
-  private exerciceRepository = AppDataSource.getRepository(Exercice);
-  private exerciceMembreRepository = AppDataSource.getRepository(ExerciceMembre);
+  private _inscriptionDueRepo?: Repository<InscriptionDueExercice>;
+  private _exerciceRepo?: Repository<Exercice>;
+  private _exerciceMembreRepo?: Repository<ExerciceMembre>;
+
+  private get inscriptionDueRepository(): Repository<InscriptionDueExercice> {
+    if (!this._inscriptionDueRepo) this._inscriptionDueRepo = AppDataSource.getRepository(InscriptionDueExercice);
+    return this._inscriptionDueRepo;
+  }
+
+  private get exerciceRepository(): Repository<Exercice> {
+    if (!this._exerciceRepo) this._exerciceRepo = AppDataSource.getRepository(Exercice);
+    return this._exerciceRepo;
+  }
+
+  private get exerciceMembreRepository(): Repository<ExerciceMembre> {
+    if (!this._exerciceMembreRepo) this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
+    return this._exerciceMembreRepo;
+  }
 
   /**
    * Générer les inscriptions dues pour un exercice

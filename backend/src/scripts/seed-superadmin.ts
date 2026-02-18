@@ -42,18 +42,18 @@ export async function seedSuperAdmin(): Promise<void> {
     });
 
     if (superAdmin) {
-      // Le superadmin existe déjà
       if (superAdmin.estSuperAdmin) {
-        logger.info('Super administrateur existant trouvé', {
+        // Le superadmin existe deja et a deja le role — ne PAS ecraser son mot de passe
+        // (l'admin a peut-etre change son mot de passe via l'application)
+        logger.info('Super administrateur existant trouvé, aucune modification nécessaire', {
           id: superAdmin.id,
           telephone: config.telephone1,
         });
         return;
       }
 
-      // Mettre à jour pour devenir superadmin
+      // Mettre à jour pour devenir superadmin (cas rare: l'utilisateur existe mais n'est pas admin)
       superAdmin.estSuperAdmin = true;
-      superAdmin.passwordHash = await hashPassword(config.password);
       await utilisateurRepository.save(superAdmin);
       logger.info('Utilisateur existant promu super administrateur', {
         id: superAdmin.id,

@@ -2,6 +2,7 @@
  * Service pour la gestion des types de penalite
  */
 
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
 import { TypePenalite } from '../entities/type-penalite.entity';
@@ -11,20 +12,25 @@ import {
   TypePenaliteResponseDto,
 } from '../dto/type-penalite.dto';
 
-const typePenaliteRepository = AppDataSource.getRepository(TypePenalite);
-
 export class TypePenaliteService {
+  private _repo?: Repository<TypePenalite>;
+
+  private get typePenaliteRepository(): Repository<TypePenalite> {
+    if (!this._repo) this._repo = AppDataSource.getRepository(TypePenalite);
+    return this._repo;
+  }
+
   /**
    * Creer un nouveau type de penalite
    */
   async create(dto: CreateTypePenaliteDto): Promise<TypePenaliteResponseDto> {
     // Verifier l'unicite du code
-    const existing = await typePenaliteRepository.findOne({ where: { code: dto.code } });
+    const existing = await this.typePenaliteRepository.findOne({ where: { code: dto.code } });
     if (existing) {
       throw new BadRequestError(`Un type de penalite avec le code "${dto.code}" existe deja`);
     }
 
-    const typePenalite = typePenaliteRepository.create({
+    const typePenalite = this.typePenaliteRepository.create({
       code: dto.code,
       libelle: dto.libelle,
       description: dto.description || null,
@@ -33,7 +39,7 @@ export class TypePenaliteService {
       estActif: dto.estActif !== undefined ? dto.estActif : true,
     });
 
-    const saved = await typePenaliteRepository.save(typePenalite);
+    const saved = await this.typePenaliteRepository.save(typePenalite);
     return this.toResponseDto(saved);
   }
 
@@ -41,21 +47,21 @@ export class TypePenaliteService {
    * Lister tous les types de penalite
    */
   async findAll(includeInactive = false): Promise<TypePenaliteResponseDto[]> {
-    const queryBuilder = typePenaliteRepository.createQueryBuilder('tp');
+    const queryBuilder = this.typePenaliteRepository.createQueryBuilder('tp');
 
     if (!includeInactive) {
       queryBuilder.where('tp.estActif = :estActif', { estActif: true });
     }
 
     const types = await queryBuilder.orderBy('tp.libelle', 'ASC').getMany();
-    return types.map((t) => this.toResponseDto(t));
+    return types.map((t: TypePenalite) => this.toResponseDto(t));
   }
 
   /**
    * Trouver un type de penalite par ID
    */
   async findById(id: string): Promise<TypePenaliteResponseDto> {
-    const typePenalite = await typePenaliteRepository.findOne({ where: { id } });
+    const typePenalite = await this.typePenaliteRepository.findOne({ where: { id } });
     if (!typePenalite) {
       throw new NotFoundError(`Type de penalite non trouve: ${id}`);
     }
@@ -66,7 +72,7 @@ export class TypePenaliteService {
    * Trouver un type de penalite par code
    */
   async findByCode(code: string): Promise<TypePenaliteResponseDto> {
-    const typePenalite = await typePenaliteRepository.findOne({ where: { code } });
+    const typePenalite = await this.typePenaliteRepository.findOne({ where: { code } });
     if (!typePenalite) {
       throw new NotFoundError(`Type de penalite non trouve: ${code}`);
     }
@@ -77,7 +83,7 @@ export class TypePenaliteService {
    * Mettre a jour un type de penalite
    */
   async update(id: string, dto: UpdateTypePenaliteDto): Promise<TypePenaliteResponseDto> {
-    const typePenalite = await typePenaliteRepository.findOne({ where: { id } });
+    const typePenalite = await this.typePenaliteRepository.findOne({ where: { id } });
     if (!typePenalite) {
       throw new NotFoundError(`Type de penalite non trouve: ${id}`);
     }
@@ -88,7 +94,7 @@ export class TypePenaliteService {
     if (dto.valeurDefaut !== undefined) typePenalite.valeurDefaut = dto.valeurDefaut;
     if (dto.estActif !== undefined) typePenalite.estActif = dto.estActif;
 
-    const saved = await typePenaliteRepository.save(typePenalite);
+    const saved = await this.typePenaliteRepository.save(typePenalite);
     return this.toResponseDto(saved);
   }
 
@@ -96,12 +102,12 @@ export class TypePenaliteService {
    * Supprimer un type de penalite (soft delete)
    */
   async delete(id: string): Promise<void> {
-    const typePenalite = await typePenaliteRepository.findOne({ where: { id } });
+    const typePenalite = await this.typePenaliteRepository.findOne({ where: { id } });
     if (!typePenalite) {
       throw new NotFoundError(`Type de penalite non trouve: ${id}`);
     }
 
-    await typePenaliteRepository.softRemove(typePenalite);
+    await this.typePenaliteRepository.softRemove(typePenalite);
   }
 
   /**

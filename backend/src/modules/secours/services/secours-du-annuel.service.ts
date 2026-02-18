@@ -2,6 +2,7 @@
  * Service pour la gestion des secours dus annuels
  */
 
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
 import { SecoursDuAnnuel } from '../entities/secours-du-annuel.entity';
@@ -15,9 +16,24 @@ import {
 import { UpdateDuePaymentDto } from '../../transactions/dto/dues.dto';
 
 export class SecoursDuAnnuelService {
-  private secoursDuRepository = AppDataSource.getRepository(SecoursDuAnnuel);
-  private exerciceRepository = AppDataSource.getRepository(Exercice);
-  private exerciceMembreRepository = AppDataSource.getRepository(ExerciceMembre);
+  private _secoursDuRepo?: Repository<SecoursDuAnnuel>;
+  private _exerciceRepo?: Repository<Exercice>;
+  private _exerciceMembreRepo?: Repository<ExerciceMembre>;
+
+  private get secoursDuRepository(): Repository<SecoursDuAnnuel> {
+    if (!this._secoursDuRepo) this._secoursDuRepo = AppDataSource.getRepository(SecoursDuAnnuel);
+    return this._secoursDuRepo;
+  }
+
+  private get exerciceRepository(): Repository<Exercice> {
+    if (!this._exerciceRepo) this._exerciceRepo = AppDataSource.getRepository(Exercice);
+    return this._exerciceRepo;
+  }
+
+  private get exerciceMembreRepository(): Repository<ExerciceMembre> {
+    if (!this._exerciceMembreRepo) this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
+    return this._exerciceMembreRepo;
+  }
 
   /**
    * Générer les secours dus pour tous les membres d'un exercice

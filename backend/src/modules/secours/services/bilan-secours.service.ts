@@ -2,6 +2,7 @@
  * Service pour la gestion des bilans secours par exercice
  */
 
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
 import { BilanSecoursExercice } from '../entities/bilan-secours-exercice.entity';
@@ -12,8 +13,18 @@ import {
 } from '../dto/bilan-secours.dto';
 
 export class BilanSecoursService {
-  private bilanSecoursRepository = AppDataSource.getRepository(BilanSecoursExercice);
-  private exerciceRepository = AppDataSource.getRepository(Exercice);
+  private _bilanRepo?: Repository<BilanSecoursExercice>;
+  private _exerciceRepo?: Repository<Exercice>;
+
+  private get bilanSecoursRepository(): Repository<BilanSecoursExercice> {
+    if (!this._bilanRepo) this._bilanRepo = AppDataSource.getRepository(BilanSecoursExercice);
+    return this._bilanRepo;
+  }
+
+  private get exerciceRepository(): Repository<Exercice> {
+    if (!this._exerciceRepo) this._exerciceRepo = AppDataSource.getRepository(Exercice);
+    return this._exerciceRepo;
+  }
 
   /**
    * Récupérer ou créer un bilan pour un exercice

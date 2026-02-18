@@ -52,7 +52,12 @@ export function authenticate(req: Request, _res: Response, next: NextFunction): 
     const token = authHeader.substring(7);
 
     const decoded = jwt.verify(token, env.jwt.secret) as JwtTokenPayload;
-    
+
+    // S'assurer que seuls les access tokens sont acceptes (pas les refresh tokens)
+    if (decoded.type !== 'access') {
+      throw new UnauthorizedError('Type de token invalide');
+    }
+
     // Mapper le payload JWT vers AuthUser avec id comme alias de sub
     req.user = {
       id: decoded.sub,
@@ -94,7 +99,7 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction): 
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
       const decoded = jwt.verify(token, env.jwt.secret) as JwtTokenPayload;
-      
+
       req.user = {
         id: decoded.sub,
         sub: decoded.sub,

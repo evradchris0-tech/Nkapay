@@ -4,6 +4,7 @@
  */
 
 import bcrypt from 'bcrypt';
+import { randomInt } from 'crypto';
 
 const SALT_ROUNDS = 12;
 
@@ -22,13 +23,14 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 /**
- * Genere un mot de passe temporaire aleatoire
+ * Genere un mot de passe temporaire aleatoire (cryptographiquement securise)
  */
 export function generateTemporaryPassword(length = 8): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
   let password = '';
   for (let i = 0; i < length; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
+    password += chars.charAt(randomInt(chars.length));
   }
   return password;
 }
+

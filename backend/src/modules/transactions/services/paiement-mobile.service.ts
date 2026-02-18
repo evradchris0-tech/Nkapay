@@ -2,6 +2,7 @@
  * Service pour la gestion des paiements mobiles
  */
 
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
 import { PaiementMobile, StatutPaiementMobile, OperateurMobile } from '../entities/paiement-mobile.entity';
@@ -14,8 +15,18 @@ import {
 } from '../dto/paiement-mobile.dto';
 
 export class PaiementMobileService {
-  private paiementMobileRepository = AppDataSource.getRepository(PaiementMobile);
-  private transactionRepository = AppDataSource.getRepository(Transaction);
+  private _paiementRepo?: Repository<PaiementMobile>;
+  private _transactionRepo?: Repository<Transaction>;
+
+  private get paiementMobileRepository(): Repository<PaiementMobile> {
+    if (!this._paiementRepo) this._paiementRepo = AppDataSource.getRepository(PaiementMobile);
+    return this._paiementRepo;
+  }
+
+  private get transactionRepository(): Repository<Transaction> {
+    if (!this._transactionRepo) this._transactionRepo = AppDataSource.getRepository(Transaction);
+    return this._transactionRepo;
+  }
 
   /**
    * Créer un nouveau paiement mobile (initier)
@@ -178,8 +189,8 @@ export class PaiementMobileService {
       throw new NotFoundError('Paiement mobile non trouvé');
     }
 
-    if (paiement.statut !== StatutPaiementMobile.EN_ATTENTE && 
-        paiement.statut !== StatutPaiementMobile.ENVOYE) {
+    if (paiement.statut !== StatutPaiementMobile.EN_ATTENTE &&
+      paiement.statut !== StatutPaiementMobile.ENVOYE) {
       throw new BadRequestError('Ce paiement ne peut pas être confirmé');
     }
 

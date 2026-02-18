@@ -9,12 +9,15 @@ import {
   Column,
   CreateDateColumn,
   ManyToOne,
+  OneToMany,
   JoinColumn,
   Index,
 } from 'typeorm';
 import { ExerciceMembre } from '../../exercices/entities/exercice-membre.entity';
 import { TypeEvenementSecours } from './type-evenement-secours.entity';
 import { Transaction } from '../../transactions/entities/transaction.entity';
+import { Reunion } from '../../reunions/entities/reunion.entity';
+import { PieceJustificativeSecours } from './piece-justificative-secours.entity';
 
 export enum StatutEvenementSecours {
   DECLARE = 'DECLARE',
@@ -83,4 +86,21 @@ export class EvenementSecours {
 
   @Column({ name: 'motif_refus', type: 'text', nullable: true })
   motifRefus: string | null;
+
+  @Index()
+  @Column({ name: 'reunion_id', type: 'uuid', nullable: true })
+  reunionId: string | null;
+
+  @ManyToOne(() => Reunion, { nullable: true })
+  @JoinColumn({ name: 'reunion_id' })
+  reunion: Reunion | null;
+
+  @Column({ name: 'montant_decaisse', type: 'decimal', precision: 15, scale: 2, nullable: true })
+  montantDecaisse: number | null;
+
+  @Column({ name: 'date_decaissement', type: 'timestamp', nullable: true })
+  dateDecaissement: Date | null;
+
+  @OneToMany(() => PieceJustificativeSecours, (pj) => pj.evenementSecours)
+  piecesJustificatives: PieceJustificativeSecours[];
 }

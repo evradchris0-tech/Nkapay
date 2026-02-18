@@ -2,6 +2,7 @@
  * Service pour la gestion des cotisations dues mensuelles
  */
 
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
 import { CotisationDueMensuelle } from '../entities/cotisation-due-mensuelle.entity';
@@ -15,9 +16,24 @@ import {
 } from '../dto/dues.dto';
 
 export class CotisationDueService {
-  private cotisationDueRepository = AppDataSource.getRepository(CotisationDueMensuelle);
-  private reunionRepository = AppDataSource.getRepository(Reunion);
-  private exerciceMembreRepository = AppDataSource.getRepository(ExerciceMembre);
+  private _cotisationDueRepo?: Repository<CotisationDueMensuelle>;
+  private _reunionRepo?: Repository<Reunion>;
+  private _exerciceMembreRepo?: Repository<ExerciceMembre>;
+
+  private get cotisationDueRepository(): Repository<CotisationDueMensuelle> {
+    if (!this._cotisationDueRepo) this._cotisationDueRepo = AppDataSource.getRepository(CotisationDueMensuelle);
+    return this._cotisationDueRepo;
+  }
+
+  private get reunionRepository(): Repository<Reunion> {
+    if (!this._reunionRepo) this._reunionRepo = AppDataSource.getRepository(Reunion);
+    return this._reunionRepo;
+  }
+
+  private get exerciceMembreRepository(): Repository<ExerciceMembre> {
+    if (!this._exerciceMembreRepo) this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
+    return this._exerciceMembreRepo;
+  }
 
   /**
    * Générer les cotisations dues pour une réunion
@@ -121,6 +137,28 @@ export class CotisationDueService {
     return cotisations.map((c: CotisationDueMensuelle) => this.formatResponse(c));
   }
 
+
+  /**
+   * Enregistrer un paiement par contexte (Réunion + Membre)
+   * Utile pour les transactions validées qui n'ont pas l'ID de la cotisation due
+   */
+  async payerParContexte(reunionId: string, exerciceMembreId: string, montant: number, transactionalEntityManager?: any): Promise<CotisationDueResponseDto | null> {
+    const repository = transactionalEntityManager
+      ? transactionalEntityManager.getRepository(CotisationDueMensuelle)
+      : this.cotisationDueRepository;
+
+    const cotisationDue = await repository.findOne({
+      where: { reunionId, exerciceMembreId }
+    });
+
+    if (!cotisationDue) {
+      // Pas de cotisation due trouvée (peut-être pas encore générée ?)
+      return null;
+    }
+
+    return this.payer(cotisationDue.id, { montantPaye: montant }, transactionalEntityManager);
+  }
+
   /**
    * Enregistrer un paiement de cotisation (alias)
    */
@@ -131,8 +169,12 @@ export class CotisationDueService {
   /**
    * Enregistrer un paiement de cotisation
    */
-  async payer(id: string, data: UpdateDuePaymentDto): Promise<CotisationDueResponseDto> {
-    const cotisationDue = await this.cotisationDueRepository.findOne({
+  async payer(id: string, data: UpdateDuePaymentDto, transactionalEntityManager?: any): Promise<CotisationDueResponseDto> {
+    const repository = transactionalEntityManager
+      ? transactionalEntityManager.getRepository(CotisationDueMensuelle)
+      : this.cotisationDueRepository;
+
+    const cotisationDue = await repository.findOne({
       where: { id }
     });
 
@@ -153,7 +195,7 @@ export class CotisationDueService {
       cotisationDue.soldeRestant = Math.max(0, cotisationDue.soldeRestant);
     }
 
-    await this.cotisationDueRepository.save(cotisationDue);
+    await repository.save(cotisationDue);
     return this.findById(id);
   }
 

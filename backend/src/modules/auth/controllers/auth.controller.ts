@@ -5,10 +5,23 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/auth.service';
+import { UtilisateurService } from '../../utilisateurs/services/utilisateur.service';
 import { LoginDto, RefreshTokenDto, LogoutDto } from '../dtos/auth.dto';
 import { ApiResponse } from '../../../shared/utils/api-response.util';
 
-const authService = new AuthService();
+// Lazy initialization pour eviter d'appeler getRepository() avant DataSource.initialize()
+let authService: AuthService;
+let utilisateurService: UtilisateurService;
+
+function getAuthService(): AuthService {
+  if (!authService) authService = new AuthService();
+  return authService;
+}
+
+function getUtilisateurService(): UtilisateurService {
+  if (!utilisateurService) utilisateurService = new UtilisateurService();
+  return utilisateurService;
+}
 
 /**
  * POST /auth/login
@@ -20,7 +33,7 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
     const adresseIp = req.ip || req.socket.remoteAddress || 'unknown';
     const userAgent = req.get('user-agent');
 
-    const result = await authService.login(dto, adresseIp, userAgent);
+    const result = await getAuthService().login(dto, adresseIp, userAgent);
 
     res.json(ApiResponse.success(result, 'Connexion reussie'));
   } catch (error) {
@@ -36,7 +49,7 @@ export async function refreshToken(req: Request, res: Response, next: NextFuncti
   try {
     const dto: RefreshTokenDto = req.body;
 
-    const result = await authService.refreshToken(dto.refreshToken);
+    const result = await getAuthService().refreshToken(dto.refreshToken);
 
     res.json(ApiResponse.success(result));
   } catch (error) {
@@ -51,14 +64,14 @@ export async function refreshToken(req: Request, res: Response, next: NextFuncti
 export async function logout(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const dto: LogoutDto = req.body;
-    const utilisateurId = (req as Request & { user?: { id: string } }).user?.id;
+    const utilisateurId = req.user?.id;
 
     if (!utilisateurId) {
       res.status(401).json(ApiResponse.error('Non authentifie'));
       return;
     }
 
-    await authService.logout(utilisateurId, dto.sessionId, dto.toutesLesSessions);
+    await getAuthService().logout(utilisateurId, dto.sessionId, dto.toutesLesSessions);
 
     res.json(ApiResponse.success(null, 'Deconnexion reussie'));
   } catch (error) {
@@ -72,14 +85,14 @@ export async function logout(req: Request, res: Response, next: NextFunction): P
  */
 export async function getSessions(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const utilisateurId = (req as Request & { user?: { id: string } }).user?.id;
+    const utilisateurId = req.user?.id;
 
     if (!utilisateurId) {
       res.status(401).json(ApiResponse.error('Non authentifie'));
       return;
     }
 
-    const sessions = await authService.getActiveSessions(utilisateurId);
+    const sessions = await getAuthService().getActiveSessions(utilisateurId);
 
     // On masque les hashs de token dans la reponse
     const sessionsResponse = sessions.map((s) => ({
@@ -102,21 +115,18 @@ export async function getSessions(req: Request, res: Response, next: NextFunctio
  */
 export async function getCurrentUser(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const user = (req as Request & { user?: { id: string; prenom: string; nom: string; telephone1: string; estSuperAdmin: boolean; doitChangerMotDePasse: boolean } }).user;
+    const userId = req.user?.id;
 
-    if (!user) {
+    if (!userId) {
       res.status(401).json(ApiResponse.error('Non authentifie'));
       return;
     }
 
-    res.json(ApiResponse.success({
-      id: user.id,
-      prenom: user.prenom,
-      nom: user.nom,
-      telephone1: user.telephone1,
-      estSuperAdmin: user.estSuperAdmin,
-      doitChangerMotDePasse: user.doitChangerMotDePasse,
-    }));
+    // Charger l'utilisateur depuis la base de donnees (le JWT ne contient que l'ID)
+    const utilisateur = await getUtilisateurService().findById(userId);
+    const responseDto = getUtilisateurService().toResponseDto(utilisateur);
+
+    res.json(ApiResponse.success(responseDto));
   } catch (error) {
     next(error);
   }

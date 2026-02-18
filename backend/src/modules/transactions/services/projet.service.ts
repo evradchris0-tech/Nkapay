@@ -2,6 +2,7 @@
  * Service pour la gestion des projets d'exercice
  */
 
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
 import { Projet } from '../entities/projet.entity';
@@ -15,9 +16,24 @@ import {
 } from '../dto/projet.dto';
 
 export class ProjetService {
-  private projetRepository = AppDataSource.getRepository(Projet);
-  private exerciceRepository = AppDataSource.getRepository(Exercice);
-  private exerciceMembreRepository = AppDataSource.getRepository(ExerciceMembre);
+  private _projetRepo?: Repository<Projet>;
+  private _exerciceRepo?: Repository<Exercice>;
+  private _exerciceMembreRepo?: Repository<ExerciceMembre>;
+
+  private get projetRepository(): Repository<Projet> {
+    if (!this._projetRepo) this._projetRepo = AppDataSource.getRepository(Projet);
+    return this._projetRepo;
+  }
+
+  private get exerciceRepository(): Repository<Exercice> {
+    if (!this._exerciceRepo) this._exerciceRepo = AppDataSource.getRepository(Exercice);
+    return this._exerciceRepo;
+  }
+
+  private get exerciceMembreRepository(): Repository<ExerciceMembre> {
+    if (!this._exerciceMembreRepo) this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
+    return this._exerciceMembreRepo;
+  }
 
   /**
    * Créer un nouveau projet
@@ -233,4 +249,3 @@ export class ProjetService {
 }
 
 export const projetService = new ProjetService();
-

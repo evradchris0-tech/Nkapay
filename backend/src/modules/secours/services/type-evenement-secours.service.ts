@@ -2,6 +2,7 @@
  * Service pour la gestion des types d'evenements de secours
  */
 
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
 import { TypeEvenementSecours } from '../entities/type-evenement-secours.entity';
@@ -11,20 +12,25 @@ import {
   TypeEvenementSecoursResponseDto,
 } from '../dto/type-evenement-secours.dto';
 
-const typeEvenementSecoursRepository = AppDataSource.getRepository(TypeEvenementSecours);
-
 export class TypeEvenementSecoursService {
+  private _repo?: Repository<TypeEvenementSecours>;
+
+  private get typeEvenementSecoursRepository(): Repository<TypeEvenementSecours> {
+    if (!this._repo) this._repo = AppDataSource.getRepository(TypeEvenementSecours);
+    return this._repo;
+  }
+
   /**
    * Creer un nouveau type d'evenement de secours
    */
   async create(dto: CreateTypeEvenementSecoursDto): Promise<TypeEvenementSecoursResponseDto> {
     // Verifier l'unicite du code
-    const existing = await typeEvenementSecoursRepository.findOne({ where: { code: dto.code } });
+    const existing = await this.typeEvenementSecoursRepository.findOne({ where: { code: dto.code } });
     if (existing) {
       throw new BadRequestError(`Un type d'evenement de secours avec le code "${dto.code}" existe deja`);
     }
 
-    const typeEvenement = typeEvenementSecoursRepository.create({
+    const typeEvenement = this.typeEvenementSecoursRepository.create({
       code: dto.code,
       libelle: dto.libelle,
       description: dto.description || null,
@@ -33,7 +39,7 @@ export class TypeEvenementSecoursService {
       estActif: dto.estActif !== undefined ? dto.estActif : true,
     });
 
-    const saved = await typeEvenementSecoursRepository.save(typeEvenement);
+    const saved = await this.typeEvenementSecoursRepository.save(typeEvenement);
     return this.toResponseDto(saved);
   }
 
@@ -41,21 +47,21 @@ export class TypeEvenementSecoursService {
    * Lister tous les types d'evenement de secours
    */
   async findAll(includeInactive = false): Promise<TypeEvenementSecoursResponseDto[]> {
-    const queryBuilder = typeEvenementSecoursRepository.createQueryBuilder('te');
+    const queryBuilder = this.typeEvenementSecoursRepository.createQueryBuilder('te');
 
     if (!includeInactive) {
       queryBuilder.where('te.estActif = :estActif', { estActif: true });
     }
 
     const types = await queryBuilder.orderBy('te.ordreAffichage', 'ASC').getMany();
-    return types.map((t) => this.toResponseDto(t));
+    return types.map((t: TypeEvenementSecours) => this.toResponseDto(t));
   }
 
   /**
    * Trouver un type d'evenement de secours par ID
    */
   async findById(id: string): Promise<TypeEvenementSecoursResponseDto> {
-    const typeEvenement = await typeEvenementSecoursRepository.findOne({ where: { id } });
+    const typeEvenement = await this.typeEvenementSecoursRepository.findOne({ where: { id } });
     if (!typeEvenement) {
       throw new NotFoundError(`Type d'evenement de secours non trouve: ${id}`);
     }
@@ -66,7 +72,7 @@ export class TypeEvenementSecoursService {
    * Mettre a jour un type d'evenement de secours
    */
   async update(id: string, dto: UpdateTypeEvenementSecoursDto): Promise<TypeEvenementSecoursResponseDto> {
-    const typeEvenement = await typeEvenementSecoursRepository.findOne({ where: { id } });
+    const typeEvenement = await this.typeEvenementSecoursRepository.findOne({ where: { id } });
     if (!typeEvenement) {
       throw new NotFoundError(`Type d'evenement de secours non trouve: ${id}`);
     }
@@ -77,7 +83,7 @@ export class TypeEvenementSecoursService {
     if (dto.ordreAffichage !== undefined) typeEvenement.ordreAffichage = dto.ordreAffichage;
     if (dto.estActif !== undefined) typeEvenement.estActif = dto.estActif;
 
-    const saved = await typeEvenementSecoursRepository.save(typeEvenement);
+    const saved = await this.typeEvenementSecoursRepository.save(typeEvenement);
     return this.toResponseDto(saved);
   }
 
@@ -85,12 +91,12 @@ export class TypeEvenementSecoursService {
    * Supprimer un type d'evenement de secours (soft delete)
    */
   async delete(id: string): Promise<void> {
-    const typeEvenement = await typeEvenementSecoursRepository.findOne({ where: { id } });
+    const typeEvenement = await this.typeEvenementSecoursRepository.findOne({ where: { id } });
     if (!typeEvenement) {
       throw new NotFoundError(`Type d'evenement de secours non trouve: ${id}`);
     }
 
-    await typeEvenementSecoursRepository.softRemove(typeEvenement);
+    await this.typeEvenementSecoursRepository.softRemove(typeEvenement);
   }
 
   /**

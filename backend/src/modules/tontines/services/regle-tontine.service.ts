@@ -2,21 +2,37 @@
  * Service pour la gestion des règles au niveau tontine
  */
 
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
 import { RegleTontine } from '../entities/regle-tontine.entity';
 import { RuleDefinition } from '../entities/rule-definition.entity';
 import { Tontine } from '../entities/tontine.entity';
-import { 
-  CreateRegleTontineDto, 
-  UpdateRegleTontineDto, 
-  RegleTontineResponseDto 
+import {
+  CreateRegleTontineDto,
+  UpdateRegleTontineDto,
+  RegleTontineResponseDto
 } from '../dto/regle-tontine.dto';
 
 export class RegleTontineService {
-  private regleTontineRepository = AppDataSource.getRepository(RegleTontine);
-  private ruleDefinitionRepository = AppDataSource.getRepository(RuleDefinition);
-  private tontineRepository = AppDataSource.getRepository(Tontine);
+  private _regleTontineRepo?: Repository<RegleTontine>;
+  private _ruleDefinitionRepo?: Repository<RuleDefinition>;
+  private _tontineRepo?: Repository<Tontine>;
+
+  private get regleTontineRepository(): Repository<RegleTontine> {
+    if (!this._regleTontineRepo) this._regleTontineRepo = AppDataSource.getRepository(RegleTontine);
+    return this._regleTontineRepo;
+  }
+
+  private get ruleDefinitionRepository(): Repository<RuleDefinition> {
+    if (!this._ruleDefinitionRepo) this._ruleDefinitionRepo = AppDataSource.getRepository(RuleDefinition);
+    return this._ruleDefinitionRepo;
+  }
+
+  private get tontineRepository(): Repository<Tontine> {
+    if (!this._tontineRepo) this._tontineRepo = AppDataSource.getRepository(Tontine);
+    return this._tontineRepo;
+  }
 
   /**
    * Créer ou mettre à jour une règle pour une tontine
@@ -43,9 +59,9 @@ export class RegleTontineService {
     }
 
     let regleTontine = await this.regleTontineRepository.findOne({
-      where: { 
-        tontineId: data.tontineId, 
-        ruleDefinitionId: data.ruleDefinitionId 
+      where: {
+        tontineId: data.tontineId,
+        ruleDefinitionId: data.ruleDefinitionId
       },
       relations: ['ruleDefinition']
     });

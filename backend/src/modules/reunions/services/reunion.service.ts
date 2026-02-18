@@ -2,6 +2,7 @@
  * Service pour la gestion des reunions
  */
 
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
 import { Reunion, StatutReunion } from '../entities/reunion.entity';
@@ -16,19 +17,43 @@ import {
   ReunionResponseDto,
   ReunionFiltersDto,
 } from '../dto/reunion.dto';
-
-const reunionRepository = AppDataSource.getRepository(Reunion);
-const exerciceRepository = AppDataSource.getRepository(Exercice);
-const exerciceMembreRepository = AppDataSource.getRepository(ExerciceMembre);
-const presenceRepository = AppDataSource.getRepository(PresenceReunion);
+import { cotisationDueService } from '../../transactions/services/cotisation-due.service';
+import { potDuService } from '../../transactions/services/pot-du.service';
+import { epargneDueService } from '../../transactions/services/epargne-due.service';
+import { regleExerciceService } from '../../exercices/services/regle-exercice.service';
 
 export class ReunionService {
+  private _reunionRepo?: Repository<Reunion>;
+  private _exerciceRepo?: Repository<Exercice>;
+  private _exerciceMembreRepo?: Repository<ExerciceMembre>;
+  private _presenceRepo?: Repository<PresenceReunion>;
+
+  private get reunionRepository(): Repository<Reunion> {
+    if (!this._reunionRepo) this._reunionRepo = AppDataSource.getRepository(Reunion);
+    return this._reunionRepo;
+  }
+
+  private get exerciceRepository(): Repository<Exercice> {
+    if (!this._exerciceRepo) this._exerciceRepo = AppDataSource.getRepository(Exercice);
+    return this._exerciceRepo;
+  }
+
+  private get exerciceMembreRepository(): Repository<ExerciceMembre> {
+    if (!this._exerciceMembreRepo) this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
+    return this._exerciceMembreRepo;
+  }
+
+  private get presenceRepository(): Repository<PresenceReunion> {
+    if (!this._presenceRepo) this._presenceRepo = AppDataSource.getRepository(PresenceReunion);
+    return this._presenceRepo;
+  }
+
   /**
    * Planifier une nouvelle reunion
    */
   async planifier(dto: PlanifierReunionDto): Promise<ReunionResponseDto> {
     // Verifier que l'exercice existe et est ouvert
-    const exercice = await exerciceRepository.findOne({ where: { id: dto.exerciceId } });
+    const exercice = await this.exerciceRepository.findOne({ where: { id: dto.exerciceId } });
     if (!exercice) {
       throw new NotFoundError(`Exercice non trouve: ${dto.exerciceId}`);
     }
@@ -37,7 +62,7 @@ export class ReunionService {
     }
 
     // Verifier l'unicite du numero de reunion
-    const existing = await reunionRepository.findOne({
+    const existing = await this.reunionRepository.findOne({
       where: { exerciceId: dto.exerciceId, numeroReunion: dto.numeroReunion },
     });
     if (existing) {
@@ -46,13 +71,13 @@ export class ReunionService {
 
     // Verifier l'hote si fourni
     if (dto.hoteExerciceMembreId) {
-      const hote = await exerciceMembreRepository.findOne({ where: { id: dto.hoteExerciceMembreId } });
+      const hote = await this.exerciceMembreRepository.findOne({ where: { id: dto.hoteExerciceMembreId } });
       if (!hote || hote.exerciceId !== dto.exerciceId) {
         throw new BadRequestError('L\'hote n\'est pas un membre de cet exercice');
       }
     }
 
-    const reunion = reunionRepository.create({
+    const reunion = this.reunionRepository.create({
       exerciceId: dto.exerciceId,
       numeroReunion: dto.numeroReunion,
       dateReunion: new Date(dto.dateReunion),
@@ -62,7 +87,7 @@ export class ReunionService {
       statut: StatutReunion.PLANIFIEE,
     });
 
-    const saved = await reunionRepository.save(reunion);
+    const saved = await this.reunionRepository.save(reunion);
 
     return this.findById(saved.id);
   }
@@ -71,7 +96,7 @@ export class ReunionService {
    * Ouvrir une reunion
    */
   async ouvrir(id: string, dto?: OuvrirReunionDto): Promise<ReunionResponseDto> {
-    const reunion = await reunionRepository.findOne({
+    const reunion = await this.reunionRepository.findOne({
       where: { id },
       relations: ['exercice'],
     });
@@ -90,15 +115,15 @@ export class ReunionService {
       reunion.heureDebut = dto.heureDebut;
     }
 
-    await reunionRepository.save(reunion);
+    await this.reunionRepository.save(reunion);
 
     // Creer les enregistrements de presence pour tous les membres actifs
-    const membres = await exerciceMembreRepository.find({
+    const membres = await this.exerciceMembreRepository.find({
       where: { exerciceId: reunion.exerciceId, statut: StatutExerciceMembre.ACTIF },
     });
 
     const presences = membres.map((membre) =>
-      presenceRepository.create({
+      this.presenceRepository.create({
         reunionId: reunion.id,
         exerciceMembreId: membre.id,
         estPresent: false,
@@ -107,7 +132,39 @@ export class ReunionService {
     );
 
     if (presences.length > 0) {
-      await presenceRepository.save(presences);
+      await this.presenceRepository.save(presences);
+    }
+
+    // Générer automatiquement les dettes mensuelles (cotisations, pots, épargnes)
+    // en utilisant les règles effectives de l'exercice
+    try {
+      // 1. Cotisations
+      const montantCotisation = await regleExerciceService.getEffectiveValueByCle(
+        reunion.exerciceId, 'COTISATION_MENSUELLE_MIN'
+      );
+      if (montantCotisation) {
+        await cotisationDueService.genererPourReunion(reunion.id, Number(montantCotisation));
+      }
+
+      // 2. Pots
+      const montantPot = await regleExerciceService.getEffectiveValueByCle(
+        reunion.exerciceId, 'POT_MENSUEL_MONTANT'
+      );
+      if (montantPot) {
+        await potDuService.genererPourReunion(reunion.id, Number(montantPot));
+      }
+
+      // 3. Épargnes (si > 0)
+      const montantEpargneMin = await regleExerciceService.getEffectiveValueByCle(
+        reunion.exerciceId, 'EPARGNE_MENSUELLE_MIN'
+      );
+      const montantEpargne = Number(montantEpargneMin || 0);
+      // On génère toujours la ligne d'épargne, même à 0, pour permettre le suivi
+      await epargneDueService.genererPourReunion(reunion.id, montantEpargne);
+
+    } catch (error) {
+      // Log warning but don't fail, manual generation possible
+      console.warn('Erreur lors de la génération automatique des dues:', error);
     }
 
     return this.findById(id);
@@ -117,7 +174,7 @@ export class ReunionService {
    * Cloturer une reunion
    */
   async cloturer(id: string, dto: CloturerReunionDto): Promise<ReunionResponseDto> {
-    const reunion = await reunionRepository.findOne({ where: { id } });
+    const reunion = await this.reunionRepository.findOne({ where: { id } });
 
     if (!reunion) {
       throw new NotFoundError(`Reunion non trouvee: ${id}`);
@@ -131,7 +188,7 @@ export class ReunionService {
     reunion.clotureeLe = new Date();
     reunion.clotureeParExerciceMembreId = dto.clotureeParExerciceMembreId;
 
-    await reunionRepository.save(reunion);
+    await this.reunionRepository.save(reunion);
 
     return this.findById(id);
   }
@@ -140,7 +197,7 @@ export class ReunionService {
    * Annuler une reunion
    */
   async annuler(id: string): Promise<ReunionResponseDto> {
-    const reunion = await reunionRepository.findOne({ where: { id } });
+    const reunion = await this.reunionRepository.findOne({ where: { id } });
 
     if (!reunion) {
       throw new NotFoundError(`Reunion non trouvee: ${id}`);
@@ -151,7 +208,7 @@ export class ReunionService {
     }
 
     reunion.statut = StatutReunion.ANNULEE;
-    await reunionRepository.save(reunion);
+    await this.reunionRepository.save(reunion);
 
     return this.findById(id);
   }
@@ -160,7 +217,7 @@ export class ReunionService {
    * Lister les reunions
    */
   async findAll(filters?: ReunionFiltersDto): Promise<ReunionResponseDto[]> {
-    const queryBuilder = reunionRepository
+    const queryBuilder = this.reunionRepository
       .createQueryBuilder('reunion')
       .leftJoinAndSelect('reunion.hote', 'hote')
       .leftJoinAndSelect('hote.adhesionTontine', 'adhesionHote')
@@ -191,7 +248,7 @@ export class ReunionService {
    * Trouver une reunion par ID
    */
   async findById(id: string): Promise<ReunionResponseDto> {
-    const reunion = await reunionRepository.findOne({
+    const reunion = await this.reunionRepository.findOne({
       where: { id },
       relations: ['hote', 'hote.adhesionTontine', 'hote.adhesionTontine.utilisateur', 'presences'],
     });
@@ -207,7 +264,7 @@ export class ReunionService {
    * Mettre a jour une reunion
    */
   async update(id: string, dto: UpdateReunionDto): Promise<ReunionResponseDto> {
-    const reunion = await reunionRepository.findOne({ where: { id } });
+    const reunion = await this.reunionRepository.findOne({ where: { id } });
 
     if (!reunion) {
       throw new NotFoundError(`Reunion non trouvee: ${id}`);
@@ -222,7 +279,7 @@ export class ReunionService {
     if (dto.lieu !== undefined) reunion.lieu = dto.lieu;
     if (dto.hoteExerciceMembreId !== undefined) reunion.hoteExerciceMembreId = dto.hoteExerciceMembreId;
 
-    await reunionRepository.save(reunion);
+    await this.reunionRepository.save(reunion);
 
     return this.findById(id);
   }
@@ -231,7 +288,7 @@ export class ReunionService {
    * Supprimer une reunion
    */
   async delete(id: string): Promise<void> {
-    const reunion = await reunionRepository.findOne({ where: { id } });
+    const reunion = await this.reunionRepository.findOne({ where: { id } });
 
     if (!reunion) {
       throw new NotFoundError(`Reunion non trouvee: ${id}`);
@@ -241,7 +298,7 @@ export class ReunionService {
       throw new BadRequestError('Seule une reunion planifiee ou annulee peut etre supprimee');
     }
 
-    await reunionRepository.remove(reunion);
+    await this.reunionRepository.remove(reunion);
   }
 
   /**
@@ -255,7 +312,7 @@ export class ReunionService {
       nombrePresents = entity.presences.filter((p) => p.estPresent).length;
       nombreAbsents = entity.presences.filter((p) => !p.estPresent).length;
     } else {
-      const presences = await presenceRepository.find({ where: { reunionId: entity.id } });
+      const presences = await this.presenceRepository.find({ where: { reunionId: entity.id } });
       nombrePresents = presences.filter((p) => p.estPresent).length;
       nombreAbsents = presences.filter((p) => !p.estPresent).length;
     }

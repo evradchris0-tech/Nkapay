@@ -2,6 +2,7 @@
  * Service pour la gestion des distributions
  */
 
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
 import { Distribution, StatutDistribution } from '../entities/distribution.entity';
@@ -16,29 +17,44 @@ import {
   DistributionsSummaryDto,
 } from '../dto/distribution.dto';
 
-const distributionRepository = AppDataSource.getRepository(Distribution);
-const exerciceMembreRepository = AppDataSource.getRepository(ExerciceMembre);
-const reunionRepository = AppDataSource.getRepository(Reunion);
-
 export class DistributionService {
+  private _distributionRepo?: Repository<Distribution>;
+  private _exerciceMembreRepo?: Repository<ExerciceMembre>;
+  private _reunionRepo?: Repository<Reunion>;
+
+  private get distributionRepository(): Repository<Distribution> {
+    if (!this._distributionRepo) this._distributionRepo = AppDataSource.getRepository(Distribution);
+    return this._distributionRepo;
+  }
+
+  private get exerciceMembreRepository(): Repository<ExerciceMembre> {
+    if (!this._exerciceMembreRepo) this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
+    return this._exerciceMembreRepo;
+  }
+
+  private get reunionRepository(): Repository<Reunion> {
+    if (!this._reunionRepo) this._reunionRepo = AppDataSource.getRepository(Reunion);
+    return this._reunionRepo;
+  }
+
   /**
    * Creer une distribution
    */
   async create(dto: CreateDistributionDto): Promise<DistributionResponseDto> {
     // Verifier le beneficiaire
-    const beneficiaire = await exerciceMembreRepository.findOne({ where: { id: dto.exerciceMembreBeneficiaireId } });
+    const beneficiaire = await this.exerciceMembreRepository.findOne({ where: { id: dto.exerciceMembreBeneficiaireId } });
     if (!beneficiaire) {
       throw new NotFoundError(`Membre d'exercice non trouve: ${dto.exerciceMembreBeneficiaireId}`);
     }
 
     // Verifier la reunion
-    const reunion = await reunionRepository.findOne({ where: { id: dto.reunionId } });
+    const reunion = await this.reunionRepository.findOne({ where: { id: dto.reunionId } });
     if (!reunion) {
       throw new NotFoundError(`Reunion non trouvee: ${dto.reunionId}`);
     }
 
     // Verifier l'unicite de l'ordre
-    const existingOrdre = await distributionRepository.findOne({
+    const existingOrdre = await this.distributionRepository.findOne({
       where: { reunionId: dto.reunionId, ordre: dto.ordre },
     });
     if (existingOrdre) {
@@ -48,7 +64,7 @@ export class DistributionService {
     const montantRetenu = dto.montantRetenu || 0;
     const montantNet = dto.montantBrut - montantRetenu;
 
-    const distribution = distributionRepository.create({
+    const distribution = this.distributionRepository.create({
       reunionId: dto.reunionId,
       exerciceMembreBeneficiaireId: dto.exerciceMembreBeneficiaireId,
       ordre: dto.ordre,
@@ -59,7 +75,7 @@ export class DistributionService {
       commentaire: dto.commentaire || null,
     });
 
-    const saved = await distributionRepository.save(distribution);
+    const saved = await this.distributionRepository.save(distribution);
     return this.findById(saved.id);
   }
 
@@ -67,7 +83,7 @@ export class DistributionService {
    * Effectuer une distribution
    */
   async distribuer(id: string, dto: DistribuerDto): Promise<DistributionResponseDto> {
-    const distribution = await distributionRepository.findOne({ where: { id } });
+    const distribution = await this.distributionRepository.findOne({ where: { id } });
     if (!distribution) {
       throw new NotFoundError(`Distribution non trouvee: ${id}`);
     }
@@ -82,7 +98,7 @@ export class DistributionService {
       distribution.transactionId = dto.transactionId;
     }
 
-    await distributionRepository.save(distribution);
+    await this.distributionRepository.save(distribution);
     return this.findById(id);
   }
 
@@ -90,7 +106,7 @@ export class DistributionService {
    * Annuler une distribution
    */
   async annuler(id: string): Promise<DistributionResponseDto> {
-    const distribution = await distributionRepository.findOne({ where: { id } });
+    const distribution = await this.distributionRepository.findOne({ where: { id } });
     if (!distribution) {
       throw new NotFoundError(`Distribution non trouvee: ${id}`);
     }
@@ -101,7 +117,7 @@ export class DistributionService {
 
     distribution.statut = StatutDistribution.ANNULEE;
 
-    await distributionRepository.save(distribution);
+    await this.distributionRepository.save(distribution);
     return this.findById(id);
   }
 
@@ -109,7 +125,7 @@ export class DistributionService {
    * Lister les distributions
    */
   async findAll(filters?: DistributionFiltersDto): Promise<{ distributions: DistributionResponseDto[]; total: number }> {
-    const queryBuilder = distributionRepository
+    const queryBuilder = this.distributionRepository
       .createQueryBuilder('d')
       .leftJoinAndSelect('d.exerciceMembreBeneficiaire', 'em')
       .leftJoinAndSelect('em.adhesionTontine', 'adhesion')
@@ -142,7 +158,7 @@ export class DistributionService {
    * Trouver une distribution par ID
    */
   async findById(id: string): Promise<DistributionResponseDto> {
-    const distribution = await distributionRepository.findOne({
+    const distribution = await this.distributionRepository.findOne({
       where: { id },
       relations: ['exerciceMembreBeneficiaire', 'exerciceMembreBeneficiaire.adhesionTontine', 'exerciceMembreBeneficiaire.adhesionTontine.utilisateur'],
     });
@@ -158,7 +174,7 @@ export class DistributionService {
    * Trouver les distributions d'une reunion
    */
   async findByReunion(reunionId: string): Promise<DistributionResponseDto[]> {
-    const distributions = await distributionRepository.find({
+    const distributions = await this.distributionRepository.find({
       where: { reunionId },
       relations: ['exerciceMembreBeneficiaire', 'exerciceMembreBeneficiaire.adhesionTontine', 'exerciceMembreBeneficiaire.adhesionTontine.utilisateur'],
       order: { ordre: 'ASC' },
@@ -170,7 +186,7 @@ export class DistributionService {
    * Mettre a jour une distribution
    */
   async update(id: string, dto: UpdateDistributionDto): Promise<DistributionResponseDto> {
-    const distribution = await distributionRepository.findOne({ where: { id } });
+    const distribution = await this.distributionRepository.findOne({ where: { id } });
     if (!distribution) {
       throw new NotFoundError(`Distribution non trouvee: ${id}`);
     }
@@ -181,7 +197,7 @@ export class DistributionService {
 
     if (dto.ordre !== undefined) {
       // Verifier l'unicite du nouvel ordre
-      const existingOrdre = await distributionRepository.findOne({
+      const existingOrdre = await this.distributionRepository.findOne({
         where: { reunionId: distribution.reunionId, ordre: dto.ordre },
       });
       if (existingOrdre && existingOrdre.id !== id) {
@@ -203,7 +219,7 @@ export class DistributionService {
     // Recalculer le montant net
     distribution.montantNet = Number(distribution.montantBrut) - Number(distribution.montantRetenu);
 
-    await distributionRepository.save(distribution);
+    await this.distributionRepository.save(distribution);
     return this.findById(id);
   }
 
@@ -211,7 +227,7 @@ export class DistributionService {
    * Supprimer une distribution
    */
   async delete(id: string): Promise<void> {
-    const distribution = await distributionRepository.findOne({ where: { id } });
+    const distribution = await this.distributionRepository.findOne({ where: { id } });
     if (!distribution) {
       throw new NotFoundError(`Distribution non trouvee: ${id}`);
     }
@@ -220,7 +236,7 @@ export class DistributionService {
       throw new BadRequestError('Une distribution effectuee ne peut pas etre supprimee');
     }
 
-    await distributionRepository.remove(distribution);
+    await this.distributionRepository.remove(distribution);
   }
 
   /**

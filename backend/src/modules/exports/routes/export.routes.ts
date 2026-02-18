@@ -1,173 +1,102 @@
 /**
- * Routes pour les exports PDF
+ * Routes d'exportation PDF / Excel
+ *
+ * Endpoints:
+ * GET /exports/releve/:exerciceMembreId?format=pdf|excel
+ * GET /exports/rapport-exercice/:exerciceId?format=pdf|excel
+ * GET /exports/rapport-mensuel/:reunionId?format=pdf|excel
  */
 
 import { Router } from 'express';
+import { param, query } from 'express-validator';
+import { authenticate, validate } from '../../../shared';
 import { exportController } from '../controllers/export.controller';
-import { authenticate } from '../../../shared/middlewares';
 
 const router = Router();
 
-// Toutes les routes d'export nécessitent une authentification
-router.use(authenticate);
+// Validators communs
+const formatValidator = [
+    query('format')
+        .optional()
+        .isIn(['pdf', 'excel'])
+        .withMessage('Format invalide. Valeurs acceptées: pdf, excel'),
+];
+
+const uuidParamValidator = (name: string) => [
+    param(name)
+        .isUUID()
+        .withMessage(`Format d'identifiant ${name} invalide`),
+];
+
+// ============================================================================
+// SWAGGER SCHEMAS
+// ============================================================================
 
 /**
  * @swagger
  * tags:
  *   name: Exports
- *   description: Export de documents PDF
+ *   description: Génération et téléchargement de rapports PDF / Excel
  */
 
 /**
  * @swagger
- * /exports/tontines/{id}/fiche:
+ * /exports/releve/{exerciceMembreId}:
  *   get:
- *     summary: Exporter la fiche d'une tontine en PDF
+ *     summary: Télécharger le relevé de compte individuel
+ *     description: |
+ *       Génère un relevé de compte PDF ou Excel pour un membre d'exercice.
+ *       Contient le résumé financier, le détail des transactions, et les infos de prêt.
  *     tags: [Exports]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: exerciceMembreId
  *         required: true
  *         schema:
  *           type: string
  *           format: uuid
- *         description: ID de la tontine
+ *         description: ID du membre d'exercice
+ *       - in: query
+ *         name: format
+ *         schema:
+ *           type: string
+ *           enum: [pdf, excel]
+ *           default: pdf
+ *         description: Format du fichier (pdf ou excel)
  *     responses:
  *       200:
- *         description: Document PDF
+ *         description: Fichier téléchargé
  *         content:
  *           application/pdf:
  *             schema:
  *               type: string
  *               format: binary
- *       404:
- *         description: Tontine non trouvée
- */
-router.get('/tontines/:id/fiche', exportController.exportTontineFiche.bind(exportController));
-
-/**
- * @swagger
- * /exports/tontines/{id}/membres:
- *   get:
- *     summary: Exporter la liste des membres d'une tontine en PDF
- *     tags: [Exports]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: ID de la tontine
- *     responses:
- *       200:
- *         description: Document PDF
- *         content:
- *           application/pdf:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
  *             schema:
  *               type: string
  *               format: binary
  *       404:
- *         description: Tontine non trouvée
+ *         description: Membre non trouvé
  */
-router.get('/tontines/:id/membres', exportController.exportMembresListe.bind(exportController));
+router.get(
+    '/releve/:exerciceMembreId',
+    authenticate,
+    ...uuidParamValidator('exerciceMembreId'),
+    ...formatValidator,
+    validate,
+    exportController.exportReleveCompte.bind(exportController),
+);
 
 /**
  * @swagger
- * /exports/exercices/{id}/bilan:
+ * /exports/rapport-exercice/{exerciceId}:
  *   get:
- *     summary: Exporter le bilan d'un exercice en PDF
- *     tags: [Exports]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: ID de l'exercice
- *     responses:
- *       200:
- *         description: Document PDF
- *         content:
- *           application/pdf:
- *             schema:
- *               type: string
- *               format: binary
- *       404:
- *         description: Exercice non trouvé
- */
-router.get('/exercices/:id/bilan', exportController.exportExerciceBilan.bind(exportController));
-
-/**
- * @swagger
- * /exports/reunions/{id}/rapport:
- *   get:
- *     summary: Exporter le rapport d'une réunion en PDF
- *     tags: [Exports]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: ID de la réunion
- *     responses:
- *       200:
- *         description: Document PDF
- *         content:
- *           application/pdf:
- *             schema:
- *               type: string
- *               format: binary
- *       404:
- *         description: Réunion non trouvée
- */
-router.get('/reunions/:id/rapport', exportController.exportReunionRapport.bind(exportController));
-
-/**
- * @swagger
- * /exports/exercices/{id}/financier:
- *   get:
- *     summary: Exporter le rapport financier d'un exercice en PDF
- *     tags: [Exports]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: ID de l'exercice
- *     responses:
- *       200:
- *         description: Document PDF
- *         content:
- *           application/pdf:
- *             schema:
- *               type: string
- *               format: binary
- *       404:
- *         description: Exercice non trouvé
- */
-router.get('/exercices/:id/financier', exportController.exportRapportFinancier.bind(exportController));
-
-/**
- * @swagger
- * /exports/exercices/{exerciceId}/membres/{membreId}/releve:
- *   get:
- *     summary: Exporter le relevé de compte d'un membre en PDF
+ *     summary: Télécharger le rapport de fin d'exercice
+ *     description: |
+ *       Génère un rapport complet PDF ou Excel pour un exercice.
+ *       Contient le résumé financier global, le détail par membre, et l'historique des réunions.
  *     tags: [Exports]
  *     security:
  *       - bearerAuth: []
@@ -178,83 +107,64 @@ router.get('/exercices/:id/financier', exportController.exportRapportFinancier.b
  *         schema:
  *           type: string
  *           format: uuid
- *         description: ID de l'exercice
- *       - in: path
- *         name: membreId
- *         required: true
+ *       - in: query
+ *         name: format
  *         schema:
  *           type: string
- *           format: uuid
- *         description: ID du membre
+ *           enum: [pdf, excel]
+ *           default: pdf
  *     responses:
  *       200:
- *         description: Document PDF
- *         content:
- *           application/pdf:
- *             schema:
- *               type: string
- *               format: binary
+ *         description: Fichier téléchargé
  *       404:
- *         description: Exercice ou membre non trouvé
+ *         description: Exercice non trouvé
  */
-router.get('/exercices/:exerciceId/membres/:membreId/releve', exportController.exportReleveMembre.bind(exportController));
+router.get(
+    '/rapport-exercice/:exerciceId',
+    authenticate,
+    ...uuidParamValidator('exerciceId'),
+    ...formatValidator,
+    validate,
+    exportController.exportRapportExercice.bind(exportController),
+);
 
 /**
  * @swagger
- * /exports/exercices/{id}/prets:
+ * /exports/rapport-mensuel/{reunionId}:
  *   get:
- *     summary: Exporter le rapport des prêts d'un exercice en PDF
+ *     summary: Télécharger le rapport mensuel (par réunion)
+ *     description: |
+ *       Génère un rapport mensuel PDF ou Excel pour une réunion spécifique.
+ *       Contient les cotisations, remboursements de prêts, pénalités, et le bénéficiaire.
  *     tags: [Exports]
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: reunionId
  *         required: true
  *         schema:
  *           type: string
  *           format: uuid
- *         description: ID de l'exercice
- *     responses:
- *       200:
- *         description: Document PDF
- *         content:
- *           application/pdf:
- *             schema:
- *               type: string
- *               format: binary
- *       404:
- *         description: Exercice non trouvé
- */
-router.get('/exercices/:id/prets', exportController.exportRapportPrets.bind(exportController));
-
-/**
- * @swagger
- * /exports/exercices/{id}/penalites:
- *   get:
- *     summary: Exporter le rapport des pénalités d'un exercice en PDF
- *     tags: [Exports]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
+ *       - in: query
+ *         name: format
  *         schema:
  *           type: string
- *           format: uuid
- *         description: ID de l'exercice
+ *           enum: [pdf, excel]
+ *           default: pdf
  *     responses:
  *       200:
- *         description: Document PDF
- *         content:
- *           application/pdf:
- *             schema:
- *               type: string
- *               format: binary
+ *         description: Fichier téléchargé
  *       404:
- *         description: Exercice non trouvé
+ *         description: Réunion non trouvée
  */
-router.get('/exercices/:id/penalites', exportController.exportRapportPenalites.bind(exportController));
+router.get(
+    '/rapport-mensuel/:reunionId',
+    authenticate,
+    ...uuidParamValidator('reunionId'),
+    ...formatValidator,
+    validate,
+    exportController.exportRapportMensuel.bind(exportController),
+);
 
-export default router;
+export const exportRoutes = router;

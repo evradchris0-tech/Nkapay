@@ -1,15 +1,16 @@
 /**
- * Contrôleur pour la gestion des dues (cotisations, pots, inscriptions)
+ * Contrôleur pour la gestion des dues (cotisations, pots, inscriptions, épargnes)
  */
 
 import { Request, Response, NextFunction } from 'express';
 import { cotisationDueService } from '../services/cotisation-due.service';
 import { potDuService } from '../services/pot-du.service';
 import { inscriptionDueService } from '../services/inscription-due.service';
+import { epargneDueService } from '../services/epargne-due.service';
 
 export class DuesController {
   // ==================== COTISATIONS ====================
-  
+
   /**
    * @swagger
    * /api/cotisations-dues/reunion/{reunionId}/generer:
@@ -42,7 +43,7 @@ export class DuesController {
   async genererCotisations(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await cotisationDueService.genererPourReunion(
-        req.params.reunionId, 
+        req.params.reunionId,
         req.body.montantCotisation
       );
       res.json(result);
@@ -177,7 +178,7 @@ export class DuesController {
   async genererPots(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await potDuService.genererPourReunion(
-        req.params.reunionId, 
+        req.params.reunionId,
         req.body.montantPot
       );
       res.json(result);
@@ -339,7 +340,7 @@ export class DuesController {
   async genererInscriptions(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await inscriptionDueService.genererPourExercice(
-        req.params.exerciceId, 
+        req.params.exerciceId,
         req.body.montantInscription
       );
       res.json(result);
@@ -460,6 +461,141 @@ export class DuesController {
   async findInscriptionsEnRetard(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await inscriptionDueService.findEnRetard(req.query.exerciceId as string);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ==================== EPARGNES ====================
+
+  /**
+   * @swagger
+   * /api/epargnes-dues/reunion/{reunionId}/generer:
+   *   post:
+   *     summary: Générer les épargnes dues pour une réunion
+   *     tags: [EpargnesDues]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: reunionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - montantEpargne
+   *             properties:
+   *               montantEpargne:
+   *                 type: number
+   *     responses:
+   *       200:
+   *         description: Épargnes générées
+   */
+  async genererEpargnes(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await epargneDueService.genererPourReunion(
+        req.params.reunionId,
+        req.body.montantEpargne
+      );
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/epargnes-dues/{id}/payer:
+   *   post:
+   *     summary: Enregistrer un paiement d'épargne
+   *     tags: [EpargnesDues]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - montantPaye
+   *             properties:
+   *               montantPaye:
+   *                 type: number
+   *     responses:
+   *       200:
+   *         description: Paiement enregistré
+   */
+  async payerEpargne(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await epargneDueService.payer(req.params.id, req.body);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/epargnes-dues/reunion/{reunionId}:
+   *   get:
+   *     summary: Récupérer les épargnes d'une réunion
+   *     tags: [EpargnesDues]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: reunionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Liste des épargnes
+   */
+  async findEpargnesByReunion(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await epargneDueService.findByReunion(req.params.reunionId);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/epargnes-dues/reunion/{reunionId}/stats:
+   *   get:
+   *     summary: Statistiques des épargnes d'une réunion
+   *     tags: [EpargnesDues]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: reunionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Statistiques
+   */
+  async getEpargneStats(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await epargneDueService.getStatsByReunion(req.params.reunionId);
       res.json(result);
     } catch (error) {
       next(error);

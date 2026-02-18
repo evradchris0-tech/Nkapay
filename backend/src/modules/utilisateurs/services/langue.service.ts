@@ -3,6 +3,7 @@
  * Gestion des langues du système
  */
 
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { Langue } from '../entities/langue.entity';
 import {
@@ -12,34 +13,38 @@ import {
 } from '../dto/langue.dto';
 import { NotFoundError, BadRequestError } from '../../../shared';
 
-const langueRepository = AppDataSource.getRepository(Langue);
-
 export class LangueService {
+  private _repository?: Repository<Langue>;
+
+  private get langueRepository(): Repository<Langue> {
+    if (!this._repository) this._repository = AppDataSource.getRepository(Langue);
+    return this._repository;
+  }
   /**
    * Créer une nouvelle langue
    */
   async create(dto: CreateLangueDto): Promise<LangueResponseDto> {
     // Vérifier unicité du code
-    const existing = await langueRepository.findOne({
+    const existing = await this.langueRepository.findOne({
       where: { code: dto.code },
     });
 
     if (existing) {
-      throw new BadRequestError( `La langue avec le code '${dto.code}' existe déjà`);
+      throw new BadRequestError(`La langue avec le code '${dto.code}' existe déjà`);
     }
 
     // Si c'est la langue par défaut, désactiver les autres
     if (dto.estDefaut) {
-      await langueRepository.update({}, { estDefaut: false });
+      await this.langueRepository.update({}, { estDefaut: false });
     }
 
-    const langue = langueRepository.create({
+    const langue = this.langueRepository.create({
       code: dto.code,
       nom: dto.nom,
       estDefaut: dto.estDefaut ?? false,
     });
 
-    const saved = await langueRepository.save(langue);
+    const saved = await this.langueRepository.save(langue);
     return this.toResponseDto(saved);
   }
 
@@ -47,7 +52,7 @@ export class LangueService {
    * Récupérer toutes les langues
    */
   async findAll(): Promise<LangueResponseDto[]> {
-    const langues = await langueRepository.find({
+    const langues = await this.langueRepository.find({
       order: { nom: 'ASC' },
     });
     return langues.map((l) => this.toResponseDto(l));
@@ -57,10 +62,10 @@ export class LangueService {
    * Récupérer une langue par ID
    */
   async findById(id: string): Promise<LangueResponseDto> {
-    const langue = await langueRepository.findOne({ where: { id } });
+    const langue = await this.langueRepository.findOne({ where: { id } });
 
     if (!langue) {
-      throw new NotFoundError( 'Langue non trouvée');
+      throw new NotFoundError('Langue non trouvée');
     }
 
     return this.toResponseDto(langue);
@@ -70,10 +75,10 @@ export class LangueService {
    * Récupérer une langue par code
    */
   async findByCode(code: string): Promise<LangueResponseDto> {
-    const langue = await langueRepository.findOne({ where: { code } });
+    const langue = await this.langueRepository.findOne({ where: { code } });
 
     if (!langue) {
-      throw new NotFoundError( 'Langue non trouvée');
+      throw new NotFoundError('Langue non trouvée');
     }
 
     return this.toResponseDto(langue);
@@ -83,7 +88,7 @@ export class LangueService {
    * Récupérer la langue par défaut
    */
   async findDefault(): Promise<LangueResponseDto | null> {
-    const langue = await langueRepository.findOne({ where: { estDefaut: true } });
+    const langue = await this.langueRepository.findOne({ where: { estDefaut: true } });
     return langue ? this.toResponseDto(langue) : null;
   }
 
@@ -91,21 +96,21 @@ export class LangueService {
    * Mettre à jour une langue
    */
   async update(id: string, dto: UpdateLangueDto): Promise<LangueResponseDto> {
-    const langue = await langueRepository.findOne({ where: { id } });
+    const langue = await this.langueRepository.findOne({ where: { id } });
 
     if (!langue) {
-      throw new NotFoundError( 'Langue non trouvée');
+      throw new NotFoundError('Langue non trouvée');
     }
 
     // Si on définit cette langue comme défaut, désactiver les autres
     if (dto.estDefaut === true) {
-      await langueRepository.update({}, { estDefaut: false });
+      await this.langueRepository.update({}, { estDefaut: false });
     }
 
     if (dto.nom !== undefined) langue.nom = dto.nom;
     if (dto.estDefaut !== undefined) langue.estDefaut = dto.estDefaut;
 
-    const updated = await langueRepository.save(langue);
+    const updated = await this.langueRepository.save(langue);
     return this.toResponseDto(updated);
   }
 
@@ -113,24 +118,24 @@ export class LangueService {
    * Supprimer une langue
    */
   async delete(id: string): Promise<void> {
-    const langue = await langueRepository.findOne({
+    const langue = await this.langueRepository.findOne({
       where: { id },
       relations: ['utilisateurs'],
     });
 
     if (!langue) {
-      throw new NotFoundError( 'Langue non trouvée');
+      throw new NotFoundError('Langue non trouvée');
     }
 
     if (langue.estDefaut) {
-      throw new BadRequestError( 'Impossible de supprimer la langue par défaut');
+      throw new BadRequestError('Impossible de supprimer la langue par défaut');
     }
 
     if (langue.utilisateurs && langue.utilisateurs.length > 0) {
-      throw new BadRequestError( 'Cette langue est utilisée par des utilisateurs');
+      throw new BadRequestError('Cette langue est utilisée par des utilisateurs');
     }
 
-    await langueRepository.remove(langue);
+    await this.langueRepository.remove(langue);
   }
 
   /**

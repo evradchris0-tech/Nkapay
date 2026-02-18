@@ -2,6 +2,7 @@
  * Service pour la gestion des adhesions aux tontines
  */
 
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
 import { AdhesionTontine, RoleMembre, StatutAdhesion } from '../entities/adhesion-tontine.entity';
@@ -15,29 +16,44 @@ import {
   AdhesionFiltersDto,
 } from '../dto/adhesion-tontine.dto';
 
-const adhesionRepository = AppDataSource.getRepository(AdhesionTontine);
-const tontineRepository = AppDataSource.getRepository(Tontine);
-const utilisateurRepository = AppDataSource.getRepository(Utilisateur);
-
 export class AdhesionTontineService {
+  private _adhesionRepo?: Repository<AdhesionTontine>;
+  private _tontineRepo?: Repository<Tontine>;
+  private _utilisateurRepo?: Repository<Utilisateur>;
+
+  private get adhesionRepository(): Repository<AdhesionTontine> {
+    if (!this._adhesionRepo) this._adhesionRepo = AppDataSource.getRepository(AdhesionTontine);
+    return this._adhesionRepo;
+  }
+
+  private get tontineRepository(): Repository<Tontine> {
+    if (!this._tontineRepo) this._tontineRepo = AppDataSource.getRepository(Tontine);
+    return this._tontineRepo;
+  }
+
+  private get utilisateurRepository(): Repository<Utilisateur> {
+    if (!this._utilisateurRepo) this._utilisateurRepo = AppDataSource.getRepository(Utilisateur);
+    return this._utilisateurRepo;
+  }
+
   /**
    * Creer une nouvelle adhesion
    */
   async create(dto: CreateAdhesionDto): Promise<AdhesionResponseDto> {
     // Verifier que la tontine existe
-    const tontine = await tontineRepository.findOne({ where: { id: dto.tontineId } });
+    const tontine = await this.tontineRepository.findOne({ where: { id: dto.tontineId } });
     if (!tontine) {
       throw new NotFoundError(`Tontine non trouvee: ${dto.tontineId}`);
     }
 
     // Verifier que l'utilisateur existe
-    const utilisateur = await utilisateurRepository.findOne({ where: { id: dto.utilisateurId } });
+    const utilisateur = await this.utilisateurRepository.findOne({ where: { id: dto.utilisateurId } });
     if (!utilisateur) {
       throw new NotFoundError(`Utilisateur non trouve: ${dto.utilisateurId}`);
     }
 
     // Verifier que l'utilisateur n'est pas deja membre
-    const existingAdhesion = await adhesionRepository.findOne({
+    const existingAdhesion = await this.adhesionRepository.findOne({
       where: { tontineId: dto.tontineId, utilisateurId: dto.utilisateurId },
     });
     if (existingAdhesion) {
@@ -45,14 +61,14 @@ export class AdhesionTontineService {
     }
 
     // Verifier l'unicite du matricule dans la tontine
-    const existingMatricule = await adhesionRepository.findOne({
+    const existingMatricule = await this.adhesionRepository.findOne({
       where: { tontineId: dto.tontineId, matricule: dto.matricule },
     });
     if (existingMatricule) {
       throw new BadRequestError(`Le matricule "${dto.matricule}" existe deja dans cette tontine`);
     }
 
-    const adhesion = adhesionRepository.create({
+    const adhesion = this.adhesionRepository.create({
       tontineId: dto.tontineId,
       utilisateurId: dto.utilisateurId,
       matricule: dto.matricule,
@@ -63,10 +79,10 @@ export class AdhesionTontineService {
       quartierResidence: dto.quartierResidence || null,
     });
 
-    const saved = await adhesionRepository.save(adhesion);
+    const saved = await this.adhesionRepository.save(adhesion);
 
     // Recharger avec les relations
-    const reloaded = await adhesionRepository.findOne({
+    const reloaded = await this.adhesionRepository.findOne({
       where: { id: saved.id },
       relations: ['tontine', 'utilisateur'],
     });
@@ -78,7 +94,7 @@ export class AdhesionTontineService {
    * Lister les adhesions d'une tontine
    */
   async findByTontine(tontineId: string, filters?: AdhesionFiltersDto): Promise<AdhesionListItemDto[]> {
-    const queryBuilder = adhesionRepository
+    const queryBuilder = this.adhesionRepository
       .createQueryBuilder('adhesion')
       .leftJoinAndSelect('adhesion.utilisateur', 'utilisateur')
       .where('adhesion.tontineId = :tontineId', { tontineId });
@@ -101,7 +117,7 @@ export class AdhesionTontineService {
    * Trouver une adhesion par ID
    */
   async findById(id: string): Promise<AdhesionResponseDto> {
-    const adhesion = await adhesionRepository.findOne({
+    const adhesion = await this.adhesionRepository.findOne({
       where: { id },
       relations: ['tontine', 'utilisateur'],
     });
@@ -117,7 +133,7 @@ export class AdhesionTontineService {
    * Trouver l'adhesion d'un utilisateur a une tontine
    */
   async findByUserAndTontine(utilisateurId: string, tontineId: string): Promise<AdhesionResponseDto> {
-    const adhesion = await adhesionRepository.findOne({
+    const adhesion = await this.adhesionRepository.findOne({
       where: { utilisateurId, tontineId },
       relations: ['tontine', 'utilisateur'],
     });
@@ -133,7 +149,7 @@ export class AdhesionTontineService {
    * Trouver toutes les adhesions d'un utilisateur
    */
   async findByUser(utilisateurId: string): Promise<AdhesionResponseDto[]> {
-    const adhesions = await adhesionRepository.find({
+    const adhesions = await this.adhesionRepository.find({
       where: { utilisateurId },
       relations: ['tontine', 'utilisateur'],
       order: { dateAdhesionTontine: 'DESC' },
@@ -146,7 +162,7 @@ export class AdhesionTontineService {
    * Mettre a jour une adhesion
    */
   async update(id: string, dto: UpdateAdhesionDto): Promise<AdhesionResponseDto> {
-    const adhesion = await adhesionRepository.findOne({
+    const adhesion = await this.adhesionRepository.findOne({
       where: { id },
       relations: ['tontine', 'utilisateur'],
     });
@@ -157,7 +173,7 @@ export class AdhesionTontineService {
 
     // Verifier l'unicite du nouveau matricule si change
     if (dto.matricule && dto.matricule !== adhesion.matricule) {
-      const existingMatricule = await adhesionRepository.findOne({
+      const existingMatricule = await this.adhesionRepository.findOne({
         where: { tontineId: adhesion.tontineId, matricule: dto.matricule },
       });
       if (existingMatricule) {
@@ -171,9 +187,9 @@ export class AdhesionTontineService {
     if (dto.photo !== undefined) adhesion.photo = dto.photo;
     if (dto.quartierResidence !== undefined) adhesion.quartierResidence = dto.quartierResidence;
 
-    const updated = await adhesionRepository.save(adhesion);
+    const updated = await this.adhesionRepository.save(adhesion);
 
-    const reloaded = await adhesionRepository.findOne({
+    const reloaded = await this.adhesionRepository.findOne({
       where: { id: updated.id },
       relations: ['tontine', 'utilisateur'],
     });
@@ -206,7 +222,7 @@ export class AdhesionTontineService {
    * Compter les membres actifs d'une tontine
    */
   async countActiveMembers(tontineId: string): Promise<number> {
-    return adhesionRepository.count({
+    return this.adhesionRepository.count({
       where: { tontineId, statut: StatutAdhesion.ACTIVE },
     });
   }
@@ -215,12 +231,12 @@ export class AdhesionTontineService {
    * Supprimer une adhesion (soft delete)
    */
   async delete(id: string): Promise<void> {
-    const adhesion = await adhesionRepository.findOne({ where: { id } });
+    const adhesion = await this.adhesionRepository.findOne({ where: { id } });
     if (!adhesion) {
       throw new NotFoundError(`Adhesion non trouvee: ${id}`);
     }
 
-    await adhesionRepository.softRemove(adhesion);
+    await this.adhesionRepository.softRemove(adhesion);
   }
 
   /**

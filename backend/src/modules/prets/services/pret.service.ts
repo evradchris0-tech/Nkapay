@@ -2,6 +2,7 @@
  * Service pour la gestion des prets
  */
 
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
 import { Pret, StatutPret } from '../entities/pret.entity';
@@ -17,33 +18,85 @@ import {
   PretsSummaryDto,
 } from '../dto/pret.dto';
 
-const pretRepository = AppDataSource.getRepository(Pret);
-const exerciceMembreRepository = AppDataSource.getRepository(ExerciceMembre);
-const reunionRepository = AppDataSource.getRepository(Reunion);
+import { regleExerciceService } from '../../exercices/services/regle-exercice.service';
+
+// ... imports existing ...
 
 export class PretService {
+  private _pretRepo?: Repository<Pret>;
+  private _exerciceMembreRepo?: Repository<ExerciceMembre>;
+  private _reunionRepo?: Repository<Reunion>;
+
+  private get pretRepository(): Repository<Pret> {
+    if (!this._pretRepo) this._pretRepo = AppDataSource.getRepository(Pret);
+    return this._pretRepo;
+  }
+
+  private get exerciceMembreRepository(): Repository<ExerciceMembre> {
+    if (!this._exerciceMembreRepo) this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
+    return this._exerciceMembreRepo;
+  }
+
+  private get reunionRepository(): Repository<Reunion> {
+    if (!this._reunionRepo) this._reunionRepo = AppDataSource.getRepository(Reunion);
+    return this._reunionRepo;
+  }
+
+  // ... getters existing ...
+
   /**
    * Demander un pret
    */
   async create(dto: CreatePretDto): Promise<PretResponseDto> {
     // Verifier le membre
-    const membre = await exerciceMembreRepository.findOne({ where: { id: dto.exerciceMembreId } });
+    const membre = await this.exerciceMembreRepository.findOne({ where: { id: dto.exerciceMembreId } });
     if (!membre) {
       throw new NotFoundError(`Membre d'exercice non trouve: ${dto.exerciceMembreId}`);
     }
 
     // Verifier la reunion
-    const reunion = await reunionRepository.findOne({ where: { id: dto.reunionId } });
+    const reunion = await this.reunionRepository.findOne({ where: { id: dto.reunionId } });
     if (!reunion) {
       throw new NotFoundError(`Reunion non trouvee: ${dto.reunionId}`);
     }
 
-    // Calculer les interets
-    const tauxInteret = dto.tauxInteret || 0;
-    const montantInteret = dto.montantCapital * tauxInteret * dto.dureeMois / 12;
+    // 1. Récupérer le taux d'intérêt effectif (règle 'PRET_TAUX_INTERET')
+    let tauxInteret = dto.tauxInteret;
+    if (tauxInteret === undefined) {
+      // Tenter de récupérer depuis la config
+      const ruleValue = await regleExerciceService.getEffectiveValueByCle(membre.exerciceId, 'PRET_TAUX_INTERET');
+      if (ruleValue) {
+        tauxInteret = parseFloat(ruleValue);
+      } else {
+        // Fallback si aucune règle trouvée (ne devrait pas arriver avec les seeds)
+        tauxInteret = 0.05;
+      }
+    }
+
+    // 2. Valider la durée max (règle 'PRET_DUREE_MAX')
+    const maxDureeValue = await regleExerciceService.getEffectiveValueByCle(membre.exerciceId, 'PRET_DUREE_MAX');
+    if (maxDureeValue) {
+      const maxDuree = parseInt(maxDureeValue, 10);
+      if (dto.dureeMois > maxDuree) {
+        throw new BadRequestError(`La durée du prêt (${dto.dureeMois} mois) dépasse la durée maximale autorisée (${maxDuree} mois).`);
+      }
+    }
+
+    // 3. Valider le plafond (règle 'PRET_PLAFOND_MONTANT') - Optionnel
+    const plafondValue = await regleExerciceService.getEffectiveValueByCle(membre.exerciceId, 'PRET_PLAFOND_MONTANT');
+    if (plafondValue) {
+      const plafond = parseFloat(plafondValue);
+      if (dto.montantCapital > plafond) {
+        throw new BadRequestError(`Le montant demandé (${dto.montantCapital}) dépasse le plafond autorisé (${plafond}).`);
+      }
+    }
+
+    const montantInteret = dto.montantCapital * tauxInteret * dto.dureeMois / 12; // Formule intérêt flat (à ajuster selon besoin)
+    // NOTE: Si intérêt composé ou amortissement, logique plus complexe ici.
+
     const montantTotalDu = dto.montantCapital + montantInteret;
 
-    const pret = pretRepository.create({
+    const pret = this.pretRepository.create({
       reunionId: dto.reunionId,
       exerciceMembreId: dto.exerciceMembreId,
       montantCapital: dto.montantCapital,
@@ -56,7 +109,7 @@ export class PretService {
       commentaire: dto.commentaire || null,
     });
 
-    const saved = await pretRepository.save(pret);
+    const saved = await this.pretRepository.save(pret);
     return this.findById(saved.id);
   }
 
@@ -64,7 +117,7 @@ export class PretService {
    * Approuver un pret
    */
   async approuver(id: string, dto: ApprouverPretDto): Promise<PretResponseDto> {
-    const pret = await pretRepository.findOne({ where: { id } });
+    const pret = await this.pretRepository.findOne({ where: { id } });
     if (!pret) {
       throw new NotFoundError(`Pret non trouve: ${id}`);
     }
@@ -89,7 +142,7 @@ export class PretService {
     pret.dateApprobation = new Date();
     pret.approuveParExerciceMembreId = dto.approuveParExerciceMembreId;
 
-    await pretRepository.save(pret);
+    await this.pretRepository.save(pret);
     return this.findById(id);
   }
 
@@ -97,7 +150,7 @@ export class PretService {
    * Refuser un pret
    */
   async refuser(id: string, dto: RefuserPretDto): Promise<PretResponseDto> {
-    const pret = await pretRepository.findOne({ where: { id } });
+    const pret = await this.pretRepository.findOne({ where: { id } });
     if (!pret) {
       throw new NotFoundError(`Pret non trouve: ${id}`);
     }
@@ -109,7 +162,7 @@ export class PretService {
     pret.statut = StatutPret.REFUSE;
     pret.motifRefus = dto.motifRefus;
 
-    await pretRepository.save(pret);
+    await this.pretRepository.save(pret);
     return this.findById(id);
   }
 
@@ -117,7 +170,7 @@ export class PretService {
    * Decaisser un pret
    */
   async decaisser(id: string, dto: DecaisserPretDto): Promise<PretResponseDto> {
-    const pret = await pretRepository.findOne({ where: { id } });
+    const pret = await this.pretRepository.findOne({ where: { id } });
     if (!pret) {
       throw new NotFoundError(`Pret non trouve: ${id}`);
     }
@@ -136,11 +189,11 @@ export class PretService {
     pret.dateDecaissement = dateDecaissement;
     pret.dateEcheance = dateEcheance;
 
-    await pretRepository.save(pret);
+    await this.pretRepository.save(pret);
 
     // Mettre en cours automatiquement apres decaissement
     pret.statut = StatutPret.EN_COURS;
-    await pretRepository.save(pret);
+    await this.pretRepository.save(pret);
 
     return this.findById(id);
   }
@@ -149,7 +202,7 @@ export class PretService {
    * Marquer un pret comme solde
    */
   async solder(id: string): Promise<PretResponseDto> {
-    const pret = await pretRepository.findOne({ where: { id } });
+    const pret = await this.pretRepository.findOne({ where: { id } });
     if (!pret) {
       throw new NotFoundError(`Pret non trouve: ${id}`);
     }
@@ -166,7 +219,7 @@ export class PretService {
     pret.dateSolde = new Date();
     pret.capitalRestant = 0;
 
-    await pretRepository.save(pret);
+    await this.pretRepository.save(pret);
     return this.findById(id);
   }
 
@@ -174,7 +227,7 @@ export class PretService {
    * Marquer un pret en defaut
    */
   async mettreEnDefaut(id: string): Promise<PretResponseDto> {
-    const pret = await pretRepository.findOne({ where: { id } });
+    const pret = await this.pretRepository.findOne({ where: { id } });
     if (!pret) {
       throw new NotFoundError(`Pret non trouve: ${id}`);
     }
@@ -185,7 +238,7 @@ export class PretService {
 
     pret.statut = StatutPret.DEFAUT;
 
-    await pretRepository.save(pret);
+    await this.pretRepository.save(pret);
     return this.findById(id);
   }
 
@@ -193,7 +246,7 @@ export class PretService {
    * Lister les prets
    */
   async findAll(filters?: PretFiltersDto): Promise<{ prets: PretResponseDto[]; total: number }> {
-    const queryBuilder = pretRepository
+    const queryBuilder = this.pretRepository
       .createQueryBuilder('p')
       .leftJoinAndSelect('p.exerciceMembre', 'em')
       .leftJoinAndSelect('em.adhesionTontine', 'adhesion')
@@ -244,7 +297,7 @@ export class PretService {
    * Trouver un pret par ID
    */
   async findById(id: string): Promise<PretResponseDto> {
-    const pret = await pretRepository.findOne({
+    const pret = await this.pretRepository.findOne({
       where: { id },
       relations: ['exerciceMembre', 'exerciceMembre.adhesionTontine', 'exerciceMembre.adhesionTontine.utilisateur', 'remboursements'],
     });

@@ -1,5 +1,8 @@
 /**
  * DTOs pour le module Secours (Événements de secours)
+ * 
+ * Workflow CAYA:
+ * - Create → Soumettre → Valider/Refuser → Décaisser (automatique) ou Payer (manuel)
  */
 
 import { StatutEvenementSecours } from '../entities/evenement-secours.entity';
@@ -13,6 +16,7 @@ export interface CreateEvenementSecoursDto {
   dateEvenement: string; // Format YYYY-MM-DD
   description?: string;
   montantDemande?: number;
+  reunionId?: string; // Réunion lors de laquelle l'événement est déclaré
 }
 
 /**
@@ -32,10 +36,19 @@ export interface RefuserEvenementSecoursDto {
 }
 
 /**
- * DTO pour le paiement d'un événement de secours
+ * DTO pour le paiement manuel (lien vers transaction existante)
  */
 export interface PayerEvenementSecoursDto {
   transactionId: string;
+}
+
+/**
+ * DTO pour le décaissement automatisé (crée la transaction + met à jour le bilan)
+ */
+export interface DecaisserEvenementSecoursDto {
+  decaisseParExerciceMembreId: string; // Trésorier qui effectue le décaissement
+  reunionId?: string; // Réunion lors de laquelle le décaissement est fait
+  seuilAlerteFonds?: number; // Seuil en dessous duquel un renflouement est suggéré
 }
 
 /**
@@ -60,12 +73,21 @@ export interface EvenementSecoursResponseDto {
   description: string | null;
   montantDemande: number | null;
   montantApprouve: number | null;
+  montantDecaisse: number | null;
   statut: StatutEvenementSecours;
   dateDeclaration: Date;
   dateValidation: Date | null;
+  dateDecaissement: Date | null;
   valideParExerciceMembreId: string | null;
   transactionId: string | null;
+  reunionId: string | null;
   motifRefus: string | null;
+  piecesJustificatives: {
+    id: string;
+    typePiece: string;
+    nomFichier: string;
+    creeLe: Date;
+  }[];
 }
 
 /**
@@ -100,4 +122,18 @@ export interface SecoursSummaryDto {
   evenementsValides: number;
   evenementsPaues: number;
   evenementsRefuses: number;
+  soldeFonds?: number; // Solde actuel du fonds de secours
+}
+
+/**
+ * DTO pour les informations de renflouement
+ */
+export interface RenflouementInfoDto {
+  exerciceId: string;
+  soldeFondsActuel: number;
+  montantCible: number;
+  deficit: number;
+  membresActifs: number;
+  montantParMembre: number;
+  estNecessaire: boolean;
 }

@@ -2,6 +2,7 @@
  * Service pour la gestion des demandes d'adhesion
  */
 
+import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
 import { DemandeAdhesion, StatutDemandeAdhesion } from '../entities/demande-adhesion.entity';
@@ -17,30 +18,50 @@ import {
   DemandesSummaryDto,
 } from '../dto/demande-adhesion.dto';
 
-const demandeRepository = AppDataSource.getRepository(DemandeAdhesion);
-const utilisateurRepository = AppDataSource.getRepository(Utilisateur);
-const tontineRepository = AppDataSource.getRepository(Tontine);
-const adhesionRepository = AppDataSource.getRepository(AdhesionTontine);
-
 export class DemandeAdhesionService {
+  private _demandeRepo?: Repository<DemandeAdhesion>;
+  private _utilisateurRepo?: Repository<Utilisateur>;
+  private _tontineRepo?: Repository<Tontine>;
+  private _adhesionRepo?: Repository<AdhesionTontine>;
+
+  private get demandeRepository(): Repository<DemandeAdhesion> {
+    if (!this._demandeRepo) this._demandeRepo = AppDataSource.getRepository(DemandeAdhesion);
+    return this._demandeRepo;
+  }
+
+  private get utilisateurRepository(): Repository<Utilisateur> {
+    if (!this._utilisateurRepo) this._utilisateurRepo = AppDataSource.getRepository(Utilisateur);
+    return this._utilisateurRepo;
+  }
+
+  private get tontineRepository(): Repository<Tontine> {
+    if (!this._tontineRepo) this._tontineRepo = AppDataSource.getRepository(Tontine);
+    return this._tontineRepo;
+  }
+
+  private get adhesionRepository(): Repository<AdhesionTontine> {
+    if (!this._adhesionRepo) this._adhesionRepo = AppDataSource.getRepository(AdhesionTontine);
+    return this._adhesionRepo;
+  }
+
   /**
    * Creer une demande d'adhesion
    */
   async create(dto: CreateDemandeAdhesionDto): Promise<DemandeAdhesionResponseDto> {
     // Verifier l'utilisateur
-    const utilisateur = await utilisateurRepository.findOne({ where: { id: dto.utilisateurId } });
+    const utilisateur = await this.utilisateurRepository.findOne({ where: { id: dto.utilisateurId } });
     if (!utilisateur) {
       throw new NotFoundError(`Utilisateur non trouve: ${dto.utilisateurId}`);
     }
 
     // Verifier la tontine
-    const tontine = await tontineRepository.findOne({ where: { id: dto.tontineId } });
+    const tontine = await this.tontineRepository.findOne({ where: { id: dto.tontineId } });
     if (!tontine) {
       throw new NotFoundError(`Tontine non trouvee: ${dto.tontineId}`);
     }
 
     // Verifier qu'il n'y a pas de demande en cours
-    const existingDemande = await demandeRepository.findOne({
+    const existingDemande = await this.demandeRepository.findOne({
       where: {
         utilisateurId: dto.utilisateurId,
         tontineId: dto.tontineId,
@@ -52,7 +73,7 @@ export class DemandeAdhesionService {
     }
 
     // Verifier que l'utilisateur n'est pas deja membre
-    const existingAdhesion = await adhesionRepository.findOne({
+    const existingAdhesion = await this.adhesionRepository.findOne({
       where: {
         utilisateurId: dto.utilisateurId,
         tontineId: dto.tontineId,
@@ -63,14 +84,14 @@ export class DemandeAdhesionService {
       throw new BadRequestError('Vous etes deja membre de cette tontine');
     }
 
-    const demande = demandeRepository.create({
+    const demande = this.demandeRepository.create({
       utilisateurId: dto.utilisateurId,
       tontineId: dto.tontineId,
       message: dto.message || null,
       statut: StatutDemandeAdhesion.SOUMISE,
     });
 
-    const saved = await demandeRepository.save(demande);
+    const saved = await this.demandeRepository.save(demande);
     return this.findById(saved.id);
   }
 
@@ -78,7 +99,7 @@ export class DemandeAdhesionService {
    * Approuver une demande d'adhesion
    */
   async approuver(id: string, dto: ApprouverDemandeDto): Promise<DemandeAdhesionResponseDto> {
-    const demande = await demandeRepository.findOne({
+    const demande = await this.demandeRepository.findOne({
       where: { id },
       relations: ['utilisateur', 'tontine'],
     });
@@ -91,20 +112,20 @@ export class DemandeAdhesionService {
     }
 
     // Creer l'adhesion
-    const adhesion = adhesionRepository.create({
+    const adhesion = this.adhesionRepository.create({
       utilisateurId: demande.utilisateurId,
       tontineId: demande.tontineId,
       role: RoleMembre.MEMBRE,
       statut: StatutAdhesion.ACTIVE,
     });
-    await adhesionRepository.save(adhesion);
+    await this.adhesionRepository.save(adhesion);
 
     // Mettre a jour la demande
     demande.statut = StatutDemandeAdhesion.APPROUVEE;
     demande.traiteeLe = new Date();
     demande.traiteeParExerciceMembreId = dto.traiteeParExerciceMembreId;
 
-    await demandeRepository.save(demande);
+    await this.demandeRepository.save(demande);
     return this.findById(id);
   }
 
@@ -112,7 +133,7 @@ export class DemandeAdhesionService {
    * Refuser une demande d'adhesion
    */
   async refuser(id: string, dto: RefuserDemandeDto): Promise<DemandeAdhesionResponseDto> {
-    const demande = await demandeRepository.findOne({ where: { id } });
+    const demande = await this.demandeRepository.findOne({ where: { id } });
     if (!demande) {
       throw new NotFoundError(`Demande non trouvee: ${id}`);
     }
@@ -126,7 +147,7 @@ export class DemandeAdhesionService {
     demande.traiteeParExerciceMembreId = dto.traiteeParExerciceMembreId;
     demande.motifRefus = dto.motifRefus;
 
-    await demandeRepository.save(demande);
+    await this.demandeRepository.save(demande);
     return this.findById(id);
   }
 
@@ -134,7 +155,7 @@ export class DemandeAdhesionService {
    * Mettre une demande en cours de traitement
    */
   async mettreEnCours(id: string): Promise<DemandeAdhesionResponseDto> {
-    const demande = await demandeRepository.findOne({ where: { id } });
+    const demande = await this.demandeRepository.findOne({ where: { id } });
     if (!demande) {
       throw new NotFoundError(`Demande non trouvee: ${id}`);
     }
@@ -145,7 +166,7 @@ export class DemandeAdhesionService {
 
     demande.statut = StatutDemandeAdhesion.EN_COURS;
 
-    await demandeRepository.save(demande);
+    await this.demandeRepository.save(demande);
     return this.findById(id);
   }
 
@@ -153,7 +174,7 @@ export class DemandeAdhesionService {
    * Lister les demandes d'adhesion
    */
   async findAll(filters?: DemandeAdhesionFiltersDto): Promise<{ demandes: DemandeAdhesionResponseDto[]; total: number }> {
-    const queryBuilder = demandeRepository
+    const queryBuilder = this.demandeRepository
       .createQueryBuilder('d')
       .leftJoinAndSelect('d.utilisateur', 'utilisateur')
       .leftJoinAndSelect('d.tontine', 'tontine');
@@ -194,7 +215,7 @@ export class DemandeAdhesionService {
    * Trouver une demande par ID
    */
   async findById(id: string): Promise<DemandeAdhesionResponseDto> {
-    const demande = await demandeRepository.findOne({
+    const demande = await this.demandeRepository.findOne({
       where: { id },
       relations: ['utilisateur', 'tontine'],
     });
@@ -210,7 +231,7 @@ export class DemandeAdhesionService {
    * Supprimer une demande
    */
   async delete(id: string): Promise<void> {
-    const demande = await demandeRepository.findOne({ where: { id } });
+    const demande = await this.demandeRepository.findOne({ where: { id } });
     if (!demande) {
       throw new NotFoundError(`Demande non trouvee: ${id}`);
     }
@@ -219,7 +240,7 @@ export class DemandeAdhesionService {
       throw new BadRequestError('Une demande approuvee ne peut pas etre supprimee');
     }
 
-    await demandeRepository.remove(demande);
+    await this.demandeRepository.remove(demande);
   }
 
   /**
@@ -275,7 +296,7 @@ export class DemandeAdhesionService {
         id: entity.utilisateur.id,
         nom: entity.utilisateur.nom,
         prenom: entity.utilisateur.prenom,
-        
+
         telephone: entity.utilisateur.telephone1,
       } : undefined,
       tontineId: entity.tontineId,
