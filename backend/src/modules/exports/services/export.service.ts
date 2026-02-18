@@ -17,8 +17,10 @@ import { Penalite, StatutPenalite } from '../../penalites/entities/penalite.enti
 import { RemboursementPret } from '../../prets/entities/remboursement-pret.entity';
 import { Distribution, StatutDistribution } from '../../distributions/entities/distribution.entity';
 
-import { pdfExportService, ReleveCompteData, RapportExerciceData, RapportMensuelData } from './pdf-export.service';
+import { pdfExportService } from './pdf-export.service';
 import { excelExportService } from './excel-export.service';
+import { ExportStrategy } from '../interfaces/export-strategy.interface';
+import { ReleveCompteData, RapportExerciceData, RapportMensuelData } from '../types/export-data.types';
 
 // =============================================================================
 // Types
@@ -37,6 +39,11 @@ export interface ExportResult {
 // =============================================================================
 
 export class ExportService {
+    // Registre de stratégies (Design Pattern: Strategy)
+    private readonly strategies: Map<ExportFormat, ExportStrategy> = new Map<ExportFormat, ExportStrategy>([
+        ['pdf', pdfExportService],
+        ['excel', excelExportService],
+    ]);
     // Repositories lazy
     private get emRepo(): Repository<ExerciceMembre> { return AppDataSource.getRepository(ExerciceMembre); }
     private get exerciceRepo(): Repository<Exercice> { return AppDataSource.getRepository(Exercice); }
@@ -53,23 +60,20 @@ export class ExportService {
     // =========================================================================
 
     async exportReleveCompte(exerciceMembreId: string, format: ExportFormat): Promise<ExportResult> {
+        const strategy = this.strategies.get(format);
+        if (!strategy) throw new NotFoundError(`Format d'export non supporté: ${format}`);
+
         const data = await this.buildReleveCompteData(exerciceMembreId);
 
         const nomMembre = data.membre.nom.replace(/\s+/g, '_');
-        const ext = format === 'pdf' ? 'pdf' : 'xlsx';
-        const filename = `releve_${nomMembre}_${new Date().toISOString().substring(0, 10)}.${ext}`;
+        const filename = `releve_${nomMembre}_${new Date().toISOString().substring(0, 10)}.${strategy.getExtension()}`;
 
-        let buffer: Buffer;
-        if (format === 'pdf') {
-            buffer = await pdfExportService.genererReleveCompte(data);
-        } else {
-            buffer = await excelExportService.genererReleveCompte(data);
-        }
+        const buffer = await strategy.genererReleveCompte(data);
 
         return {
             buffer,
             filename,
-            contentType: format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            contentType: strategy.getContentType(),
         };
     }
 
@@ -180,19 +184,20 @@ export class ExportService {
     // =========================================================================
 
     async exportRapportExercice(exerciceId: string, format: ExportFormat): Promise<ExportResult> {
+        const strategy = this.strategies.get(format);
+        if (!strategy) throw new NotFoundError(`Format d'export non supporté: ${format}`);
+
         const data = await this.buildRapportExerciceData(exerciceId);
 
-        const ext = format === 'pdf' ? 'pdf' : 'xlsx';
-        const filename = `rapport_exercice_${new Date().toISOString().substring(0, 10)}.${ext}`;
+        const filename = `rapport_exercice_${new Date().toISOString().substring(0, 10)}.${strategy.getExtension()}`;
 
-        let buffer: Buffer;
-        if (format === 'pdf') {
-            buffer = await pdfExportService.genererRapportExercice(data);
-        } else {
-            buffer = await excelExportService.genererRapportExercice(data);
-        }
+        const buffer = await strategy.genererRapportExercice(data);
 
-        return { buffer, filename, contentType: format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' };
+        return {
+            buffer,
+            filename,
+            contentType: strategy.getContentType(),
+        };
     }
 
     private async buildRapportExerciceData(exerciceId: string): Promise<RapportExerciceData> {
@@ -333,19 +338,20 @@ export class ExportService {
     // =========================================================================
 
     async exportRapportMensuel(reunionId: string, format: ExportFormat): Promise<ExportResult> {
+        const strategy = this.strategies.get(format);
+        if (!strategy) throw new NotFoundError(`Format d'export non supporté: ${format}`);
+
         const data = await this.buildRapportMensuelData(reunionId);
 
-        const ext = format === 'pdf' ? 'pdf' : 'xlsx';
-        const filename = `rapport_reunion_${data.reunion.numero}_${new Date().toISOString().substring(0, 10)}.${ext}`;
+        const filename = `rapport_reunion_${data.reunion.numero}_${new Date().toISOString().substring(0, 10)}.${strategy.getExtension()}`;
 
-        let buffer: Buffer;
-        if (format === 'pdf') {
-            buffer = await pdfExportService.genererRapportMensuel(data);
-        } else {
-            buffer = await excelExportService.genererRapportMensuel(data);
-        }
+        const buffer = await strategy.genererRapportMensuel(data);
 
-        return { buffer, filename, contentType: format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' };
+        return {
+            buffer,
+            filename,
+            contentType: strategy.getContentType(),
+        };
     }
 
     private async buildRapportMensuelData(reunionId: string): Promise<RapportMensuelData> {

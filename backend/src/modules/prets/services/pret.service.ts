@@ -19,8 +19,20 @@ import {
 } from '../dto/pret.dto';
 
 import { regleExerciceService } from '../../exercices/services/regle-exercice.service';
+import { StateMachine } from '../../../shared/utils/state-machine.util';
 
-// ... imports existing ...
+// =============================================================================
+// Machine à États (Design Pattern: State)
+// =============================================================================
+
+const pretStateMachine = new StateMachine<StatutPret>([
+  { from: StatutPret.DEMANDE, to: StatutPret.APPROUVE, action: 'approuver' },
+  { from: StatutPret.DEMANDE, to: StatutPret.REFUSE, action: 'refuser' },
+  { from: StatutPret.APPROUVE, to: StatutPret.DECAISSE, action: 'decaisser' },
+  { from: StatutPret.DECAISSE, to: StatutPret.EN_COURS, action: 'activer' },
+  { from: StatutPret.EN_COURS, to: StatutPret.SOLDE, action: 'solder' },
+  { from: StatutPret.EN_COURS, to: StatutPret.DEFAUT, action: 'mettre en defaut' },
+], 'Prêt');
 
 export class PretService {
   private _pretRepo?: Repository<Pret>;
@@ -122,9 +134,7 @@ export class PretService {
       throw new NotFoundError(`Pret non trouve: ${id}`);
     }
 
-    if (pret.statut !== StatutPret.DEMANDE) {
-      throw new BadRequestError('Seul un pret en demande peut etre approuve');
-    }
+    pretStateMachine.assertTransition(pret.statut, StatutPret.APPROUVE);
 
     // Mettre a jour le taux et la duree si fournis
     if (dto.tauxInteret !== undefined) {
@@ -155,9 +165,7 @@ export class PretService {
       throw new NotFoundError(`Pret non trouve: ${id}`);
     }
 
-    if (pret.statut !== StatutPret.DEMANDE) {
-      throw new BadRequestError('Seul un pret en demande peut etre refuse');
-    }
+    pretStateMachine.assertTransition(pret.statut, StatutPret.REFUSE);
 
     pret.statut = StatutPret.REFUSE;
     pret.motifRefus = dto.motifRefus;
@@ -175,9 +183,7 @@ export class PretService {
       throw new NotFoundError(`Pret non trouve: ${id}`);
     }
 
-    if (pret.statut !== StatutPret.APPROUVE) {
-      throw new BadRequestError('Seul un pret approuve peut etre decaisse');
-    }
+    pretStateMachine.assertTransition(pret.statut, StatutPret.DECAISSE);
 
     const dateDecaissement = dto.dateDecaissement ? new Date(dto.dateDecaissement) : new Date();
 
@@ -192,6 +198,7 @@ export class PretService {
     await this.pretRepository.save(pret);
 
     // Mettre en cours automatiquement apres decaissement
+    pretStateMachine.assertTransition(pret.statut, StatutPret.EN_COURS);
     pret.statut = StatutPret.EN_COURS;
     await this.pretRepository.save(pret);
 
@@ -207,9 +214,7 @@ export class PretService {
       throw new NotFoundError(`Pret non trouve: ${id}`);
     }
 
-    if (pret.statut !== StatutPret.EN_COURS) {
-      throw new BadRequestError('Seul un pret en cours peut etre solde');
-    }
+    pretStateMachine.assertTransition(pret.statut, StatutPret.SOLDE);
 
     if (Number(pret.capitalRestant) > 0.01) {
       throw new BadRequestError('Le capital restant doit etre zero pour solder le pret');
@@ -232,9 +237,7 @@ export class PretService {
       throw new NotFoundError(`Pret non trouve: ${id}`);
     }
 
-    if (pret.statut !== StatutPret.EN_COURS) {
-      throw new BadRequestError('Seul un pret en cours peut etre mis en defaut');
-    }
+    pretStateMachine.assertTransition(pret.statut, StatutPret.DEFAUT);
 
     pret.statut = StatutPret.DEFAUT;
 

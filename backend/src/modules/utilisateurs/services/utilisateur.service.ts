@@ -15,28 +15,23 @@ import {
 import { NotFoundError, ConflictError, BadRequestError } from '../../../shared/errors/app-error';
 import { hashPassword, verifyPassword } from '../../auth/utils/password.util';
 
-export class UtilisateurService {
+import { BaseCrudService } from '../../../shared/services/base-crud.service';
+
+export class UtilisateurService extends BaseCrudService<
+  Utilisateur,
+  CreateUtilisateurDto,
+  UpdateUtilisateurDto,
+  UtilisateurResponseDto
+> {
   private _repository?: Repository<Utilisateur>;
 
-  private get repository(): Repository<Utilisateur> {
+  protected get repository(): Repository<Utilisateur> {
     if (!this._repository) this._repository = AppDataSource.getRepository(Utilisateur);
     return this._repository;
   }
 
-  /**
-   * Recherche un utilisateur par ID
-   */
-  async findById(id: string): Promise<Utilisateur> {
-    const utilisateur = await this.repository.findOne({
-      where: { id },
-      relations: ['languePreferee'],
-    });
-
-    if (!utilisateur) {
-      throw new NotFoundError('Utilisateur non trouve');
-    }
-
-    return utilisateur;
+  protected getRelations(): string[] {
+    return ['languePreferee'];
   }
 
   /**
@@ -51,7 +46,7 @@ export class UtilisateurService {
   /**
    * Creation d'un nouvel utilisateur
    */
-  async create(dto: CreateUtilisateurDto): Promise<Utilisateur> {
+  async create(dto: CreateUtilisateurDto): Promise<UtilisateurResponseDto> {
     // Verification de l'unicite du telephone
     const existant = await this.findByTelephone(dto.telephone1);
     if (existant) {
@@ -84,27 +79,30 @@ export class UtilisateurService {
       languePrefereeId: dto.languePrefereeId || null,
     });
 
-    return this.repository.save(utilisateur);
+    const saved = await this.repository.save(utilisateur);
+    return this.toResponseDto(saved);
   }
 
   /**
    * Mise a jour d'un utilisateur
    */
-  async update(id: string, dto: UpdateUtilisateurDto): Promise<Utilisateur> {
-    const utilisateur = await this.findById(id);
+  async update(id: string, dto: UpdateUtilisateurDto): Promise<UtilisateurResponseDto> {
+    const raw = await this.repository.findOne({ where: { id } as any });
+    if (!raw) throw new NotFoundError('Utilisateur non trouve');
 
     // Mise a jour des champs modifiables
-    if (dto.prenom !== undefined) utilisateur.prenom = dto.prenom;
-    if (dto.nom !== undefined) utilisateur.nom = dto.nom;
-    if (dto.telephone2 !== undefined) utilisateur.telephone2 = dto.telephone2 || null;
-    if (dto.adresseResidence !== undefined) utilisateur.adresseResidence = dto.adresseResidence || null;
-    if (dto.nomContactUrgence !== undefined) utilisateur.nomContactUrgence = dto.nomContactUrgence || null;
-    if (dto.telContactUrgence !== undefined) utilisateur.telContactUrgence = dto.telContactUrgence || null;
-    if (dto.numeroMobileMoney !== undefined) utilisateur.numeroMobileMoney = dto.numeroMobileMoney || null;
-    if (dto.numeroOrangeMoney !== undefined) utilisateur.numeroOrangeMoney = dto.numeroOrangeMoney || null;
-    if (dto.languePrefereeId !== undefined) utilisateur.languePrefereeId = dto.languePrefereeId || null;
+    if (dto.prenom !== undefined) raw.prenom = dto.prenom;
+    if (dto.nom !== undefined) raw.nom = dto.nom;
+    if (dto.telephone2 !== undefined) raw.telephone2 = dto.telephone2 || null;
+    if (dto.adresseResidence !== undefined) raw.adresseResidence = dto.adresseResidence || null;
+    if (dto.nomContactUrgence !== undefined) raw.nomContactUrgence = dto.nomContactUrgence || null;
+    if (dto.telContactUrgence !== undefined) raw.telContactUrgence = dto.telContactUrgence || null;
+    if (dto.numeroMobileMoney !== undefined) raw.numeroMobileMoney = dto.numeroMobileMoney || null;
+    if (dto.numeroOrangeMoney !== undefined) raw.numeroOrangeMoney = dto.numeroOrangeMoney || null;
+    if (dto.languePrefereeId !== undefined) raw.languePrefereeId = dto.languePrefereeId || null;
 
-    return this.repository.save(utilisateur);
+    const saved = await this.repository.save(raw);
+    return this.toResponseDto(saved);
   }
 
   /**
@@ -115,7 +113,8 @@ export class UtilisateurService {
     ancienMotDePasse: string,
     nouveauMotDePasse: string
   ): Promise<void> {
-    const utilisateur = await this.findById(id);
+    const utilisateur = await this.repository.findOne({ where: { id } as any });
+    if (!utilisateur) throw new NotFoundError('Utilisateur non trouve');
 
     // Verification de l'ancien mot de passe
     const isValid = await verifyPassword(ancienMotDePasse, utilisateur.passwordHash);
@@ -132,34 +131,9 @@ export class UtilisateurService {
   }
 
   /**
-   * Suppression logique d'un utilisateur
-   */
-  async softDelete(id: string): Promise<void> {
-    const utilisateur = await this.findById(id);
-    await this.repository.softRemove(utilisateur);
-  }
-
-  /**
-   * Liste des utilisateurs avec pagination
-   */
-  async findAll(pagination: PaginationQuery = {}): Promise<PaginatedResult<Utilisateur>> {
-    const page = Math.max(1, Number(pagination.page) || 1);
-    const limit = Math.min(Math.max(1, Number(pagination.limit) || 20), 100);
-
-    const [data, total] = await this.repository.findAndCount({
-      order: { creeLe: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-      relations: ['languePreferee'],
-    });
-
-    return paginateRaw(data, total, { page, limit });
-  }
-
-  /**
    * Conversion vers DTO de reponse (sans donnees sensibles)
    */
-  toResponseDto(utilisateur: Utilisateur): UtilisateurResponseDto {
+  public toResponseDto(utilisateur: Utilisateur): UtilisateurResponseDto {
     return {
       id: utilisateur.id,
       prenom: utilisateur.prenom,

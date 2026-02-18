@@ -10,11 +10,12 @@
  */
 
 import ExcelJS from 'exceljs';
+import { ExportStrategy } from '../interfaces/export-strategy.interface';
 import {
     ReleveCompteData,
     RapportExerciceData,
     RapportMensuelData,
-} from './pdf-export.service';
+} from '../types/export-data.types';
 
 // =============================================================================
 // Constantes de style
@@ -64,7 +65,15 @@ const BORDER_STYLE: Partial<ExcelJS.Borders> = {
 // Service
 // =============================================================================
 
-export class ExcelExportService {
+export class ExcelExportService implements ExportStrategy {
+
+    getExtension(): string {
+        return 'xlsx';
+    }
+
+    getContentType(): string {
+        return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    }
 
     /**
      * Génère un relevé de compte Excel

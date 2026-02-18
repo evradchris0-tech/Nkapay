@@ -3,6 +3,7 @@
  */
 
 import { Repository } from 'typeorm';
+import { eventBus, AppEvents } from '../../../shared/utils/event-bus.util';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError, PaginationQuery, PaginatedResult, paginate } from '../../../shared';
 import { Transaction, TypeTransaction, StatutTransaction, ModeCreationTransaction } from '../entities/transaction.entity';
@@ -26,26 +27,26 @@ import { potDuService } from './pot-du.service';
 import { inscriptionDueService } from './inscription-due.service';
 import { epargneDueService } from './epargne-due.service';
 import { regleExerciceService } from '../../exercices/services/regle-exercice.service';
+import { StateMachine } from '../../../shared/utils/state-machine.util';
+
+// =============================================================================
+// Machine à États (Design Pattern: State)
+// =============================================================================
+
+const transactionStateMachine = new StateMachine<StatutTransaction>([
+  { from: StatutTransaction.BROUILLON, to: StatutTransaction.SOUMIS, action: 'soumettre' },
+  { from: StatutTransaction.SOUMIS, to: StatutTransaction.VALIDE, action: 'valider' },
+  { from: StatutTransaction.SOUMIS, to: StatutTransaction.REJETE, action: 'rejeter' },
+  { from: StatutTransaction.VALIDE, to: StatutTransaction.ANNULE, action: 'annuler' },
+], 'Transaction');
+
+import { RepositoryFactory } from '../../../shared/utils/repository.factory';
 
 export class TransactionService {
-  private _transactionRepo?: Repository<Transaction>;
-  private _exerciceMembreRepo?: Repository<ExerciceMembre>;
-  private _reunionRepo?: Repository<Reunion>;
-
-  private get transactionRepository(): Repository<Transaction> {
-    if (!this._transactionRepo) this._transactionRepo = AppDataSource.getRepository(Transaction);
-    return this._transactionRepo;
-  }
-
-  private get exerciceMembreRepository(): Repository<ExerciceMembre> {
-    if (!this._exerciceMembreRepo) this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
-    return this._exerciceMembreRepo;
-  }
-
-  private get reunionRepository(): Repository<Reunion> {
-    if (!this._reunionRepo) this._reunionRepo = AppDataSource.getRepository(Reunion);
-    return this._reunionRepo;
-  }
+  // Repositories (Design Pattern: Repository Factory)
+  private get transactionRepository() { return RepositoryFactory.getRepository(Transaction); }
+  private get exerciceMembreRepository() { return RepositoryFactory.getRepository(ExerciceMembre); }
+  private get reunionRepository() { return RepositoryFactory.getRepository(Reunion); }
 
   /**
    * Generer une reference unique pour la transaction
@@ -174,9 +175,7 @@ export class TransactionService {
       throw new NotFoundError(`Transaction non trouvee: ${id}`);
     }
 
-    if (transaction.statut !== StatutTransaction.BROUILLON) {
-      throw new BadRequestError('Seule une transaction en brouillon peut etre soumise');
-    }
+    transactionStateMachine.assertTransition(transaction.statut, StatutTransaction.SOUMIS);
 
     transaction.statut = StatutTransaction.SOUMIS;
     transaction.soumisLe = new Date();
@@ -202,9 +201,7 @@ export class TransactionService {
         throw new NotFoundError(`Transaction non trouvee: ${id}`);
       }
 
-      if (transaction.statut !== StatutTransaction.SOUMIS) {
-        throw new BadRequestError('Seule une transaction soumise peut etre validee');
-      }
+      transactionStateMachine.assertTransition(transaction.statut, StatutTransaction.VALIDE);
 
       transaction.statut = StatutTransaction.VALIDE;
       transaction.valideLe = new Date();
@@ -270,7 +267,12 @@ export class TransactionService {
       }
 
       await queryRunner.commitTransaction();
-      return this.findById(id);
+
+      // Émettre un événement après le succès (Design Pattern: Observer)
+      const result = await this.findById(id);
+      eventBus.emit(AppEvents.TRANSACTION_VALIDATED, result);
+
+      return result;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
@@ -288,9 +290,7 @@ export class TransactionService {
       throw new NotFoundError(`Transaction non trouvee: ${id}`);
     }
 
-    if (transaction.statut !== StatutTransaction.SOUMIS) {
-      throw new BadRequestError('Seule une transaction soumise peut etre rejetee');
-    }
+    transactionStateMachine.assertTransition(transaction.statut, StatutTransaction.REJETE);
 
     transaction.statut = StatutTransaction.REJETE;
     transaction.rejeteLe = new Date();
