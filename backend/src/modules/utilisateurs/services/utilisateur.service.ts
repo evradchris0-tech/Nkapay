@@ -4,6 +4,7 @@
  */
 
 import { Repository } from 'typeorm';
+import { PaginationQuery, PaginatedResult, paginateRaw } from '../../../shared';
 import { AppDataSource } from '../../../config/database.config';
 import { Utilisateur } from '../entities/utilisateur.entity';
 import {
@@ -15,10 +16,11 @@ import { NotFoundError, ConflictError, BadRequestError } from '../../../shared/e
 import { hashPassword, verifyPassword } from '../../auth/utils/password.util';
 
 export class UtilisateurService {
-  private repository: Repository<Utilisateur>;
+  private _repository?: Repository<Utilisateur>;
 
-  constructor() {
-    this.repository = AppDataSource.getRepository(Utilisateur);
+  private get repository(): Repository<Utilisateur> {
+    if (!this._repository) this._repository = AppDataSource.getRepository(Utilisateur);
+    return this._repository;
   }
 
   /**
@@ -140,7 +142,10 @@ export class UtilisateurService {
   /**
    * Liste des utilisateurs avec pagination
    */
-  async findAll(page = 1, limit = 20): Promise<{ data: Utilisateur[]; total: number }> {
+  async findAll(pagination: PaginationQuery = {}): Promise<PaginatedResult<Utilisateur>> {
+    const page = Math.max(1, Number(pagination.page) || 1);
+    const limit = Math.min(Math.max(1, Number(pagination.limit) || 20), 100);
+
     const [data, total] = await this.repository.findAndCount({
       order: { creeLe: 'DESC' },
       skip: (page - 1) * limit,
@@ -148,7 +153,7 @@ export class UtilisateurService {
       relations: ['languePreferee'],
     });
 
-    return { data, total };
+    return paginateRaw(data, total, { page, limit });
   }
 
   /**

@@ -1,12 +1,7 @@
-/**
- * Controleur Utilisateur
- * Gestion des endpoints CRUD utilisateur
- */
-
 import { Request, Response, NextFunction } from 'express';
 import { UtilisateurService } from '../services/utilisateur.service';
 import { CreateUtilisateurDto, UpdateUtilisateurDto, ChangePasswordDto } from '../dtos/utilisateur.dto';
-import { ApiResponse } from '../../../shared/utils/api-response.util';
+import { ApiResponse, PaginationQuery } from '../../../shared';
 
 const utilisateurService = new UtilisateurService();
 
@@ -16,19 +11,18 @@ const utilisateurService = new UtilisateurService();
  */
 export async function getAllUtilisateurs(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
+    const pagination: PaginationQuery = {
+      page: req.query.page ? parseInt(req.query.page as string) : undefined,
+      limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
+      sortBy: req.query.sortBy as string,
+      sortOrder: req.query.sortOrder as 'ASC' | 'DESC',
+    };
 
-    const { data, total } = await utilisateurService.findAll(page, limit);
+    const result = await utilisateurService.findAll(pagination);
 
-    const response = data.map((u) => utilisateurService.toResponseDto(u));
+    const response = result.data.map((u) => utilisateurService.toResponseDto(u));
 
-    res.json(ApiResponse.paginated(response, {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-    }));
+    res.json(ApiResponse.paginated(response, result.meta));
   } catch (error) {
     next(error);
   }

@@ -107,8 +107,6 @@ export interface TransactionFiltersDto {
   statut?: StatutTransaction;
   dateDebut?: string;
   dateFin?: string;
-  page?: number;
-  limit?: number;
 }
 
 /**

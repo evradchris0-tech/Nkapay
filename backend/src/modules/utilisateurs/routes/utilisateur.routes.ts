@@ -16,9 +16,8 @@ import {
   updateUtilisateurValidator,
   changePasswordValidator,
   getUtilisateurByIdValidator,
-  paginationValidator,
 } from '../validators/utilisateur.validator';
-import { validate, authenticate } from '../../../shared/middlewares';
+import { validate, authenticate, paginationValidator } from '../../../shared/middlewares';
 
 const router = Router();
 

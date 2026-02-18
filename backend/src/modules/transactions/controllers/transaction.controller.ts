@@ -5,6 +5,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { transactionService } from '../services/transaction.service';
 import { TransactionFiltersDto } from '../dto/transaction.dto';
+import { ApiResponse, PaginationQuery } from '../../../shared';
 
 export class TransactionController {
   /**
@@ -166,12 +167,17 @@ export class TransactionController {
         statut: req.query.statut as any,
         dateDebut: req.query.dateDebut as string,
         dateFin: req.query.dateFin as string,
-        page: req.query.page ? parseInt(req.query.page as string, 10) : undefined,
-        limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
       };
 
-      const result = await transactionService.findAll(filters);
-      res.json(result);
+      const pagination: PaginationQuery = {
+        page: req.query.page ? parseInt(req.query.page as string, 10) : undefined,
+        limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
+        sortBy: req.query.sortBy as string,
+        sortOrder: req.query.sortOrder as 'ASC' | 'DESC',
+      };
+
+      const result = await transactionService.findAll(filters, pagination);
+      res.json(ApiResponse.paginated(result.data, result.meta));
     } catch (error) {
       next(error);
     }
