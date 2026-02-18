@@ -1,1 +1,0 @@
-    this.app.use(`${env.apiPrefix}/langues`, langueRoutes);  
