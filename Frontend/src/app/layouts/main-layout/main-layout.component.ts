@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { PhoneFormatPipe } from '../../core/pipes/phone-format.pipe';
 import { AuthService } from '../../core/services/auth.service';
 import { NotificationService } from '../../core/services/notification.service';
 
@@ -14,7 +15,7 @@ interface MenuItem {
 @Component({
   selector: 'app-main-layout',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, PhoneFormatPipe],
   templateUrl: './main-layout.component.html',
   styleUrl: './main-layout.component.scss'
 })
@@ -29,6 +30,7 @@ export class MainLayoutComponent {
   menuItems: MenuItem[] = [
     { label: 'Tableau de bord', icon: 'dashboard', route: '/dashboard' },
     { label: 'Tontines', icon: 'account_balance', route: '/dashboard/tontines' },
+    { label: 'Découvrir', icon: 'explore', route: '/dashboard/tontines/recherche' },
     { label: 'Exercices', icon: 'calendar_month', route: '/dashboard/exercices' },
     { label: 'Réunions', icon: 'groups', route: '/dashboard/reunions' },
     { label: 'Membres', icon: 'people', route: '/dashboard/membres' },
@@ -39,6 +41,15 @@ export class MainLayoutComponent {
     { label: 'Secours', icon: 'volunteer_activism', route: '/dashboard/secours' },
     { label: 'Rapports', icon: 'assessment', route: '/dashboard/rapports' }
   ];
+
+  adminMenuItems: MenuItem[] = [
+    { label: 'Administration', icon: 'admin_panel_settings', route: '/dashboard/admin' }
+  ];
+
+  isSuperAdmin = computed(() => {
+    const user = this.currentUser();
+    return user?.estSuperAdmin === true;
+  });
 
   userInitials = computed(() => {
     const user = this.currentUser();

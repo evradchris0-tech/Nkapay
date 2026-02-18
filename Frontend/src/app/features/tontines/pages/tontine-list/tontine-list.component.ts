@@ -50,8 +50,8 @@ export class TontineListComponent implements OnInit {
       },
       error: () => {
         this.isLoading.set(false);
-        // Mock data for dev
-        this.tontines.set(this.getMockTontines());
+        this.notification.error('Erreur', 'Impossible de charger les tontines');
+        this.tontines.set([]);
       }
     });
   }
@@ -82,8 +82,7 @@ export class TontineListComponent implements OnInit {
   getStatusColor(statut: string): string {
     switch (statut) {
       case 'ACTIVE': return 'green';
-      case 'EN_PREPARATION': return 'orange';
-      case 'TERMINEE': return 'gray';
+      case 'INACTIVE': return 'gray';
       case 'SUSPENDUE': return 'red';
       default: return 'gray';
     }
@@ -92,57 +91,9 @@ export class TontineListComponent implements OnInit {
   getStatusLabel(statut: string): string {
     switch (statut) {
       case 'ACTIVE': return 'Active';
-      case 'EN_PREPARATION': return 'En préparation';
-      case 'TERMINEE': return 'Terminée';
+      case 'INACTIVE': return 'Inactive';
       case 'SUSPENDUE': return 'Suspendue';
       default: return statut;
     }
-  }
-
-  private getMockTontines(): Tontine[] {
-    return [
-      {
-        id: '1',
-        nom: 'Tontine Familiale',
-        nomCourt: 'Familiale',
-        tontineTypeId: 'tt1',
-        description: 'Tontine pour la famille élargie',
-        type: TontineType.MIXTE as any,
-        montantCotisation: 50000,
-        periodicite: 'MENSUELLE',
-        statut: StatutTontine.ACTIVE,
-        dateCreation: new Date().toISOString(),
-        creeLe: new Date(),
-        createdBy: '1'
-      },
-      {
-        id: '2',
-        nom: 'Tontine des Amis',
-        nomCourt: 'Amis',
-        tontineTypeId: 'tt2',
-        description: 'Entre amis du quartier',
-        type: TontineType.INVESTISSEMENT as any,
-        montantCotisation: 100000,
-        periodicite: 'MENSUELLE',
-        statut: StatutTontine.ACTIVE,
-        dateCreation: new Date().toISOString(),
-        creeLe: new Date(),
-        createdBy: '1'
-      },
-      {
-        id: '3',
-        nom: 'Tontine Entreprise',
-        nomCourt: 'Entreprise',
-        tontineTypeId: 'tt3',
-        description: 'Pour les collègues',
-        type: TontineType.SOLIDARITE as any,
-        montantCotisation: 25000,
-        periodicite: 'BI_MENSUELLE',
-        statut: StatutTontine.EN_PREPARATION,
-        dateCreation: new Date().toISOString(),
-        creeLe: new Date(),
-        createdBy: '1'
-      }
-    ];
   }
 }

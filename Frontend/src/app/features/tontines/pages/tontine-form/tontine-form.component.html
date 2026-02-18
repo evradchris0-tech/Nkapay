@@ -21,60 +21,70 @@
             type="text" 
             id="nom" 
             formControlName="nom"
-            placeholder="Ex: Tontine Familiale"
+            placeholder="Ex: Tontine Familiale du Cameroun"
             [class.invalid]="f['nom'].invalid && f['nom'].touched"
           />
           <ng-container *ngIf="f['nom'].invalid && f['nom'].touched">
             <span class="error-message">
               <ng-container *ngIf="f['nom'].errors?.['required']">Le nom est requis</ng-container>
               <ng-container *ngIf="f['nom'].errors?.['minlength']">Au moins 3 caractères</ng-container>
-              <ng-container *ngIf="f['nom'].errors?.['maxlength']">Maximum 100 caractères</ng-container>
+              <ng-container *ngIf="f['nom'].errors?.['maxlength']">Maximum 200 caractères</ng-container>
             </span>
           </ng-container>
         </div>
 
         <div class="form-group">
-          <label for="description">Description</label>
-          <textarea 
-            id="description" 
-            formControlName="description"
-            rows="3"
-            placeholder="Description optionnelle de la tontine..."
-          ></textarea>
+          <label for="nomCourt">Nom court (unique) *</label>
+          <input 
+            type="text" 
+            id="nomCourt" 
+            formControlName="nomCourt"
+            placeholder="Ex: TFC"
+            [class.invalid]="f['nomCourt'].invalid && f['nomCourt'].touched"
+          />
+          <span class="hint">Identifiant court unique pour la tontine (2-50 caractères)</span>
+          <ng-container *ngIf="f['nomCourt'].invalid && f['nomCourt'].touched">
+            <span class="error-message">
+              <ng-container *ngIf="f['nomCourt'].errors?.['required']">Le nom court est requis</ng-container>
+              <ng-container *ngIf="f['nomCourt'].errors?.['minlength']">Au moins 2 caractères</ng-container>
+              <ng-container *ngIf="f['nomCourt'].errors?.['maxlength']">Maximum 50 caractères</ng-container>
+            </span>
+          </ng-container>
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label for="type">Type de tontine *</label>
-            <select id="type" formControlName="type">
-              <option *ngFor="let type of tontineTypes" [value]="type">{{ typeLabels[type] }}</option>
+            <label for="tontineTypeId">Type de tontine *</label>
+            <select id="tontineTypeId" formControlName="tontineTypeId" [class.invalid]="f['tontineTypeId'].invalid && f['tontineTypeId'].touched">
+              <option value="">Sélectionner un type</option>
+              <option *ngFor="let type of tontineTypes()" [value]="type.id">{{ type.libelle }}</option>
             </select>
+            <ng-container *ngIf="f['tontineTypeId'].invalid && f['tontineTypeId'].touched">
+              <span class="error-message">Le type de tontine est requis</span>
+            </ng-container>
           </div>
 
           <div class="form-group">
-            <label for="periodicite">Périodicité *</label>
-            <select id="periodicite" formControlName="periodicite">
-              <option *ngFor="let p of periodicites" [value]="p">{{ periodiciteLabels[p] }}</option>
-            </select>
+            <label for="anneeFondation">Année de fondation</label>
+            <input 
+              type="number" 
+              id="anneeFondation" 
+              formControlName="anneeFondation"
+              min="1900"
+              [max]="2100"
+              placeholder="Ex: 2020"
+            />
           </div>
         </div>
 
         <div class="form-group">
-          <label for="montantCotisation">Montant de cotisation (FCFA) *</label>
+          <label for="motto">Devise / Motto</label>
           <input 
-            type="number" 
-            id="montantCotisation" 
-            formControlName="montantCotisation"
-            min="1000"
-            step="1000"
-            [class.invalid]="f['montantCotisation'].invalid && f['montantCotisation'].touched"
+            type="text" 
+            id="motto" 
+            formControlName="motto"
+            placeholder="Ex: L'union fait la force"
           />
-          <ng-container *ngIf="f['montantCotisation'].invalid && f['montantCotisation'].touched">
-            <span class="error-message">
-              <ng-container *ngIf="f['montantCotisation'].errors?.['required']">Le montant est requis</ng-container>
-              <ng-container *ngIf="f['montantCotisation'].errors?.['min']">Minimum 1 000 FCFA</ng-container>
-            </span>
-          </ng-container>
         </div>
 
         <div class="form-actions">

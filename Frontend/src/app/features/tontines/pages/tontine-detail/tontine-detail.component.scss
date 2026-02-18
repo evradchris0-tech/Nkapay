@@ -297,3 +297,332 @@ $bg-color: #f9fafb;
     opacity: 0.5;
   }
 }
+
+.loading-small {
+  display: flex;
+  justify-content: center;
+  padding: 2rem;
+  
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba($primary-color, 0.2);
+    border-top-color: $primary-color;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4rem;
+  background: white;
+  border-radius: 12px;
+  color: $text-muted;
+  
+  .material-icons {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.4;
+  }
+  
+  p { margin-bottom: 1rem; }
+}
+
+.btn-primary-small {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, $primary-color, $secondary-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  text-decoration: none;
+  
+  .material-icons { font-size: 1rem; }
+}
+
+.membres-list, .exercices-list, .regles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.membre-card, .exercice-card, .regle-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.membre-info, .exercice-info, .regle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.membre-name, .exercice-libelle, .regle-libelle {
+  font-weight: 600;
+  color: $text-color;
+}
+
+.membre-matricule, .exercice-periode, .regle-categorie {
+  font-size: 0.8125rem;
+  color: $text-muted;
+}
+
+.membre-meta, .exercice-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.role-badge {
+  padding: 0.25rem 0.5rem;
+  background: rgba($primary-color, 0.1);
+  color: $primary-color;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  
+  &.green { background: #d1fae5; color: #059669; }
+  &.blue { background: #dbeafe; color: #1e40af; }
+  &.gray { background: #f3f4f6; color: #6b7280; }
+  &.red { background: #fee2e2; color: #dc2626; }
+}
+
+.membres-count {
+  font-size: 0.8125rem;
+  color: $text-muted;
+}
+
+.regle-valeur {
+  font-weight: 600;
+  color: $primary-color;
+}
+
+.tab-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  
+  h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    color: $text-color;
+  }
+}
+
+.btn-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, $primary-color, $secondary-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  
+  &:hover {
+    opacity: 0.9;
+  }
+  
+  .material-icons { font-size: 1rem; }
+}
+
+// Modal styles
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid $border-color;
+  
+  h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: $text-color;
+  }
+  
+  .close-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: $text-muted;
+    
+    &:hover { color: $text-color; }
+  }
+}
+
+.modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  
+  .form-group {
+    margin-bottom: 1rem;
+    
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      font-size: 0.875rem;
+      color: $text-color;
+    }
+    
+    input, select {
+      width: 100%;
+      padding: 0.75rem;
+      border: 2px solid $border-color;
+      border-radius: 8px;
+      font-size: 0.9375rem;
+      
+      &:focus {
+        outline: none;
+        border-color: $primary-color;
+      }
+    }
+  }
+  
+  .search-input {
+    position: relative;
+    
+    input { padding-right: 2.5rem; }
+    
+    .material-icons {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: $primary-color;
+      animation: spin 1s linear infinite;
+    }
+  }
+}
+
+.users-list {
+  margin-top: 0.75rem;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid $border-color;
+  border-radius: 8px;
+}
+
+.user-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  border-bottom: 1px solid $border-color;
+  
+  &:last-child { border-bottom: none; }
+  
+  &:hover { background: $bg-color; }
+  
+  &.selected {
+    background: rgba($primary-color, 0.1);
+    border-left: 3px solid $primary-color;
+  }
+  
+  .user-name {
+    font-weight: 500;
+    color: $text-color;
+  }
+  
+  .user-phone {
+    font-size: 0.8125rem;
+    color: $text-muted;
+  }
+}
+
+.selected-user-form {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid $border-color;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid $border-color;
+  
+  .btn-cancel {
+    padding: 0.75rem 1.25rem;
+    background: $bg-color;
+    border: none;
+    border-radius: 8px;
+    color: $text-color;
+    cursor: pointer;
+    
+    &:hover { background: darken($bg-color, 5%); }
+  }
+  
+  .btn-submit {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: linear-gradient(135deg, $primary-color, $secondary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    .spinner-sm {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+  }
+}

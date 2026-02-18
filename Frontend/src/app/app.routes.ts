@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, noAuthGuard } from './core/guards/auth.guard';
+import { authGuard, noAuthGuard, superAdminGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   {
@@ -60,6 +60,11 @@ export const routes: Routes = [
       {
         path: 'rapports',
         loadChildren: () => import('./features/rapports/rapports.routes').then(m => m.RAPPORTS_ROUTES)
+      },
+      {
+        path: 'admin',
+        canActivate: [superAdminGuard],
+        loadChildren: () => import('./features/admin/admin.routes').then(m => m.ADMIN_ROUTES)
       }
     ]
   },

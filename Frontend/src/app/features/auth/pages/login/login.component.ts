@@ -25,7 +25,7 @@ export class LoginComponent {
 
   constructor() {
     this.loginForm = this.fb.group({
-      telephone: ['', [Validators.required, Validators.pattern(/^\d{9,15}$/)]],
+      telephone: ['', [Validators.required, Validators.pattern(/^(\+?\d{9,15})$/)]],
       password: ['', [Validators.required, Validators.minLength(4)]]
     });
   }
@@ -43,7 +43,7 @@ export class LoginComponent {
     this.isLoading.set(true);
 
     this.authService.login({
-      telephone: this.loginForm.value.telephone,
+      identifiant: this.loginForm.value.telephone,
       motDePasse: this.loginForm.value.password
     }).subscribe({
       next: (response) => {

@@ -46,10 +46,12 @@ export enum StatutPret {
 }
 
 export interface CreatePretDto {
+  reunionId: string;
   exerciceMembreId: string;
   montantCapital: number;
-  nombreEcheances: number;
-  motif?: string;
+  tauxInteret?: number;
+  dureeMois: number;
+  commentaire?: string;
 }
 
 export interface RemboursementPret {

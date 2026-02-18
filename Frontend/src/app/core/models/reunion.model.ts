@@ -45,7 +45,7 @@ export interface ExerciceMembreResume {
 
 export enum StatutReunion {
   PLANIFIEE = 'PLANIFIEE',
-  EN_COURS = 'EN_COURS',
+  OUVERTE = 'OUVERTE',
   CLOTUREE = 'CLOTUREE',
   ANNULEE = 'ANNULEE',
 }

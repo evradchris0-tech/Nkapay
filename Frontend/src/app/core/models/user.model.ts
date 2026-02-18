@@ -31,7 +31,7 @@ export interface CreateUtilisateurDto {
   telContactUrgence?: string;
   numeroMobileMoney?: string;
   numeroOrangeMoney?: string;
-  motDePasse: string;
+  password: string;
 }
 
 export interface UpdateUtilisateurDto {

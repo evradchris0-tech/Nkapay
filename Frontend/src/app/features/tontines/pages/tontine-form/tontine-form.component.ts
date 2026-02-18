@@ -2,8 +2,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { TontineService } from '../../services/tontine.service';
-import { TontineType, TontineTypeLabels, Periodicite, PeriodiciteLabels } from '../../../../core/models/tontine.model';
+import { TontineService, TontineTypeBackend } from '../../services/tontine.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 
 @Component({
@@ -25,13 +24,11 @@ export class TontineFormComponent implements OnInit {
   isEditMode = signal(false);
   tontineId: string | null = null;
 
-  tontineTypes = Object.values(TontineType);
-  typeLabels = TontineTypeLabels;
-  periodicites = Object.values(Periodicite);
-  periodiciteLabels = PeriodiciteLabels;
+  tontineTypes = signal<TontineTypeBackend[]>([]);
 
   ngOnInit() {
     this.initForm();
+    this.loadTontineTypes();
     
     const id = this.route.snapshot.params['id'];
     if (id) {
@@ -43,11 +40,24 @@ export class TontineFormComponent implements OnInit {
 
   private initForm() {
     this.tontineForm = this.fb.group({
-      nom: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
-      description: ['', [Validators.maxLength(500)]],
-      type: [TontineType.MIXTE, Validators.required],
-      montantCotisation: [50000, [Validators.required, Validators.min(1000)]],
-      periodicite: [Periodicite.MENSUELLE, Validators.required]
+      nom: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(200)]],
+      nomCourt: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
+      tontineTypeId: ['', Validators.required],
+      anneeFondation: [new Date().getFullYear()],
+      motto: ['', Validators.maxLength(255)]
+    });
+  }
+
+  private loadTontineTypes() {
+    this.tontineService.getTontineTypes().subscribe({
+      next: (response) => {
+        if (response.data) {
+          this.tontineTypes.set(response.data.filter(t => t.estActif));
+        }
+      },
+      error: () => {
+        this.notification.error('Erreur', 'Impossible de charger les types de tontine');
+      }
     });
   }
 
@@ -57,7 +67,13 @@ export class TontineFormComponent implements OnInit {
     this.tontineService.getById(id).subscribe({
       next: (response) => {
         if (response.success && response.data) {
-          this.tontineForm.patchValue(response.data);
+          this.tontineForm.patchValue({
+            nom: response.data.nom,
+            nomCourt: response.data.nomCourt,
+            tontineTypeId: response.data.tontineTypeId,
+            anneeFondation: response.data.anneeFondation,
+            motto: response.data.motto
+          });
         }
         this.isLoading.set(false);
       },
@@ -76,7 +92,15 @@ export class TontineFormComponent implements OnInit {
     }
 
     this.isLoading.set(true);
-    const data = this.tontineForm.value;
+    const formValue = this.tontineForm.value;
+    
+    const data = {
+      nom: formValue.nom,
+      nomCourt: formValue.nomCourt,
+      tontineTypeId: formValue.tontineTypeId,
+      anneeFondation: formValue.anneeFondation || undefined,
+      motto: formValue.motto || undefined
+    };
 
     const request = this.isEditMode()
       ? this.tontineService.update(this.tontineId!, data)

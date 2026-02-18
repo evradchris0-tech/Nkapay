@@ -14,6 +14,7 @@ export interface Tontine {
   statut: StatutTontine;
   tontineTypeId: string;
   tontineType?: TontineType;
+  estPublique?: boolean;
   creeLe: Date;
   modifieLe?: Date;
   nombreMembres?: number;
@@ -37,10 +38,8 @@ export interface TontineType {
 
 export enum StatutTontine {
   ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
   SUSPENDUE = 'SUSPENDUE',
-  DISSOUTE = 'DISSOUTE',
-  EN_PREPARATION = 'EN_PREPARATION',
-  TERMINEE = 'TERMINEE',
 }
 
 export interface CreateTontineDto {

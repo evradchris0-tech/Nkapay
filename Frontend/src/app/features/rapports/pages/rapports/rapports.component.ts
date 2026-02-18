@@ -150,11 +150,8 @@ export class RapportsComponent {
         }
       },
       error: () => {
-        // Mock data
-        this.tontines.set([
-          { id: '1', nom: 'Tontine Familiale' },
-          { id: '2', nom: 'Tontine des Amis' }
-        ]);
+        this.notification.error('Erreur', 'Impossible de charger les tontines');
+        this.tontines.set([]);
       }
     });
   }

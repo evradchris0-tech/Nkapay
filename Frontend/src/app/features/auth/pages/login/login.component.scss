@@ -1,8 +1,9 @@
-$primary-color: #667eea;
+$primary-color: #3b82f6;
+$primary-dark: #1d4ed8;
 $error-color: #ef4444;
-$border-color: #e5e7eb;
-$text-color: #1f2937;
-$text-muted: #6b7280;
+$border-color: #e2e8f0;
+$text-color: #1e293b;
+$text-muted: #64748b;
 
 h2 {
   text-align: center;
@@ -42,9 +43,17 @@ form {
     font-size: 1.25rem;
   }
 
+  .country-prefix {
+    position: absolute;
+    left: 2.5rem;
+    color: $text-muted;
+    font-size: 0.9rem;
+    padding-left: 0.25rem;
+  }
+
   input {
     width: 100%;
-    padding: 0.75rem 0.75rem 0.75rem 2.75rem;
+    padding: 0.75rem 0.75rem 0.75rem 5.25rem;
     border: 2px solid $border-color;
     border-radius: 8px;
     font-size: 1rem;
@@ -92,19 +101,23 @@ form {
   gap: 0.5rem;
   width: 100%;
   padding: 0.875rem;
-  background: linear-gradient(135deg, $primary-color 0%, #764ba2 100%);
+  background: linear-gradient(135deg, $primary-color 0%, $primary-dark 100%);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 1rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  margin-top: 0.5rem;
+  margin-top: 0.75rem;
 
   &:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba($primary-color, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba($primary-color, 0.35);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
   }
 
   &:disabled {

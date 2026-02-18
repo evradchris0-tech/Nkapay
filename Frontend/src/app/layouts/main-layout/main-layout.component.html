@@ -17,6 +17,21 @@
         <span *ngIf="!sidebarCollapsed()" class="nav-label">{{ item.label }}</span>
         <span *ngIf="item.badge && !sidebarCollapsed()" class="badge">{{ item.badge }}</span>
       </a>
+
+      <!-- Admin Section -->
+      <ng-container *ngIf="isSuperAdmin()">
+        <div class="nav-divider" *ngIf="!sidebarCollapsed()">
+          <span>Administration</span>
+        </div>
+        <a *ngFor="let item of adminMenuItems"
+           [routerLink]="item.route"
+           routerLinkActive="active"
+           class="nav-item admin"
+           [title]="sidebarCollapsed() ? item.label : ''">
+          <span class="material-icons">{{ item.icon }}</span>
+          <span *ngIf="!sidebarCollapsed()" class="nav-label">{{ item.label }}</span>
+        </a>
+      </ng-container>
     </nav>
 
     <div class="sidebar-footer">
@@ -44,7 +59,7 @@
           <ng-container *ngIf="currentUser() as user">
             <div class="user-info">
               <span class="user-name">{{ user.prenom }} {{ user.nom }}</span>
-              <span class="user-role">{{ user.telephone1 }}</span>
+              <span class="user-role">{{ user.telephone1 | phoneFormat }}</span>
             </div>
           </ng-container>
           <button class="logout-btn" (click)="logout()" title="Déconnexion">

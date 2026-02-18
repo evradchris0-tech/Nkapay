@@ -26,10 +26,10 @@ export interface Exercice {
 }
 
 export enum StatutExercice {
-  PLANIFIE = 'PLANIFIE',
-  EN_COURS = 'EN_COURS',
-  CLOTURE = 'CLOTURE',
-  ANNULE = 'ANNULE',
+  BROUILLON = 'BROUILLON',
+  OUVERT = 'OUVERT',
+  SUSPENDU = 'SUSPENDU',
+  FERME = 'FERME',
 }
 
 export interface CreateExerciceDto {

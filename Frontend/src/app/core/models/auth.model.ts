@@ -4,7 +4,7 @@
 
 // Login request payload
 export interface LoginRequest {
-  telephone: string;
+  identifiant: string;
   motDePasse: string;
 }
 
