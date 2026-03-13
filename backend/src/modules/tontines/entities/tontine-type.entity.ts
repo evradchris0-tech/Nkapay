@@ -3,13 +3,7 @@
  * Types de tontines disponibles (STANDARD, COMPLET, EPARGNE, SOLIDARITE)
  */
 
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  OneToMany,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany } from 'typeorm';
 import { Tontine } from './tontine.entity';
 
 @Entity('tontine_type')

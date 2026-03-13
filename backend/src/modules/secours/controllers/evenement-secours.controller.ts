@@ -1,6 +1,6 @@
 /**
  * Contrôleur pour la gestion des événements de secours
- * 
+ *
  * Endpoints:
  * POST   /                        — Déclarer un événement
  * GET    /                        — Lister les événements
@@ -29,7 +29,7 @@ export class EvenementSecoursController {
   async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await evenementSecoursService.create(req.body);
-      res.status(201).json(result);
+      res.status(201).json(ApiResponse.success(result, 'Événement de secours déclaré avec succès'));
     } catch (error) {
       next(error);
     }
@@ -41,7 +41,7 @@ export class EvenementSecoursController {
   async soumettre(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await evenementSecoursService.soumettre(req.params.id);
-      res.json(result);
+      res.json(ApiResponse.success(result, 'Événement soumis pour validation'));
     } catch (error) {
       next(error);
     }
@@ -53,7 +53,7 @@ export class EvenementSecoursController {
   async valider(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await evenementSecoursService.valider(req.params.id, req.body);
-      res.json(result);
+      res.json(ApiResponse.success(result, 'Événement validé avec succès'));
     } catch (error) {
       next(error);
     }
@@ -65,7 +65,7 @@ export class EvenementSecoursController {
   async refuser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await evenementSecoursService.refuser(req.params.id, req.body);
-      res.json(result);
+      res.json(ApiResponse.success(result, 'Événement refusé'));
     } catch (error) {
       next(error);
     }
@@ -77,7 +77,7 @@ export class EvenementSecoursController {
   async payer(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await evenementSecoursService.payer(req.params.id, req.body);
-      res.json(result);
+      res.json(ApiResponse.success(result, 'Événement marqué comme payé'));
     } catch (error) {
       next(error);
     }
@@ -90,7 +90,7 @@ export class EvenementSecoursController {
   async decaisser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await evenementSecoursService.decaisser(req.params.id, req.body);
-      res.json(result);
+      res.json(ApiResponse.success(result, 'Décaissement effectué avec succès'));
     } catch (error) {
       next(error);
     }
@@ -126,7 +126,7 @@ export class EvenementSecoursController {
   async findById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await evenementSecoursService.findById(req.params.id);
-      res.json(result);
+      res.json(ApiResponse.success(result));
     } catch (error) {
       next(error);
     }
@@ -138,7 +138,7 @@ export class EvenementSecoursController {
   async getSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await evenementSecoursService.getSummary(req.query as any);
-      res.json(result);
+      res.json(ApiResponse.success(result));
     } catch (error) {
       next(error);
     }
@@ -150,7 +150,7 @@ export class EvenementSecoursController {
   async getSoldeFonds(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await evenementSecoursService.getSoldeFonds(req.params.exerciceId);
-      res.json(result);
+      res.json(ApiResponse.success(result));
     } catch (error) {
       next(error);
     }
@@ -162,8 +162,11 @@ export class EvenementSecoursController {
   async calculerRenflouement(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const montantCible = req.query.montantCible ? Number(req.query.montantCible) : undefined;
-      const result = await evenementSecoursService.calculerRenflouement(req.params.exerciceId, montantCible);
-      res.json(result);
+      const result = await evenementSecoursService.calculerRenflouement(
+        req.params.exerciceId,
+        montantCible
+      );
+      res.json(ApiResponse.success(result));
     } catch (error) {
       next(error);
     }
@@ -174,8 +177,11 @@ export class EvenementSecoursController {
    */
   async ajouterPiece(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const result = await evenementSecoursService.ajouterPieceJustificative(req.params.id, req.body);
-      res.status(201).json(result);
+      const result = await evenementSecoursService.ajouterPieceJustificative(
+        req.params.id,
+        req.body
+      );
+      res.status(201).json(ApiResponse.success(result, 'Pièce justificative ajoutée'));
     } catch (error) {
       next(error);
     }
@@ -187,7 +193,7 @@ export class EvenementSecoursController {
   async getPieces(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await evenementSecoursService.getPiecesJustificatives(req.params.id);
-      res.json(result);
+      res.json(ApiResponse.success(result));
     } catch (error) {
       next(error);
     }

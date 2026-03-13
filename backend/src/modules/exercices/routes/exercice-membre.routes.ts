@@ -142,7 +142,11 @@ router.post('/', authenticate, exerciceMembreController.create.bind(exerciceMemb
  *       200:
  *         description: Liste des membres
  */
-router.get('/exercice/:exerciceId', authenticate, exerciceMembreController.findByExercice.bind(exerciceMembreController));
+router.get(
+  '/exercice/:exerciceId',
+  authenticate,
+  exerciceMembreController.findByExercice.bind(exerciceMembreController)
+);
 
 /**
  * @swagger
@@ -230,7 +234,11 @@ router.delete('/:id', authenticate, exerciceMembreController.delete.bind(exercic
  *       200:
  *         description: Membre desactive
  */
-router.post('/:id/deactivate', authenticate, exerciceMembreController.deactivate.bind(exerciceMembreController));
+router.post(
+  '/:id/deactivate',
+  authenticate,
+  exerciceMembreController.deactivate.bind(exerciceMembreController)
+);
 
 /**
  * @swagger
@@ -250,6 +258,10 @@ router.post('/:id/deactivate', authenticate, exerciceMembreController.deactivate
  *       200:
  *         description: Membre reactive
  */
-router.post('/:id/reactivate', authenticate, exerciceMembreController.reactivate.bind(exerciceMembreController));
+router.post(
+  '/:id/reactivate',
+  authenticate,
+  exerciceMembreController.reactivate.bind(exerciceMembreController)
+);
 
 export const exerciceMembreRoutes = router;

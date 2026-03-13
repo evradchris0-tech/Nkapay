@@ -29,7 +29,7 @@ export class TransactionController {
   async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const transaction = await transactionService.create(req.body);
-      res.status(201).json(transaction);
+      res.status(201).json(ApiResponse.success(transaction, 'Transaction créée avec succès'));
     } catch (error) {
       next(error);
     }
@@ -56,7 +56,7 @@ export class TransactionController {
   async createCotisation(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const transaction = await transactionService.createCotisation(req.body);
-      res.status(201).json(transaction);
+      res.status(201).json(ApiResponse.success(transaction, 'Cotisation créée avec succès'));
     } catch (error) {
       next(error);
     }
@@ -83,7 +83,9 @@ export class TransactionController {
   async createPot(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const transaction = await transactionService.createPot(req.body);
-      res.status(201).json(transaction);
+      res
+        .status(201)
+        .json(ApiResponse.success(transaction, 'Contribution au pot créée avec succès'));
     } catch (error) {
       next(error);
     }
@@ -110,7 +112,9 @@ export class TransactionController {
   async createInscription(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const transaction = await transactionService.createInscription(req.body);
-      res.status(201).json(transaction);
+      res
+        .status(201)
+        .json(ApiResponse.success(transaction, "Frais d'inscription créés avec succès"));
     } catch (error) {
       next(error);
     }
@@ -206,7 +210,7 @@ export class TransactionController {
       };
 
       const summary = await transactionService.getSummary(filters);
-      res.json(summary);
+      res.json(ApiResponse.success(summary));
     } catch (error) {
       next(error);
     }
@@ -233,7 +237,7 @@ export class TransactionController {
   async findById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const transaction = await transactionService.findById(req.params.id);
-      res.json(transaction);
+      res.json(ApiResponse.success(transaction));
     } catch (error) {
       next(error);
     }
@@ -260,7 +264,7 @@ export class TransactionController {
   async findByReference(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const transaction = await transactionService.findByReference(req.params.reference);
-      res.json(transaction);
+      res.json(ApiResponse.success(transaction));
     } catch (error) {
       next(error);
     }
@@ -293,7 +297,7 @@ export class TransactionController {
   async update(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const transaction = await transactionService.update(req.params.id, req.body);
-      res.json(transaction);
+      res.json(ApiResponse.success(transaction, 'Transaction mise à jour'));
     } catch (error) {
       next(error);
     }
@@ -320,7 +324,7 @@ export class TransactionController {
   async soumettre(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const transaction = await transactionService.soumettre(req.params.id);
-      res.json(transaction);
+      res.json(ApiResponse.success(transaction, 'Transaction soumise'));
     } catch (error) {
       next(error);
     }
@@ -353,7 +357,7 @@ export class TransactionController {
   async valider(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const transaction = await transactionService.valider(req.params.id, req.body);
-      res.json(transaction);
+      res.json(ApiResponse.success(transaction, 'Transaction validée'));
     } catch (error) {
       next(error);
     }
@@ -386,7 +390,7 @@ export class TransactionController {
   async rejeter(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const transaction = await transactionService.rejeter(req.params.id, req.body);
-      res.json(transaction);
+      res.json(ApiResponse.success(transaction, 'Transaction rejetée'));
     } catch (error) {
       next(error);
     }
@@ -413,7 +417,7 @@ export class TransactionController {
   async annuler(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const transaction = await transactionService.annuler(req.params.id);
-      res.json(transaction);
+      res.json(ApiResponse.success(transaction, 'Transaction annulée'));
     } catch (error) {
       next(error);
     }

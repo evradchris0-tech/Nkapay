@@ -4,7 +4,7 @@
 
 import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
-import { NotFoundError, BadRequestError } from '../../../shared';
+import { NotFoundError, BadRequestError, PaginationQuery, PaginatedResult, paginate } from '../../../shared';
 import { Distribution, StatutDistribution } from '../entities/distribution.entity';
 import { ExerciceMembre } from '../../exercices/entities/exercice-membre.entity';
 import { Reunion } from '../../reunions/entities/reunion.entity';
@@ -28,7 +28,8 @@ export class DistributionService {
   }
 
   private get exerciceMembreRepository(): Repository<ExerciceMembre> {
-    if (!this._exerciceMembreRepo) this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
+    if (!this._exerciceMembreRepo)
+      this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
     return this._exerciceMembreRepo;
   }
 
@@ -42,7 +43,9 @@ export class DistributionService {
    */
   async create(dto: CreateDistributionDto): Promise<DistributionResponseDto> {
     // Verifier le beneficiaire
-    const beneficiaire = await this.exerciceMembreRepository.findOne({ where: { id: dto.exerciceMembreBeneficiaireId } });
+    const beneficiaire = await this.exerciceMembreRepository.findOne({
+      where: { id: dto.exerciceMembreBeneficiaireId },
+    });
     if (!beneficiaire) {
       throw new NotFoundError(`Membre d'exercice non trouve: ${dto.exerciceMembreBeneficiaireId}`);
     }
@@ -58,7 +61,9 @@ export class DistributionService {
       where: { reunionId: dto.reunionId, ordre: dto.ordre },
     });
     if (existingOrdre) {
-      throw new BadRequestError(`Une distribution avec l'ordre ${dto.ordre} existe deja pour cette reunion`);
+      throw new BadRequestError(
+        `Une distribution avec l'ordre ${dto.ordre} existe deja pour cette reunion`
+      );
     }
 
     const montantRetenu = dto.montantRetenu || 0;
@@ -122,9 +127,12 @@ export class DistributionService {
   }
 
   /**
-   * Lister les distributions
+   * Lister les distributions avec pagination et filtres
    */
-  async findAll(filters?: DistributionFiltersDto): Promise<{ distributions: DistributionResponseDto[]; total: number }> {
+  async findAll(
+    filters?: DistributionFiltersDto,
+    pagination?: PaginationQuery
+  ): Promise<PaginatedResult<DistributionResponseDto>> {
     const queryBuilder = this.distributionRepository
       .createQueryBuilder('d')
       .leftJoinAndSelect('d.exerciceMembreBeneficiaire', 'em')
@@ -138,19 +146,32 @@ export class DistributionService {
       queryBuilder.andWhere('em.exerciceId = :exerciceId', { exerciceId: filters.exerciceId });
     }
     if (filters?.exerciceMembreId) {
-      queryBuilder.andWhere('d.exerciceMembreBeneficiaireId = :exerciceMembreId', { exerciceMembreId: filters.exerciceMembreId });
+      queryBuilder.andWhere('d.exerciceMembreBeneficiaireId = :exerciceMembreId', {
+        exerciceMembreId: filters.exerciceMembreId,
+      });
     }
     if (filters?.statut) {
       queryBuilder.andWhere('d.statut = :statut', { statut: filters.statut });
     }
+    if (filters?.dateDebut) {
+      queryBuilder.andWhere('d.creeLe >= :dateDebut', { dateDebut: filters.dateDebut });
+    }
+    if (filters?.dateFin) {
+      queryBuilder.andWhere('d.creeLe <= :dateFin', { dateFin: filters.dateFin });
+    }
+    if (filters?.montantMin !== undefined) {
+      queryBuilder.andWhere('d.montantNet >= :montantMin', { montantMin: filters.montantMin });
+    }
+    if (filters?.montantMax !== undefined) {
+      queryBuilder.andWhere('d.montantNet <= :montantMax', { montantMax: filters.montantMax });
+    }
 
-    const [distributions, total] = await queryBuilder
-      .orderBy('d.ordre', 'ASC')
-      .getManyAndCount();
+    queryBuilder.orderBy('d.ordre', 'ASC');
 
+    const result = await paginate(queryBuilder, pagination ?? {});
     return {
-      distributions: distributions.map((d) => this.toResponseDto(d)),
-      total,
+      ...result,
+      data: result.data.map((d) => this.toResponseDto(d)),
     };
   }
 
@@ -160,7 +181,11 @@ export class DistributionService {
   async findById(id: string): Promise<DistributionResponseDto> {
     const distribution = await this.distributionRepository.findOne({
       where: { id },
-      relations: ['exerciceMembreBeneficiaire', 'exerciceMembreBeneficiaire.adhesionTontine', 'exerciceMembreBeneficiaire.adhesionTontine.utilisateur'],
+      relations: [
+        'exerciceMembreBeneficiaire',
+        'exerciceMembreBeneficiaire.adhesionTontine',
+        'exerciceMembreBeneficiaire.adhesionTontine.utilisateur',
+      ],
     });
 
     if (!distribution) {
@@ -176,7 +201,11 @@ export class DistributionService {
   async findByReunion(reunionId: string): Promise<DistributionResponseDto[]> {
     const distributions = await this.distributionRepository.find({
       where: { reunionId },
-      relations: ['exerciceMembreBeneficiaire', 'exerciceMembreBeneficiaire.adhesionTontine', 'exerciceMembreBeneficiaire.adhesionTontine.utilisateur'],
+      relations: [
+        'exerciceMembreBeneficiaire',
+        'exerciceMembreBeneficiaire.adhesionTontine',
+        'exerciceMembreBeneficiaire.adhesionTontine.utilisateur',
+      ],
       order: { ordre: 'ASC' },
     });
     return distributions.map((d) => this.toResponseDto(d));
@@ -201,7 +230,9 @@ export class DistributionService {
         where: { reunionId: distribution.reunionId, ordre: dto.ordre },
       });
       if (existingOrdre && existingOrdre.id !== id) {
-        throw new BadRequestError(`Une distribution avec l'ordre ${dto.ordre} existe deja pour cette reunion`);
+        throw new BadRequestError(
+          `Une distribution avec l'ordre ${dto.ordre} existe deja pour cette reunion`
+        );
       }
       distribution.ordre = dto.ordre;
     }
@@ -243,7 +274,7 @@ export class DistributionService {
    * Obtenir le resume des distributions
    */
   async getSummary(filters?: DistributionFiltersDto): Promise<DistributionsSummaryDto> {
-    const { distributions } = await this.findAll(filters);
+    const { data: distributions } = await this.findAll(filters, { limit: 1000 });
 
     let totalMontantBrut = 0;
     let totalMontantRetenu = 0;
@@ -287,11 +318,13 @@ export class DistributionService {
       id: entity.id,
       reunionId: entity.reunionId,
       exerciceMembreBeneficiaireId: entity.exerciceMembreBeneficiaireId,
-      exerciceMembreBeneficiaire: entity.exerciceMembreBeneficiaire ? {
-        id: entity.exerciceMembreBeneficiaire.id,
-        utilisateurId: utilisateur?.id || '',
-        utilisateurNom: utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}` : undefined,
-      } : undefined,
+      exerciceMembreBeneficiaire: entity.exerciceMembreBeneficiaire
+        ? {
+            id: entity.exerciceMembreBeneficiaire.id,
+            utilisateurId: utilisateur?.id || '',
+            utilisateurNom: utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}` : undefined,
+          }
+        : undefined,
       ordre: entity.ordre,
       montantBrut: Number(entity.montantBrut),
       montantRetenu: Number(entity.montantRetenu),

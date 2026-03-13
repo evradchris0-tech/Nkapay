@@ -5,6 +5,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { demandeAdhesionService } from '../services/demande-adhesion.service';
 import { DemandeAdhesionFiltersDto } from '../dto/demande-adhesion.dto';
+import { ApiResponse, PaginationQuery } from '../../../shared';
 
 export class DemandeAdhesionController {
   /**
@@ -70,16 +71,20 @@ export class DemandeAdhesionController {
   async findAll(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const filters: DemandeAdhesionFiltersDto = {
-        tontineId: req.query.tontineId as string,
-        utilisateurId: req.query.utilisateurId as string,
+        tontineId: req.query.tontineId as string | undefined,
+        utilisateurId: req.query.utilisateurId as string | undefined,
         statut: req.query.statut as any,
-        dateDebut: req.query.dateDebut as string,
-        dateFin: req.query.dateFin as string,
+        dateDebut: req.query.dateDebut as string | undefined,
+        dateFin: req.query.dateFin as string | undefined,
+      };
+      const pagination: PaginationQuery = {
         page: req.query.page ? parseInt(req.query.page as string, 10) : undefined,
         limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
+        sortBy: req.query.sortBy as string | undefined,
+        sortOrder: req.query.sortOrder as 'ASC' | 'DESC' | undefined,
       };
-      const result = await demandeAdhesionService.findAll(filters);
-      res.json(result);
+      const result = await demandeAdhesionService.findAll(filters, pagination);
+      res.json(ApiResponse.paginated(result.data, result.meta));
     } catch (error) {
       next(error);
     }

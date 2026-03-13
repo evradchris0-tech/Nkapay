@@ -1,6 +1,6 @@
 /**
  * DTOs pour le module Secours (Événements de secours)
- * 
+ *
  * Workflow CAYA:
  * - Create → Soumettre → Valider/Refuser → Décaisser (automatique) ou Payer (manuel)
  */

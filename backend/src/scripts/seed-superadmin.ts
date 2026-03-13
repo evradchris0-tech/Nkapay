@@ -37,7 +37,7 @@ export async function seedSuperAdmin(): Promise<void> {
     const config = getSuperAdminConfig();
 
     // Vérifier s'il existe déjà un superadmin avec ce numéro de téléphone
-    let superAdmin = await utilisateurRepository.findOne({
+    const superAdmin = await utilisateurRepository.findOne({
       where: { telephone1: config.telephone1 },
     });
 

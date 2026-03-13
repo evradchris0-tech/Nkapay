@@ -5,6 +5,8 @@
 import { Router } from 'express';
 import { tontineController } from '../controllers/tontine.controller';
 import { authenticate } from '../../../shared';
+import { planGuard } from '../../../shared/middlewares/plan.guard';
+import { AppDataSource } from '../../../config';
 
 const router = Router();
 
@@ -102,7 +104,14 @@ const router = Router();
  *       401:
  *         description: Non authentifie
  */
-router.post('/', authenticate, tontineController.create.bind(tontineController));
+router.post(
+  '/',
+  authenticate,
+  planGuard('maxTontines', (orgId) =>
+    AppDataSource.getRepository('tontine').count({ where: { organisation_id: orgId } } as any)
+  ),
+  tontineController.create.bind(tontineController)
+);
 
 /**
  * @swagger

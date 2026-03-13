@@ -82,7 +82,7 @@ const swaggerDefinition = {
     },
     responses: {
       UnauthorizedError: {
-        description: 'Token d\'authentification manquant ou invalide',
+        description: "Token d'authentification manquant ou invalide",
         content: {
           'application/json': {
             schema: {

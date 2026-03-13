@@ -37,6 +37,9 @@ export class Utilisateur {
   @Column({ type: 'varchar', length: 20, unique: true, nullable: true })
   telephone2: string | null;
 
+  @Column({ type: 'varchar', length: 255, unique: true, nullable: true })
+  email: string | null;
+
   @Column({ name: 'adresse_residence', type: 'varchar', length: 255, nullable: true })
   adresseResidence: string | null;
 

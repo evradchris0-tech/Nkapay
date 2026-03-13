@@ -6,6 +6,7 @@ import { Request, Response, NextFunction } from 'express';
 import { tontineService } from '../services/tontine.service';
 import { ApiResponse } from '../../../shared';
 import { StatutTontine } from '../entities/tontine.entity';
+import { TontineFiltersDto } from '../dto/tontine.dto';
 
 export class TontineController {
   /**
@@ -21,12 +22,17 @@ export class TontineController {
   }
 
   /**
-   * GET / - Lister toutes les tontines
+   * GET / - Lister toutes les tontines avec filtres
    */
   async findAll(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const statut = req.query.statut as StatutTontine | undefined;
-      const result = await tontineService.findAll({ statut });
+      const filters: TontineFiltersDto = {
+        statut: req.query.statut as StatutTontine | undefined,
+        search: req.query.search as string | undefined,
+        tontineTypeId: req.query.tontineTypeId as string | undefined,
+        organisationId: req.query.organisationId as string | undefined,
+      };
+      const result = await tontineService.findAll(filters);
       res.json(ApiResponse.success(result));
     } catch (error) {
       next(error);

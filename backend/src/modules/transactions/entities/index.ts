@@ -1,4 +1,9 @@
-export { Transaction, TypeTransaction, StatutTransaction, ModeCreationTransaction } from './transaction.entity';
+export {
+  Transaction,
+  TypeTransaction,
+  StatutTransaction,
+  ModeCreationTransaction,
+} from './transaction.entity';
 export { Projet } from './projet.entity';
 export { OperateurPaiement } from './operateur-paiement.entity';
 export { PaiementMobile, StatutPaiementMobile } from './paiement-mobile.entity';

@@ -40,6 +40,16 @@ export interface ChangePasswordDto {
 }
 
 /**
+ * DTO pour les filtres de liste utilisateurs
+ */
+export interface UtilisateurFiltersDto {
+  search?: string;        // recherche dans nom OU prenom
+  telephone?: string;     // telephone1 LIKE
+  estSuperAdmin?: boolean;
+  organisationId?: string; // membres de cette organisation
+}
+
+/**
  * DTO pour la reponse utilisateur (sans donnees sensibles)
  */
 export interface UtilisateurResponseDto {

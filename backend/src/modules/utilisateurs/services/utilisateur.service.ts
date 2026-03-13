@@ -3,14 +3,15 @@
  * Gestion des utilisateurs du systeme
  */
 
-import { Repository } from 'typeorm';
-import { PaginationQuery, PaginatedResult, paginateRaw } from '../../../shared';
+import { Repository, SelectQueryBuilder } from 'typeorm';
+import { PaginationQuery, PaginatedResult, paginateRaw, paginate } from '../../../shared';
 import { AppDataSource } from '../../../config/database.config';
 import { Utilisateur } from '../entities/utilisateur.entity';
 import {
   CreateUtilisateurDto,
   UpdateUtilisateurDto,
   UtilisateurResponseDto,
+  UtilisateurFiltersDto,
 } from '../dtos/utilisateur.dto';
 import { NotFoundError, ConflictError, BadRequestError } from '../../../shared/errors/app-error';
 import { hashPassword, verifyPassword } from '../../auth/utils/password.util';
@@ -21,7 +22,8 @@ export class UtilisateurService extends BaseCrudService<
   Utilisateur,
   CreateUtilisateurDto,
   UpdateUtilisateurDto,
-  UtilisateurResponseDto
+  UtilisateurResponseDto,
+  UtilisateurFiltersDto
 > {
   private _repository?: Repository<Utilisateur>;
 
@@ -32,6 +34,35 @@ export class UtilisateurService extends BaseCrudService<
 
   protected getRelations(): string[] {
     return ['languePreferee'];
+  }
+
+  protected applyFilters(
+    query: SelectQueryBuilder<Utilisateur>,
+    filters?: UtilisateurFiltersDto
+  ): void {
+    if (!filters) return;
+
+    if (filters.search) {
+      query.andWhere(
+        '(e.prenom LIKE :search OR e.nom LIKE :search)',
+        { search: `%${filters.search}%` }
+      );
+    }
+
+    if (filters.telephone) {
+      query.andWhere('e.telephone1 LIKE :telephone', { telephone: `%${filters.telephone}%` });
+    }
+
+    if (filters.estSuperAdmin !== undefined) {
+      query.andWhere('e.estSuperAdmin = :estSuperAdmin', { estSuperAdmin: filters.estSuperAdmin });
+    }
+
+    if (filters.organisationId) {
+      query
+        .innerJoin('membre_organisation', 'mo', 'mo.utilisateur_id = e.id')
+        .andWhere('mo.organisation_id = :organisationId', { organisationId: filters.organisationId })
+        .andWhere('mo.statut = :statutMo', { statutMo: 'ACTIVE' });
+    }
   }
 
   /**

@@ -8,11 +8,7 @@ import { NotFoundError, BadRequestError } from '../../../shared';
 import { InscriptionDueExercice, StatutDu } from '../entities/inscription-due-exercice.entity';
 import { Exercice } from '../../exercices/entities/exercice.entity';
 import { ExerciceMembre } from '../../exercices/entities/exercice-membre.entity';
-import {
-  InscriptionDueResponseDto,
-  DueFiltersDto,
-  UpdateDuePaymentDto
-} from '../dto/dues.dto';
+import { InscriptionDueResponseDto, DueFiltersDto, UpdateDuePaymentDto } from '../dto/dues.dto';
 
 export class InscriptionDueService {
   private _inscriptionDueRepo?: Repository<InscriptionDueExercice>;
@@ -20,7 +16,8 @@ export class InscriptionDueService {
   private _exerciceMembreRepo?: Repository<ExerciceMembre>;
 
   private get inscriptionDueRepository(): Repository<InscriptionDueExercice> {
-    if (!this._inscriptionDueRepo) this._inscriptionDueRepo = AppDataSource.getRepository(InscriptionDueExercice);
+    if (!this._inscriptionDueRepo)
+      this._inscriptionDueRepo = AppDataSource.getRepository(InscriptionDueExercice);
     return this._inscriptionDueRepo;
   }
 
@@ -30,17 +27,21 @@ export class InscriptionDueService {
   }
 
   private get exerciceMembreRepository(): Repository<ExerciceMembre> {
-    if (!this._exerciceMembreRepo) this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
+    if (!this._exerciceMembreRepo)
+      this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
     return this._exerciceMembreRepo;
   }
 
   /**
    * Générer les inscriptions dues pour un exercice
    */
-  async genererPourExercice(exerciceId: string, montantDu: number): Promise<InscriptionDueResponseDto[]> {
+  async genererPourExercice(
+    exerciceId: string,
+    montantDu: number
+  ): Promise<InscriptionDueResponseDto[]> {
     const exercice = await this.exerciceRepository.findOne({
       where: { id: exerciceId },
-      relations: ['membres']
+      relations: ['membres'],
     });
 
     if (!exercice) {
@@ -51,7 +52,7 @@ export class InscriptionDueService {
 
     for (const exerciceMembre of exercice.membres) {
       const existing = await this.inscriptionDueRepository.findOne({
-        where: { exerciceMembreId: exerciceMembre.id }
+        where: { exerciceMembreId: exerciceMembre.id },
       });
 
       if (!existing) {
@@ -60,7 +61,7 @@ export class InscriptionDueService {
           montantDu,
           montantPaye: 0,
           soldeRestant: montantDu,
-          statut: StatutDu.EN_RETARD
+          statut: StatutDu.EN_RETARD,
         });
         await this.inscriptionDueRepository.save(inscriptionDue);
         inscriptionsDues.push(this.formatResponse(inscriptionDue));
@@ -82,13 +83,13 @@ export class InscriptionDueService {
 
     if (filters?.exerciceMembreId) {
       queryBuilder.andWhere('inscription.exerciceMembreId = :exerciceMembreId', {
-        exerciceMembreId: filters.exerciceMembreId
+        exerciceMembreId: filters.exerciceMembreId,
       });
     }
 
     if (filters?.statut) {
       queryBuilder.andWhere('inscription.statut = :statut', {
-        statut: filters.statut
+        statut: filters.statut,
       });
     }
 
@@ -104,7 +105,7 @@ export class InscriptionDueService {
   async findById(id: string): Promise<InscriptionDueResponseDto> {
     const inscriptionDue = await this.inscriptionDueRepository.findOne({
       where: { id },
-      relations: ['exerciceMembre', 'exerciceMembre.adhesionTontine']
+      relations: ['exerciceMembre', 'exerciceMembre.adhesionTontine'],
     });
 
     if (!inscriptionDue) {
@@ -152,7 +153,10 @@ export class InscriptionDueService {
   /**
    * Enregistrer un paiement d'inscription (alias)
    */
-  async enregistrerPaiement(id: string, data: UpdateDuePaymentDto): Promise<InscriptionDueResponseDto> {
+  async enregistrerPaiement(
+    id: string,
+    data: UpdateDuePaymentDto
+  ): Promise<InscriptionDueResponseDto> {
     return this.payer(id, data);
   }
 
@@ -161,7 +165,7 @@ export class InscriptionDueService {
    */
   async payer(id: string, data: UpdateDuePaymentDto): Promise<InscriptionDueResponseDto> {
     const inscriptionDue = await this.inscriptionDueRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!inscriptionDue) {
@@ -222,7 +226,7 @@ export class InscriptionDueService {
       totalMontantPaye: 0,
       tauxRecouvrement: 0,
       aJour: 0,
-      enRetard: 0
+      enRetard: 0,
     };
 
     inscriptions.forEach((i: InscriptionDueExercice) => {
@@ -236,7 +240,8 @@ export class InscriptionDueService {
     });
 
     if (stats.totalMontantDu > 0) {
-      stats.tauxRecouvrement = Math.round((stats.totalMontantPaye / stats.totalMontantDu) * 10000) / 100;
+      stats.tauxRecouvrement =
+        Math.round((stats.totalMontantPaye / stats.totalMontantDu) * 10000) / 100;
     }
 
     return stats;
@@ -250,7 +255,7 @@ export class InscriptionDueService {
       montantPaye: Number(inscriptionDue.montantPaye),
       soldeRestant: Number(inscriptionDue.soldeRestant),
       statut: inscriptionDue.statut,
-      creeLe: inscriptionDue.creeLe
+      creeLe: inscriptionDue.creeLe,
     };
   }
 }

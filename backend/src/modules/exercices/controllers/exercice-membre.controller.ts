@@ -1,9 +1,6 @@
-/**
- * Controlleur pour la gestion des membres d'exercice
- */
-
 import { Request, Response, NextFunction } from 'express';
 import { exerciceMembreService } from '../services/exercice-membre.service';
+import { ApiResponse } from '../../../shared';
 
 export class ExerciceMembreController {
   /**
@@ -12,7 +9,7 @@ export class ExerciceMembreController {
   async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await exerciceMembreService.create(req.body);
-      res.status(201).json(result);
+      res.status(201).json(ApiResponse.success(result, "Membre ajouté à l'exercice"));
     } catch (error) {
       next(error);
     }
@@ -23,8 +20,11 @@ export class ExerciceMembreController {
    */
   async findByExercice(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const result = await exerciceMembreService.findByExercice(req.params.exerciceId, req.query as any);
-      res.json(result);
+      const result = await exerciceMembreService.findByExercice(
+        req.params.exerciceId,
+        req.query as any
+      );
+      res.json(ApiResponse.success(result));
     } catch (error) {
       next(error);
     }
@@ -36,7 +36,7 @@ export class ExerciceMembreController {
   async findById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await exerciceMembreService.findById(req.params.id);
-      res.json(result);
+      res.json(ApiResponse.success(result));
     } catch (error) {
       next(error);
     }
@@ -48,7 +48,7 @@ export class ExerciceMembreController {
   async update(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await exerciceMembreService.update(req.params.id, req.body);
-      res.json(result);
+      res.json(ApiResponse.success(result, "Membre d'exercice mis à jour"));
     } catch (error) {
       next(error);
     }
@@ -60,7 +60,7 @@ export class ExerciceMembreController {
   async deactivate(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await exerciceMembreService.deactivate(req.params.id);
-      res.json(result);
+      res.json(ApiResponse.success(result, "Membre d'exercice désactivé"));
     } catch (error) {
       next(error);
     }
@@ -72,7 +72,7 @@ export class ExerciceMembreController {
   async reactivate(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await exerciceMembreService.reactivate(req.params.id);
-      res.json(result);
+      res.json(ApiResponse.success(result, "Membre d'exercice réactivé"));
     } catch (error) {
       next(error);
     }

@@ -47,7 +47,9 @@ export class AdhesionTontineService {
     }
 
     // Verifier que l'utilisateur existe
-    const utilisateur = await this.utilisateurRepository.findOne({ where: { id: dto.utilisateurId } });
+    const utilisateur = await this.utilisateurRepository.findOne({
+      where: { id: dto.utilisateurId },
+    });
     if (!utilisateur) {
       throw new NotFoundError(`Utilisateur non trouve: ${dto.utilisateurId}`);
     }
@@ -93,7 +95,10 @@ export class AdhesionTontineService {
   /**
    * Lister les adhesions d'une tontine
    */
-  async findByTontine(tontineId: string, filters?: AdhesionFiltersDto): Promise<AdhesionListItemDto[]> {
+  async findByTontine(
+    tontineId: string,
+    filters?: AdhesionFiltersDto
+  ): Promise<AdhesionListItemDto[]> {
     const queryBuilder = this.adhesionRepository
       .createQueryBuilder('adhesion')
       .leftJoinAndSelect('adhesion.utilisateur', 'utilisateur')
@@ -106,9 +111,7 @@ export class AdhesionTontineService {
       queryBuilder.andWhere('adhesion.statut = :statut', { statut: filters.statut });
     }
 
-    const adhesions = await queryBuilder
-      .orderBy('adhesion.dateAdhesionTontine', 'ASC')
-      .getMany();
+    const adhesions = await queryBuilder.orderBy('adhesion.dateAdhesionTontine', 'ASC').getMany();
 
     return adhesions.map((a) => this.toListItemDto(a));
   }
@@ -132,7 +135,10 @@ export class AdhesionTontineService {
   /**
    * Trouver l'adhesion d'un utilisateur a une tontine
    */
-  async findByUserAndTontine(utilisateurId: string, tontineId: string): Promise<AdhesionResponseDto> {
+  async findByUserAndTontine(
+    utilisateurId: string,
+    tontineId: string
+  ): Promise<AdhesionResponseDto> {
     const adhesion = await this.adhesionRepository.findOne({
       where: { utilisateurId, tontineId },
       relations: ['tontine', 'utilisateur'],
@@ -245,17 +251,21 @@ export class AdhesionTontineService {
   private toResponseDto(entity: AdhesionTontine): AdhesionResponseDto {
     return {
       id: entity.id,
-      tontine: entity.tontine ? {
-        id: entity.tontine.id,
-        nom: entity.tontine.nom,
-        nomCourt: entity.tontine.nomCourt,
-      } : { id: '', nom: '', nomCourt: '' },
-      utilisateur: entity.utilisateur ? {
-        id: entity.utilisateur.id,
-        nom: entity.utilisateur.nom,
-        prenom: entity.utilisateur.prenom,
-        telephone1: entity.utilisateur.telephone1,
-      } : { id: '', nom: '', prenom: '', telephone1: '' },
+      tontine: entity.tontine
+        ? {
+            id: entity.tontine.id,
+            nom: entity.tontine.nom,
+            nomCourt: entity.tontine.nomCourt,
+          }
+        : { id: '', nom: '', nomCourt: '' },
+      utilisateur: entity.utilisateur
+        ? {
+            id: entity.utilisateur.id,
+            nom: entity.utilisateur.nom,
+            prenom: entity.utilisateur.prenom,
+            telephone1: entity.utilisateur.telephone1,
+          }
+        : { id: '', nom: '', prenom: '', telephone1: '' },
       matricule: entity.matricule,
       role: entity.role,
       statut: entity.statut,
@@ -273,11 +283,13 @@ export class AdhesionTontineService {
   private toListItemDto(entity: AdhesionTontine): AdhesionListItemDto {
     return {
       id: entity.id,
-      utilisateur: entity.utilisateur ? {
-        id: entity.utilisateur.id,
-        nom: entity.utilisateur.nom,
-        prenom: entity.utilisateur.prenom,
-      } : { id: '', nom: '', prenom: '' },
+      utilisateur: entity.utilisateur
+        ? {
+            id: entity.utilisateur.id,
+            nom: entity.utilisateur.nom,
+            prenom: entity.utilisateur.prenom,
+          }
+        : { id: '', nom: '', prenom: '' },
       matricule: entity.matricule,
       role: entity.role,
       statut: entity.statut,

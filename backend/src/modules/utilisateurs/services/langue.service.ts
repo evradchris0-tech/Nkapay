@@ -6,11 +6,7 @@
 import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { Langue } from '../entities/langue.entity';
-import {
-  CreateLangueDto,
-  UpdateLangueDto,
-  LangueResponseDto,
-} from '../dto/langue.dto';
+import { CreateLangueDto, UpdateLangueDto, LangueResponseDto } from '../dto/langue.dto';
 import { NotFoundError, BadRequestError } from '../../../shared';
 
 export class LangueService {

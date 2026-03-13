@@ -7,14 +7,24 @@ import crypto from 'crypto';
 import { env } from '../../../config/env.config';
 import { JwtPayload } from '../dtos/auth.dto';
 
+export interface AccessTokenOptions {
+  organisationId?: string;
+  orgRole?: string;
+  estSuperAdmin?: boolean;
+}
+
 /**
- * Genere un access token
+ * Genere un access token (avec contexte organisation optionnel)
  */
-export function generateAccessToken(utilisateurId: string): string {
-  const payload: Omit<JwtPayload, 'iat' | 'exp'> = {
+export function generateAccessToken(utilisateurId: string, opts?: AccessTokenOptions): string {
+  const payload: Record<string, unknown> = {
     sub: utilisateurId,
     type: 'access',
   };
+
+  if (opts?.organisationId) payload.org = opts.organisationId;
+  if (opts?.orgRole) payload.orgRole = opts.orgRole;
+  if (opts?.estSuperAdmin) payload.estSuperAdmin = true;
 
   const options: SignOptions = {
     expiresIn: env.jwt.accessExpiresIn as jwt.SignOptions['expiresIn'],

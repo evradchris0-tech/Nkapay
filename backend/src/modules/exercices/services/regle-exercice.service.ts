@@ -7,17 +7,21 @@ import { NotFoundError, BadRequestError } from '../../../shared';
 import { RegleExercice } from '../entities/regle-exercice.entity';
 import { RuleDefinition } from '../../tontines/entities/rule-definition.entity';
 import { RegleTontine } from '../../tontines/entities/regle-tontine.entity';
+import { RegleOrganisation } from '../../organisations/entities/regle-organisation.entity';
+import { Tontine } from '../../tontines/entities/tontine.entity';
 import { Exercice } from '../entities/exercice.entity';
-import { 
-  CreateRegleExerciceDto, 
-  UpdateRegleExerciceDto, 
-  RegleExerciceResponseDto 
+import {
+  CreateRegleExerciceDto,
+  UpdateRegleExerciceDto,
+  RegleExerciceResponseDto,
 } from '../dto/regle-exercice.dto';
 
 export class RegleExerciceService {
   private regleExerciceRepository = AppDataSource.getRepository(RegleExercice);
   private ruleDefinitionRepository = AppDataSource.getRepository(RuleDefinition);
   private regleTontineRepository = AppDataSource.getRepository(RegleTontine);
+  private regleOrganisationRepository = AppDataSource.getRepository(RegleOrganisation);
+  private tontineRepository = AppDataSource.getRepository(Tontine);
   private exerciceRepository = AppDataSource.getRepository(Exercice);
 
   /**
@@ -25,7 +29,7 @@ export class RegleExerciceService {
    */
   async upsert(data: CreateRegleExerciceDto): Promise<RegleExerciceResponseDto> {
     const exercice = await this.exerciceRepository.findOne({
-      where: { id: data.exerciceId }
+      where: { id: data.exerciceId },
     });
 
     if (!exercice) {
@@ -33,7 +37,7 @@ export class RegleExerciceService {
     }
 
     const ruleDefinition = await this.ruleDefinitionRepository.findOne({
-      where: { id: data.ruleDefinitionId }
+      where: { id: data.ruleDefinitionId },
     });
 
     if (!ruleDefinition) {
@@ -45,11 +49,11 @@ export class RegleExerciceService {
     }
 
     let regleExercice = await this.regleExerciceRepository.findOne({
-      where: { 
-        exerciceId: data.exerciceId, 
-        ruleDefinitionId: data.ruleDefinitionId 
+      where: {
+        exerciceId: data.exerciceId,
+        ruleDefinitionId: data.ruleDefinitionId,
       },
-      relations: ['ruleDefinition']
+      relations: ['ruleDefinition'],
     });
 
     if (regleExercice) {
@@ -66,7 +70,7 @@ export class RegleExerciceService {
         valeur: data.valeur,
         estSurchargee: true,
         modifieLe: new Date(),
-        modifieParExerciceMembreId: data.modifieParExerciceMembreId
+        modifieParExerciceMembreId: data.modifieParExerciceMembreId,
       });
     }
 
@@ -74,7 +78,7 @@ export class RegleExerciceService {
 
     regleExercice = await this.regleExerciceRepository.findOne({
       where: { id: regleExercice.id },
-      relations: ['ruleDefinition']
+      relations: ['ruleDefinition'],
     });
 
     return this.formatResponse(regleExercice!);
@@ -87,36 +91,45 @@ export class RegleExerciceService {
     const regles = await this.regleExerciceRepository.find({
       where: { exerciceId },
       relations: ['ruleDefinition'],
-      order: { creeLe: 'ASC' }
+      order: { creeLe: 'ASC' },
     });
     return regles.map((r: RegleExercice) => this.formatResponse(r));
   }
 
   /**
-   * Récupérer les règles effectives d'un exercice (cascade: exercice -> tontine -> défaut)
+   * Récupérer les règles effectives d'un exercice
+   * Cascade 4 niveaux : exercice → tontine → organisation → défaut global
    */
   async getEffectiveRules(exerciceId: string): Promise<any[]> {
     const exercice = await this.exerciceRepository.findOne({
-      where: { id: exerciceId }
+      where: { id: exerciceId },
+    });
+    if (!exercice) throw new NotFoundError('Exercice non trouvé');
+
+    const tontine = await this.tontineRepository.findOne({
+      where: { id: exercice.tontineId },
     });
 
-    if (!exercice) {
-      throw new NotFoundError('Exercice non trouvé');
-    }
-
     const allDefinitions = await this.ruleDefinitionRepository.find({
-      order: { categorie: 'ASC', ordreAffichage: 'ASC' }
+      order: { categorie: 'ASC', ordreAffichage: 'ASC' },
     });
 
     const tontineRules = await this.regleTontineRepository.find({
-      where: { tontineId: exercice.tontineId }
+      where: { tontineId: exercice.tontineId },
     });
-    const tontineRulesMap = new Map(
-      tontineRules.map((r: RegleTontine) => [r.ruleDefinitionId, r])
-    );
+    const tontineRulesMap = new Map(tontineRules.map((r: RegleTontine) => [r.ruleDefinitionId, r]));
+
+    // Règles niveau organisation (nouveau niveau)
+    const orgRulesMap = new Map<string, string>();
+    if (tontine?.organisationId) {
+      const orgRules = await this.regleOrganisationRepository.find({
+        where: { organisationId: tontine.organisationId, estActive: true },
+      });
+      for (const r of orgRules) orgRulesMap.set(r.ruleDefinitionId, r.valeur);
+    }
 
     const exerciceRules = await this.regleExerciceRepository.find({
-      where: { exerciceId }
+      where: { exerciceId },
     });
     const exerciceRulesMap = new Map(
       exerciceRules.map((r: RegleExercice) => [r.ruleDefinitionId, r])
@@ -125,15 +138,19 @@ export class RegleExerciceService {
     return allDefinitions.map((def: RuleDefinition) => {
       const exerciceRule = exerciceRulesMap.get(def.id);
       const tontineRule = tontineRulesMap.get(def.id);
+      const orgValeur = orgRulesMap.get(def.id);
 
       let valeur = def.valeurDefaut;
       let source = 'DEFAUT';
 
+      if (orgValeur !== undefined) {
+        valeur = orgValeur;
+        source = 'ORGANISATION';
+      }
       if (tontineRule?.estActive) {
         valeur = tontineRule.valeur;
         source = 'TONTINE';
       }
-
       if (exerciceRule?.estSurchargee) {
         valeur = exerciceRule.valeur;
         source = 'EXERCICE';
@@ -147,7 +164,7 @@ export class RegleExerciceService {
         categorie: def.categorie,
         valeur,
         source,
-        estModifiable: def.estModifiableParExercice
+        estModifiable: def.estModifiableParExercice,
       };
     });
   }
@@ -158,7 +175,7 @@ export class RegleExerciceService {
   async findById(id: string): Promise<RegleExerciceResponseDto> {
     const regleExercice = await this.regleExerciceRepository.findOne({
       where: { id },
-      relations: ['ruleDefinition']
+      relations: ['ruleDefinition'],
     });
 
     if (!regleExercice) {
@@ -170,40 +187,41 @@ export class RegleExerciceService {
 
   /**
    * Récupérer la valeur effective d'une règle par clé
+   * Cascade 4 niveaux : exercice → tontine → organisation → défaut global
    */
   async getEffectiveValueByCle(exerciceId: string, cle: string): Promise<string | null> {
-    const exercice = await this.exerciceRepository.findOne({
-      where: { id: exerciceId }
-    });
+    const exercice = await this.exerciceRepository.findOne({ where: { id: exerciceId } });
+    if (!exercice) return null;
 
-    if (!exercice) {
-      return null;
-    }
+    const ruleDefinition = await this.ruleDefinitionRepository.findOne({ where: { cle } });
+    if (!ruleDefinition) return null;
 
-    const ruleDefinition = await this.ruleDefinitionRepository.findOne({
-      where: { cle }
-    });
-
-    if (!ruleDefinition) {
-      return null;
-    }
-
+    // Niveau 1 : exercice
     const regleExercice = await this.regleExerciceRepository.findOne({
-      where: { exerciceId, ruleDefinitionId: ruleDefinition.id }
+      where: { exerciceId, ruleDefinitionId: ruleDefinition.id },
     });
+    if (regleExercice?.estSurchargee) return regleExercice.valeur;
 
-    if (regleExercice?.estSurchargee) {
-      return regleExercice.valeur;
-    }
-
+    // Niveau 2 : tontine
     const regleTontine = await this.regleTontineRepository.findOne({
-      where: { tontineId: exercice.tontineId, ruleDefinitionId: ruleDefinition.id }
+      where: { tontineId: exercice.tontineId, ruleDefinitionId: ruleDefinition.id },
     });
+    if (regleTontine?.estActive) return regleTontine.valeur;
 
-    if (regleTontine?.estActive) {
-      return regleTontine.valeur;
+    // Niveau 3 : organisation
+    const tontine = await this.tontineRepository.findOne({ where: { id: exercice.tontineId } });
+    if (tontine?.organisationId) {
+      const regleOrg = await this.regleOrganisationRepository.findOne({
+        where: {
+          organisationId: tontine.organisationId,
+          ruleDefinitionId: ruleDefinition.id,
+          estActive: true,
+        },
+      });
+      if (regleOrg) return regleOrg.valeur;
     }
 
+    // Niveau 4 : défaut global
     return ruleDefinition.valeurDefaut;
   }
 
@@ -213,7 +231,7 @@ export class RegleExerciceService {
   async update(id: string, data: UpdateRegleExerciceDto): Promise<RegleExerciceResponseDto> {
     const regleExercice = await this.regleExerciceRepository.findOne({
       where: { id },
-      relations: ['ruleDefinition']
+      relations: ['ruleDefinition'],
     });
 
     if (!regleExercice) {
@@ -240,7 +258,7 @@ export class RegleExerciceService {
    */
   async delete(id: string): Promise<void> {
     const regleExercice = await this.regleExerciceRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!regleExercice) {
@@ -255,7 +273,7 @@ export class RegleExerciceService {
    */
   async initializeFromTontine(exerciceId: string, tontineId: string): Promise<void> {
     const tontineRules = await this.regleTontineRepository.find({
-      where: { tontineId, estActive: true }
+      where: { tontineId, estActive: true },
     });
 
     for (const rule of tontineRules) {
@@ -264,7 +282,7 @@ export class RegleExerciceService {
         ruleDefinitionId: rule.ruleDefinitionId,
         valeur: rule.valeur,
         estSurchargee: false,
-        modifieLe: new Date()
+        modifieLe: new Date(),
       });
       await this.regleExerciceRepository.save(regleExercice);
     }
@@ -275,18 +293,20 @@ export class RegleExerciceService {
       id: regleExercice.id,
       exerciceId: regleExercice.exerciceId,
       ruleDefinitionId: regleExercice.ruleDefinitionId,
-      ruleDefinition: regleExercice.ruleDefinition ? {
-        id: regleExercice.ruleDefinition.id,
-        cle: regleExercice.ruleDefinition.cle,
-        libelle: regleExercice.ruleDefinition.libelle,
-        typeValeur: regleExercice.ruleDefinition.typeValeur,
-        categorie: regleExercice.ruleDefinition.categorie
-      } : undefined,
+      ruleDefinition: regleExercice.ruleDefinition
+        ? {
+            id: regleExercice.ruleDefinition.id,
+            cle: regleExercice.ruleDefinition.cle,
+            libelle: regleExercice.ruleDefinition.libelle,
+            typeValeur: regleExercice.ruleDefinition.typeValeur,
+            categorie: regleExercice.ruleDefinition.categorie,
+          }
+        : undefined,
       valeur: regleExercice.valeur,
       estSurchargee: regleExercice.estSurchargee,
       modifieLe: regleExercice.modifieLe,
       modifieParExerciceMembreId: regleExercice.modifieParExerciceMembreId,
-      creeLe: regleExercice.creeLe
+      creeLe: regleExercice.creeLe,
     };
   }
 }

@@ -8,10 +8,7 @@ import { NotFoundError, BadRequestError } from '../../../shared';
 import { RemboursementPret } from '../entities/remboursement-pret.entity';
 import { Pret, StatutPret } from '../entities/pret.entity';
 import { Reunion } from '../../reunions/entities/reunion.entity';
-import {
-  CreateRemboursementDto,
-  RemboursementPretResponseDto,
-} from '../dto/pret.dto';
+import { CreateRemboursementDto, RemboursementPretResponseDto } from '../dto/pret.dto';
 
 export class RemboursementPretService {
   private _remboursementRepo?: Repository<RemboursementPret>;
@@ -19,7 +16,8 @@ export class RemboursementPretService {
   private _reunionRepo?: Repository<Reunion>;
 
   private get remboursementRepository(): Repository<RemboursementPret> {
-    if (!this._remboursementRepo) this._remboursementRepo = AppDataSource.getRepository(RemboursementPret);
+    if (!this._remboursementRepo)
+      this._remboursementRepo = AppDataSource.getRepository(RemboursementPret);
     return this._remboursementRepo;
   }
 
@@ -55,7 +53,9 @@ export class RemboursementPretService {
 
     // Verifier que le montant ne depasse pas le capital restant
     if (dto.montantCapital > Number(pret.capitalRestant)) {
-      throw new BadRequestError(`Le montant du capital (${dto.montantCapital}) depasse le capital restant (${pret.capitalRestant})`);
+      throw new BadRequestError(
+        `Le montant du capital (${dto.montantCapital}) depasse le capital restant (${pret.capitalRestant})`
+      );
     }
 
     const montantInteret = dto.montantInteret || 0;

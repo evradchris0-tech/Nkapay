@@ -65,7 +65,11 @@ const router = Router();
  *       201:
  *         description: Type d'evenement de secours cree
  */
-router.post('/', authenticate, typeEvenementSecoursController.create.bind(typeEvenementSecoursController));
+router.post(
+  '/',
+  authenticate,
+  typeEvenementSecoursController.create.bind(typeEvenementSecoursController)
+);
 
 /**
  * @swagger
@@ -84,7 +88,11 @@ router.post('/', authenticate, typeEvenementSecoursController.create.bind(typeEv
  *       200:
  *         description: Liste des types d'evenement de secours
  */
-router.get('/', authenticate, typeEvenementSecoursController.findAll.bind(typeEvenementSecoursController));
+router.get(
+  '/',
+  authenticate,
+  typeEvenementSecoursController.findAll.bind(typeEvenementSecoursController)
+);
 
 /**
  * @swagger
@@ -106,7 +114,11 @@ router.get('/', authenticate, typeEvenementSecoursController.findAll.bind(typeEv
  *       404:
  *         description: Type d'evenement de secours non trouve
  */
-router.get('/:id', authenticate, typeEvenementSecoursController.findById.bind(typeEvenementSecoursController));
+router.get(
+  '/:id',
+  authenticate,
+  typeEvenementSecoursController.findById.bind(typeEvenementSecoursController)
+);
 
 /**
  * @swagger
@@ -126,7 +138,11 @@ router.get('/:id', authenticate, typeEvenementSecoursController.findById.bind(ty
  *       200:
  *         description: Type d'evenement de secours mis a jour
  */
-router.patch('/:id', authenticate, typeEvenementSecoursController.update.bind(typeEvenementSecoursController));
+router.patch(
+  '/:id',
+  authenticate,
+  typeEvenementSecoursController.update.bind(typeEvenementSecoursController)
+);
 
 /**
  * @swagger
@@ -146,6 +162,10 @@ router.patch('/:id', authenticate, typeEvenementSecoursController.update.bind(ty
  *       204:
  *         description: Type d'evenement de secours supprime
  */
-router.delete('/:id', authenticate, typeEvenementSecoursController.delete.bind(typeEvenementSecoursController));
+router.delete(
+  '/:id',
+  authenticate,
+  typeEvenementSecoursController.delete.bind(typeEvenementSecoursController)
+);
 
 export const typeEvenementSecoursRoutes = router;

@@ -23,4 +23,3 @@ router.use('/regles-exercice', regleExerciceRoutes);
 router.use('/cassations', cassationRoutes);
 
 export const exerciceModuleRoutes = router;
-

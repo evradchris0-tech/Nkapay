@@ -1,17 +1,17 @@
 /**
  * Entité EpargneDueMensuelle
- * 
+ *
  * Représente l'ÉPARGNE que chaque membre doit verser lors d'une réunion.
- * 
+ *
  * LOGIQUE MÉTIER TONTINE:
  * - L'ÉPARGNE est un montant mis de côté INDIVIDUELLEMENT par chaque membre
  * - Contrairement à la cotisation (redistribuée), l'épargne est CONSERVÉE
  * - À la fin de l'exercice (CASSATION), chaque membre récupère SON épargne
- * 
+ *
  * DIFFÉRENCE CLÉ:
  * - COTISATION: Mutualisée → 1 bénéficiaire par mois
  * - ÉPARGNE: Individuelle → Chacun récupère la sienne à la cassation
- * 
+ *
  * @example
  * Épargne de 5 000 FCFA/mois × 12 mois = 60 000 FCFA récupérés à la cassation
  */

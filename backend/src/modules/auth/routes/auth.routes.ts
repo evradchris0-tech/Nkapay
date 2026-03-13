@@ -3,8 +3,19 @@
  */
 
 import { Router } from 'express';
-import { login, refreshToken, logout, getSessions, getCurrentUser } from '../controllers/auth.controller';
-import { loginValidator, refreshTokenValidator, logoutValidator } from '../validators/auth.validator';
+import {
+  login,
+  refreshToken,
+  logout,
+  getSessions,
+  getCurrentUser,
+  registerOrganisation,
+} from '../controllers/auth.controller';
+import {
+  loginValidator,
+  refreshTokenValidator,
+  logoutValidator,
+} from '../validators/auth.validator';
 import { validate, authenticate } from '../../../shared/middlewares';
 
 const router = Router();
@@ -37,6 +48,12 @@ const router = Router();
  *         description: Identifiants incorrects
  */
 router.post('/login', loginValidator, validate, login);
+
+/**
+ * POST /auth/register-organisation
+ * Onboarding self-service : crée un compte utilisateur + une organisation
+ */
+router.post('/register-organisation', registerOrganisation);
 
 /**
  * @swagger

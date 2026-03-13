@@ -1,108 +1,183 @@
 /**
- * Tests unitaires pour le service Tontine
+ * Tests unitaires pour TontineService
  */
 
-import { 
-  TestNotFoundError as NotFoundError, 
-  TestBadRequestError as BadRequestError, 
-  TestConflictError as ConflictError 
-} from '../../helpers/test-errors';
+import { createMockRepo } from '../../helpers/mock-repo';
 
-describe('Tontine Service', () => {
-  describe('Validation des données de tontine', () => {
-    it('devrait valider un nom de tontine valide', () => {
-      const validNames = ['Tontine Famille', 'Epargne Mensuelle', 'SOLIDARITÉ 2024'];
-      validNames.forEach(name => {
-        expect(name.length).toBeGreaterThanOrEqual(3);
-        expect(name.length).toBeLessThanOrEqual(100);
-      });
+const mockTontineRepo = createMockRepo();
+const mockTontineTypeRepo = createMockRepo();
+
+jest.mock('../../../src/config', () => ({
+  AppDataSource: {
+    getRepository: jest.fn((entity: any) => {
+      const name = typeof entity === 'string' ? entity : entity?.name ?? String(entity);
+      if (name === 'Tontine') return mockTontineRepo;
+      if (name === 'TontineType') return mockTontineTypeRepo;
+      return createMockRepo();
+    }),
+    isInitialized: true,
+  },
+  env: { nodeEnv: 'test', db: {} },
+  isDevelopment: false,
+}));
+
+jest.mock('../../../src/shared/errors/app-error', () => ({
+  NotFoundError: class NotFoundError extends Error {
+    statusCode = 404;
+    constructor(message: string) { super(`NotFoundError: ${message}`); this.name = 'NotFoundError'; }
+  },
+  BadRequestError: class BadRequestError extends Error {
+    statusCode = 400;
+    constructor(message: string) { super(`BadRequestError: ${message}`); this.name = 'BadRequestError'; }
+  },
+}));
+
+import { TontineService } from '../../../src/modules/tontines/services/tontine.service';
+import { StatutTontine } from '../../../src/modules/tontines/entities/tontine.entity';
+
+function makeMockTontine(overrides: any = {}) {
+  return {
+    id: 'tontine-uuid-1',
+    nom: 'Tontine Test',
+    nomCourt: 'TT',
+    tontineTypeId: 'type-uuid-1',
+    statut: StatutTontine.ACTIVE,
+    anneeFondation: 2020,
+    motto: null,
+    logo: null,
+    estOfficiellementDeclaree: false,
+    numeroEnregistrement: null,
+    documentStatuts: null,
+    organisationId: null,
+    tontineType: { id: 'type-uuid-1', code: 'CLASSIQUE', libelle: 'Classique' },
+    adhesions: [],
+    exercices: [],
+    creeLe: new Date(),
+    modifieLe: null,
+    ...overrides,
+  };
+}
+
+describe('TontineService', () => {
+  let service: TontineService;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    service = new TontineService();
+    mockTontineRepo.create.mockImplementation((data: any) => ({ ...data }));
+    mockTontineRepo.save.mockImplementation((data: any) => Promise.resolve({ id: 'tontine-uuid-1', ...data }));
+  });
+
+  describe('create()', () => {
+    it('crée avec statut ACTIVE', async () => {
+      mockTontineTypeRepo.findOne.mockResolvedValue({ id: 'type-uuid-1' });
+      mockTontineRepo.findOne
+        .mockResolvedValueOnce(null) // nom court unique
+        .mockResolvedValueOnce(makeMockTontine()); // reloaded
+
+      const result = await service.create({ nom: 'Tontine Test', nomCourt: 'TT', tontineTypeId: 'type-uuid-1' });
+
+      expect(mockTontineRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ statut: StatutTontine.ACTIVE })
+      );
+      expect(result).toHaveProperty('id');
     });
 
-    it('devrait valider une devise valide', () => {
-      const validDevises = ['XAF', 'EUR', 'USD'];
-      validDevises.forEach(devise => {
-        expect(devise).toMatch(/^[A-Z]{3}$/);
-      });
+    it('lève NotFoundError si tontineType inexistant', async () => {
+      mockTontineTypeRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.create({ nom: 'Test', nomCourt: 'T', tontineTypeId: 'unknown' })
+      ).rejects.toThrow('NotFoundError');
     });
 
-    it('devrait valider un montant de cotisation positif', () => {
-      const validMontants = [1000, 5000, 50000, 100000];
-      validMontants.forEach(montant => {
-        expect(montant).toBeGreaterThan(0);
-      });
+    it('lève BadRequestError si nomCourt dupliqué', async () => {
+      mockTontineTypeRepo.findOne.mockResolvedValue({ id: 'type-uuid-1' });
+      mockTontineRepo.findOne.mockResolvedValueOnce(makeMockTontine()); // exists
+
+      await expect(
+        service.create({ nom: 'Test', nomCourt: 'TT', tontineTypeId: 'type-uuid-1' })
+      ).rejects.toThrow('BadRequestError');
     });
 
-    it('devrait rejeter un montant négatif ou nul', () => {
-      const invalidMontants = [0, -1000, -50000];
-      invalidMontants.forEach(montant => {
-        expect(montant).not.toBeGreaterThan(0);
-      });
+    it('assigne organisationId si fourni', async () => {
+      mockTontineTypeRepo.findOne.mockResolvedValue({ id: 'type-uuid-1' });
+      mockTontineRepo.findOne
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(makeMockTontine({ organisationId: 'org-uuid-1' }));
+
+      await service.create({ nom: 'Test', nomCourt: 'T2', tontineTypeId: 'type-uuid-1' }, 'org-uuid-1');
+
+      expect(mockTontineRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ organisationId: 'org-uuid-1' })
+      );
     });
   });
 
-  describe('Périodicité de tontine', () => {
-    const periodicites = ['HEBDOMADAIRE', 'BIMENSUELLE', 'MENSUELLE', 'TRIMESTRIELLE'];
+  describe('findAll()', () => {
+    it('filtre par statut', async () => {
+      const qb = mockTontineRepo.createQueryBuilder();
+      qb.getRawAndEntities.mockResolvedValue({ entities: [], raw: [] });
 
-    it('devrait accepter les périodicités valides', () => {
-      periodicites.forEach(p => {
-        expect(periodicites).toContain(p);
-      });
+      await service.findAll({ statut: StatutTontine.ACTIVE });
+
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        expect.stringContaining('statut'),
+        expect.any(Object)
+      );
     });
 
-    it('devrait calculer le nombre de réunions annuelles', () => {
-      const reunionsParAn: Record<string, number> = {
-        'HEBDOMADAIRE': 52,
-        'BIMENSUELLE': 24,
-        'MENSUELLE': 12,
-        'TRIMESTRIELLE': 4,
-      };
-      expect(reunionsParAn['MENSUELLE']).toBe(12);
-      expect(reunionsParAn['HEBDOMADAIRE']).toBe(52);
-    });
-  });
+    it('filtre par organisationId', async () => {
+      const qb = mockTontineRepo.createQueryBuilder();
+      qb.getRawAndEntities.mockResolvedValue({ entities: [], raw: [] });
 
-  describe('Statuts de tontine', () => {
-    const statuts = ['BROUILLON', 'ACTIVE', 'SUSPENDUE', 'FERMEE'];
+      await service.findAll({ organisationId: 'org-uuid-1' });
 
-    it('devrait valider les transitions de statut', () => {
-      expect(statuts.indexOf('ACTIVE')).toBeGreaterThan(statuts.indexOf('BROUILLON'));
-      expect(statuts.indexOf('SUSPENDUE')).toBeGreaterThan(statuts.indexOf('ACTIVE'));
-    });
-
-    it('devrait rejeter transition FERMEE vers ACTIVE', () => {
-      const currentStatut = 'FERMEE';
-      const isFinalState = currentStatut === 'FERMEE';
-      expect(isFinalState).toBe(true);
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        expect.stringContaining('organisation_id'),
+        expect.any(Object)
+      );
     });
   });
 
-  describe('Calcul des montants', () => {
-    it('devrait calculer le montant total de cotisation mensuelle', () => {
-      const montantCotisation = 10000;
-      const nombreParts = 2;
-      const montantTotal = montantCotisation * nombreParts;
-      expect(montantTotal).toBe(20000);
+  describe('suspend() / activate()', () => {
+    it('suspend → SUSPENDUE', async () => {
+      const tontine = makeMockTontine({ statut: StatutTontine.ACTIVE });
+      mockTontineRepo.findOne
+        .mockResolvedValueOnce(tontine)
+        .mockResolvedValueOnce({ ...tontine, statut: StatutTontine.SUSPENDUE });
+
+      await service.suspend('tontine-uuid-1');
+
+      expect(mockTontineRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ statut: StatutTontine.SUSPENDUE })
+      );
     });
 
-    it('devrait calculer le pot mensuel', () => {
-      const montantCotisation = 10000;
-      const nombreMembres = 12;
-      const potMensuel = montantCotisation * nombreMembres;
-      expect(potMensuel).toBe(120000);
+    it('activate → ACTIVE', async () => {
+      const tontine = makeMockTontine({ statut: StatutTontine.SUSPENDUE });
+      mockTontineRepo.findOne
+        .mockResolvedValueOnce(tontine)
+        .mockResolvedValueOnce({ ...tontine, statut: StatutTontine.ACTIVE });
+
+      await service.activate('tontine-uuid-1');
+
+      expect(mockTontineRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ statut: StatutTontine.ACTIVE })
+      );
     });
   });
 
-  describe('Erreurs métier', () => {
-    it('devrait lever NotFoundError pour tontine inexistante', () => {
-      expect(() => { throw new NotFoundError('Tontine non trouvée'); }).toThrow(NotFoundError);
-    });
+  describe('update()', () => {
+    it('lève BadRequestError si nomCourt dupliqué au changement', async () => {
+      const tontine = makeMockTontine({ nomCourt: 'TT' });
+      mockTontineRepo.findOne
+        .mockResolvedValueOnce(tontine)
+        .mockResolvedValueOnce(makeMockTontine({ id: 'autre-id', nomCourt: 'NEW' })); // existe déjà
 
-    it('devrait lever BadRequestError pour activation sans membres', () => {
-      expect(() => { throw new BadRequestError('La tontine doit avoir au moins un membre'); }).toThrow(BadRequestError);
-    });
-
-    it('devrait lever ConflictError pour nom déjà utilisé', () => {
-      expect(() => { throw new ConflictError('Une tontine avec ce nom existe déjà'); }).toThrow(ConflictError);
+      await expect(
+        service.update('tontine-uuid-1', { nomCourt: 'NEW' })
+      ).rejects.toThrow('BadRequestError');
     });
   });
 });

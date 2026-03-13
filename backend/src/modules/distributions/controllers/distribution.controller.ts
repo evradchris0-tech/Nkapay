@@ -5,6 +5,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { distributionService } from '../services/distribution.service';
 import { DistributionFiltersDto } from '../dto/distribution.dto';
+import { ApiResponse, PaginationQuery } from '../../../shared';
 
 export class DistributionController {
   /**
@@ -66,13 +67,23 @@ export class DistributionController {
   async findAll(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const filters: DistributionFiltersDto = {
-        reunionId: req.query.reunionId as string,
-        exerciceId: req.query.exerciceId as string,
-        exerciceMembreId: req.query.exerciceMembreId as string,
+        reunionId: req.query.reunionId as string | undefined,
+        exerciceId: req.query.exerciceId as string | undefined,
+        exerciceMembreId: req.query.exerciceMembreId as string | undefined,
         statut: req.query.statut as any,
+        dateDebut: req.query.dateDebut as string | undefined,
+        dateFin: req.query.dateFin as string | undefined,
+        montantMin: req.query.montantMin ? parseFloat(req.query.montantMin as string) : undefined,
+        montantMax: req.query.montantMax ? parseFloat(req.query.montantMax as string) : undefined,
       };
-      const result = await distributionService.findAll(filters);
-      res.json(result);
+      const pagination: PaginationQuery = {
+        page: req.query.page ? parseInt(req.query.page as string, 10) : undefined,
+        limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
+        sortBy: req.query.sortBy as string | undefined,
+        sortOrder: req.query.sortOrder as 'ASC' | 'DESC' | undefined,
+      };
+      const result = await distributionService.findAll(filters, pagination);
+      res.json(ApiResponse.paginated(result.data, result.meta));
     } catch (error) {
       next(error);
     }

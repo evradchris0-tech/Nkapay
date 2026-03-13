@@ -1,17 +1,17 @@
 /**
  * Entité PotDuMensuel
- * 
+ *
  * Représente le POT que chaque membre doit payer pour une réunion.
- * 
+ *
  * LOGIQUE MÉTIER:
  * - Le POT est une contribution pour les DÉPENSES de la réunion
  * - Utilisé pour: collation, boissons, nourriture lors de la réunion
  * - Ce montant est CONSOMMÉ (dépensé), pas distribué aux membres
- * 
+ *
  * NE PAS CONFONDRE AVEC:
  * - COTISATION: Argent collecté et DISTRIBUÉ au bénéficiaire du mois
  * - ÉPARGNE: Argent mis de côté pour la cassation finale
- * 
+ *
  * @example
  * Pot de 2 000 FCFA/membre × 4 membres = 8 000 FCFA pour la collation du jour
  */

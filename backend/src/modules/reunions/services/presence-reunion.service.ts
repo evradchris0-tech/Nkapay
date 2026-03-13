@@ -45,7 +45,11 @@ export class PresenceReunionService {
     // Verifier si la presence existe deja
     let presence = await this.presenceRepository.findOne({
       where: { reunionId: dto.reunionId, exerciceMembreId: dto.exerciceMembreId },
-      relations: ['exerciceMembre', 'exerciceMembre.adhesionTontine', 'exerciceMembre.adhesionTontine.utilisateur'],
+      relations: [
+        'exerciceMembre',
+        'exerciceMembre.adhesionTontine',
+        'exerciceMembre.adhesionTontine.utilisateur',
+      ],
     });
 
     if (presence) {
@@ -80,7 +84,9 @@ export class PresenceReunionService {
       throw new NotFoundError(`Reunion non trouvee: ${dto.reunionId}`);
     }
     if (reunion.statut !== StatutReunion.OUVERTE) {
-      throw new BadRequestError('On ne peut enregistrer les presences que pour une reunion ouverte');
+      throw new BadRequestError(
+        'On ne peut enregistrer les presences que pour une reunion ouverte'
+      );
     }
 
     for (const item of dto.presences) {
@@ -116,7 +122,11 @@ export class PresenceReunionService {
   async findByReunion(reunionId: string): Promise<PresenceReunionResponseDto[]> {
     const presences = await this.presenceRepository.find({
       where: { reunionId },
-      relations: ['exerciceMembre', 'exerciceMembre.adhesionTontine', 'exerciceMembre.adhesionTontine.utilisateur'],
+      relations: [
+        'exerciceMembre',
+        'exerciceMembre.adhesionTontine',
+        'exerciceMembre.adhesionTontine.utilisateur',
+      ],
       order: { creeLe: 'ASC' },
     });
 
@@ -129,7 +139,11 @@ export class PresenceReunionService {
   async findById(id: string): Promise<PresenceReunionResponseDto> {
     const presence = await this.presenceRepository.findOne({
       where: { id },
-      relations: ['exerciceMembre', 'exerciceMembre.adhesionTontine', 'exerciceMembre.adhesionTontine.utilisateur'],
+      relations: [
+        'exerciceMembre',
+        'exerciceMembre.adhesionTontine',
+        'exerciceMembre.adhesionTontine.utilisateur',
+      ],
     });
 
     if (!presence) {
@@ -153,7 +167,9 @@ export class PresenceReunionService {
     }
 
     if (presence.reunion && presence.reunion.statut === StatutReunion.CLOTUREE) {
-      throw new BadRequestError('Les presences d\'une reunion cloturee ne peuvent pas etre modifiees');
+      throw new BadRequestError(
+        "Les presences d'une reunion cloturee ne peuvent pas etre modifiees"
+      );
     }
 
     if (dto.estPresent !== undefined) presence.estPresent = dto.estPresent;
@@ -180,7 +196,9 @@ export class PresenceReunionService {
     }
 
     if (presence.reunion && presence.reunion.statut === StatutReunion.CLOTUREE) {
-      throw new BadRequestError('Les presences d\'une reunion cloturee ne peuvent pas etre supprimees');
+      throw new BadRequestError(
+        "Les presences d'une reunion cloturee ne peuvent pas etre supprimees"
+      );
     }
 
     await this.presenceRepository.remove(presence);
@@ -218,11 +236,13 @@ export class PresenceReunionService {
       id: entity.id,
       reunionId: entity.reunionId,
       exerciceMembreId: entity.exerciceMembreId,
-      exerciceMembre: entity.exerciceMembre ? {
-        id: entity.exerciceMembre.id,
-        utilisateurId: utilisateur?.id || '',
-        utilisateurNom: utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}` : undefined,
-      } : undefined,
+      exerciceMembre: entity.exerciceMembre
+        ? {
+            id: entity.exerciceMembre.id,
+            utilisateurId: utilisateur?.id || '',
+            utilisateurNom: utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}` : undefined,
+          }
+        : undefined,
       estPresent: entity.estPresent,
       estEnRetard: entity.estEnRetard,
       heureArrivee: entity.heureArrivee,

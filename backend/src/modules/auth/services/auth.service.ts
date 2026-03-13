@@ -8,6 +8,7 @@ import { AppDataSource } from '../../../config/database.config';
 import { Utilisateur } from '../../utilisateurs/entities/utilisateur.entity';
 import { SessionUtilisateur } from '../entities/session-utilisateur.entity';
 import { TentativeConnexion } from '../entities/tentative-connexion.entity';
+import { MembreOrganisation } from '../../organisations/entities/membre-organisation.entity';
 import { LoginDto, LoginResponseDto, JwtPayload } from '../dtos/auth.dto';
 import { UnauthorizedError } from '../../../shared/errors/app-error';
 import { verifyPassword } from '../utils/password.util';
@@ -26,11 +27,13 @@ export class AuthService {
   private utilisateurRepository: Repository<Utilisateur>;
   private sessionRepository: Repository<SessionUtilisateur>;
   private tentativeRepository: Repository<TentativeConnexion>;
+  private membreOrgRepository: Repository<MembreOrganisation>;
 
   constructor() {
     this.utilisateurRepository = AppDataSource.getRepository(Utilisateur);
     this.sessionRepository = AppDataSource.getRepository(SessionUtilisateur);
     this.tentativeRepository = AppDataSource.getRepository(TentativeConnexion);
+    this.membreOrgRepository = AppDataSource.getRepository(MembreOrganisation);
   }
 
   /**
@@ -40,7 +43,9 @@ export class AuthService {
     // Normaliser le numéro de téléphone (supporter les formats avec et sans +237)
     const identifiant = dto.identifiant.trim();
     const identifiantAvecPrefixe = identifiant.startsWith('+') ? identifiant : `+237${identifiant}`;
-    const identifiantSansPrefixe = identifiant.startsWith('+237') ? identifiant.substring(4) : identifiant;
+    const identifiantSansPrefixe = identifiant.startsWith('+237')
+      ? identifiant.substring(4)
+      : identifiant;
 
     // Recherche de l'utilisateur par telephone (avec les deux formats)
     const utilisateur = await this.utilisateurRepository.findOne({
@@ -81,8 +86,30 @@ export class AuthService {
     tentative.estReussie = true;
     await this.tentativeRepository.save(tentative);
 
+    // Récupération des organisations de l'utilisateur
+    const membresOrg = await this.membreOrgRepository.find({
+      where: { utilisateurId: utilisateur.id, statut: 'ACTIVE' as any },
+      relations: ['organisation'],
+    });
+    const organisations = membresOrg
+      .filter((m) => m.organisation)
+      .map((m) => ({
+        id: m.organisation.id,
+        nom: m.organisation.nom,
+        slug: m.organisation.slug,
+        role: m.role,
+        statut: m.organisation.statut,
+      }));
+
+    // Embed de l'organisation active dans le JWT (première org si une seule)
+    const orgActive = organisations.length === 1 ? organisations[0] : undefined;
+
     // Generation des tokens
-    const accessToken = generateAccessToken(utilisateur.id);
+    const accessToken = generateAccessToken(utilisateur.id, {
+      organisationId: orgActive?.id,
+      orgRole: orgActive?.role,
+      estSuperAdmin: utilisateur.estSuperAdmin,
+    });
     const refreshToken = generateRefreshToken(utilisateur.id);
 
     // Creation de la session
@@ -109,9 +136,11 @@ export class AuthService {
         prenom: utilisateur.prenom,
         nom: utilisateur.nom,
         telephone1: utilisateur.telephone1,
+        email: (utilisateur as any).email ?? null,
         estSuperAdmin: utilisateur.estSuperAdmin,
         doitChangerMotDePasse: utilisateur.doitChangerMotDePasse,
       },
+      organisations,
     };
   }
 
@@ -164,7 +193,11 @@ export class AuthService {
   /**
    * Deconnexion d'une session
    */
-  async logout(utilisateurId: string, sessionId?: string, toutesLesSessions = false): Promise<void> {
+  async logout(
+    utilisateurId: string,
+    sessionId?: string,
+    toutesLesSessions = false
+  ): Promise<void> {
     if (toutesLesSessions) {
       // Revocation de toutes les sessions
       await this.sessionRepository.update(
@@ -184,7 +217,9 @@ export class AuthService {
         { utilisateurId, estRevoquee: false },
         { estRevoquee: true, revoqueeLe: new Date(), motifRevocation: 'LOGOUT' }
       );
-      logger.info(`Sessions revoquees pour l'utilisateur ${utilisateurId} (aucun sessionId fourni)`);
+      logger.info(
+        `Sessions revoquees pour l'utilisateur ${utilisateurId} (aucun sessionId fourni)`
+      );
     }
   }
 

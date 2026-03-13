@@ -72,6 +72,10 @@ export interface DistributionFiltersDto {
   exerciceId?: string;
   exerciceMembreId?: string;
   statut?: StatutDistribution;
+  dateDebut?: string;
+  dateFin?: string;
+  montantMin?: number;
+  montantMax?: number;
 }
 
 /**

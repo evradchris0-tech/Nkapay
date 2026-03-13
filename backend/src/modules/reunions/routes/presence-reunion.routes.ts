@@ -131,7 +131,11 @@ router.post('/', authenticate, presenceReunionController.create.bind(presenceReu
  *             schema:
  *               $ref: '#/components/schemas/PresenceReunionSummary'
  */
-router.post('/bulk', authenticate, presenceReunionController.createBulk.bind(presenceReunionController));
+router.post(
+  '/bulk',
+  authenticate,
+  presenceReunionController.createBulk.bind(presenceReunionController)
+);
 
 /**
  * @swagger
@@ -151,7 +155,11 @@ router.post('/bulk', authenticate, presenceReunionController.createBulk.bind(pre
  *       200:
  *         description: Liste des presences
  */
-router.get('/reunion/:reunionId', authenticate, presenceReunionController.findByReunion.bind(presenceReunionController));
+router.get(
+  '/reunion/:reunionId',
+  authenticate,
+  presenceReunionController.findByReunion.bind(presenceReunionController)
+);
 
 /**
  * @swagger
@@ -175,7 +183,11 @@ router.get('/reunion/:reunionId', authenticate, presenceReunionController.findBy
  *             schema:
  *               $ref: '#/components/schemas/PresenceReunionSummary'
  */
-router.get('/reunion/:reunionId/summary', authenticate, presenceReunionController.getSummary.bind(presenceReunionController));
+router.get(
+  '/reunion/:reunionId/summary',
+  authenticate,
+  presenceReunionController.getSummary.bind(presenceReunionController)
+);
 
 /**
  * @swagger
@@ -197,7 +209,11 @@ router.get('/reunion/:reunionId/summary', authenticate, presenceReunionControlle
  *       404:
  *         description: Presence non trouvee
  */
-router.get('/:id', authenticate, presenceReunionController.findById.bind(presenceReunionController));
+router.get(
+  '/:id',
+  authenticate,
+  presenceReunionController.findById.bind(presenceReunionController)
+);
 
 /**
  * @swagger
@@ -223,7 +239,11 @@ router.get('/:id', authenticate, presenceReunionController.findById.bind(presenc
  *       200:
  *         description: Presence mise a jour
  */
-router.patch('/:id', authenticate, presenceReunionController.update.bind(presenceReunionController));
+router.patch(
+  '/:id',
+  authenticate,
+  presenceReunionController.update.bind(presenceReunionController)
+);
 
 /**
  * @swagger
@@ -243,6 +263,10 @@ router.patch('/:id', authenticate, presenceReunionController.update.bind(presenc
  *       204:
  *         description: Presence supprimee
  */
-router.delete('/:id', authenticate, presenceReunionController.delete.bind(presenceReunionController));
+router.delete(
+  '/:id',
+  authenticate,
+  presenceReunionController.delete.bind(presenceReunionController)
+);
 
 export const presenceReunionRoutes = router;

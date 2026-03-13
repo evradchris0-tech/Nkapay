@@ -17,10 +17,18 @@ router.get('/', authenticate, (req, res, next) => pretController.findAll(req, re
 router.get('/:id', authenticate, (req, res, next) => pretController.findById(req, res, next));
 
 // Actions sur les prets
-router.post('/:id/approuver', authenticate, (req, res, next) => pretController.approuver(req, res, next));
-router.post('/:id/refuser', authenticate, (req, res, next) => pretController.refuser(req, res, next));
-router.post('/:id/decaisser', authenticate, (req, res, next) => pretController.decaisser(req, res, next));
+router.post('/:id/approuver', authenticate, (req, res, next) =>
+  pretController.approuver(req, res, next)
+);
+router.post('/:id/refuser', authenticate, (req, res, next) =>
+  pretController.refuser(req, res, next)
+);
+router.post('/:id/decaisser', authenticate, (req, res, next) =>
+  pretController.decaisser(req, res, next)
+);
 router.post('/:id/solder', authenticate, (req, res, next) => pretController.solder(req, res, next));
-router.post('/:id/defaut', authenticate, (req, res, next) => pretController.mettreEnDefaut(req, res, next));
+router.post('/:id/defaut', authenticate, (req, res, next) =>
+  pretController.mettreEnDefaut(req, res, next)
+);
 
 export default router;

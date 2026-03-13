@@ -6,7 +6,11 @@ import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
 import { Exercice, StatutExercice } from '../entities/exercice.entity';
-import { ExerciceMembre, TypeMembre, StatutExerciceMembre } from '../entities/exercice-membre.entity';
+import {
+  ExerciceMembre,
+  TypeMembre,
+  StatutExerciceMembre,
+} from '../entities/exercice-membre.entity';
 import { Tontine } from '../../tontines/entities/tontine.entity';
 import { AdhesionTontine, StatutAdhesion } from '../../tontines/entities/adhesion-tontine.entity';
 import {
@@ -31,7 +35,8 @@ export class ExerciceService {
   }
 
   private get exerciceMembreRepository(): Repository<ExerciceMembre> {
-    if (!this._exerciceMembreRepo) this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
+    if (!this._exerciceMembreRepo)
+      this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
     return this._exerciceMembreRepo;
   }
 
@@ -60,7 +65,9 @@ export class ExerciceService {
       where: { tontineId: dto.tontineId, libelle: dto.libelle },
     });
     if (existing) {
-      throw new BadRequestError(`Un exercice avec le libelle "${dto.libelle}" existe deja pour cette tontine`);
+      throw new BadRequestError(
+        `Un exercice avec le libelle "${dto.libelle}" existe deja pour cette tontine`
+      );
     }
 
     const exercice = this.exerciceRepository.create({
@@ -337,11 +344,13 @@ export class ExerciceService {
   private toResponseDto(entity: Exercice): ExerciceResponseDto {
     return {
       id: entity.id,
-      tontine: entity.tontine ? {
-        id: entity.tontine.id,
-        nom: entity.tontine.nom,
-        nomCourt: entity.tontine.nomCourt,
-      } : { id: '', nom: '', nomCourt: '' },
+      tontine: entity.tontine
+        ? {
+            id: entity.tontine.id,
+            nom: entity.tontine.nom,
+            nomCourt: entity.tontine.nomCourt,
+          }
+        : { id: '', nom: '', nomCourt: '' },
       libelle: entity.libelle,
       anneeDebut: entity.anneeDebut,
       moisDebut: entity.moisDebut,

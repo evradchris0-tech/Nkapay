@@ -10,7 +10,7 @@ module.exports = {
   clearMocks: true,
   forceExit: true,
   transform: {
-    '^.+\\.ts$': ['ts-jest', {
+    '^.+\.ts$': ['ts-jest', {
       tsconfig: 'tests/tsconfig.json'
     }]
   },
@@ -18,6 +18,7 @@ module.exports = {
     '^@config/(.*)$': '<rootDir>/src/config/$1',
     '^@modules/(.*)$': '<rootDir>/src/modules/$1',
     '^@shared/(.*)$': '<rootDir>/src/shared/$1',
-    '^@utils/(.*)$': '<rootDir>/src/shared/utils/$1'
+    '^@utils/(.*)$': '<rootDir>/src/shared/utils/$1',
+    '^.*logger\.util$': '<rootDir>/tests/__mocks__/logger.util.ts'
   }
 };

@@ -12,6 +12,10 @@ import swaggerUi from 'swagger-ui-express';
 import { env, initializeDatabase, swaggerSpec } from './config';
 import { errorHandler, requestLogger, ApiResponse, logger } from './shared';
 import { seedSuperAdmin } from './scripts/seed-superadmin';
+import { AppDataSource } from './config/database.config';
+import { seedRuleDefinitions } from './database/seeds/rule-definition.seeder';
+import { seedTypeEvenementSecours } from './database/seeds/type-evenement-secours.seeder';
+import { runDatabaseSeeder } from './database/seeds/database-seeder';
 import { authRoutes } from './modules/auth/routes';
 import { utilisateurRoutes, langueRoutes } from './modules/utilisateurs/routes';
 import { tontineModuleRoutes } from './modules/tontines/routes';
@@ -25,6 +29,8 @@ import { distributionModuleRoutes } from './modules/distributions/routes';
 import { adhesionModuleRoutes } from './modules/adhesions/routes';
 import { exportRoutes } from './modules/exports/routes';
 import { dashboardRoutes } from './modules/dashboard/routes';
+import { organisationRouter } from './modules/organisations/routes/organisation.routes';
+import { adminRouter } from './modules/admin/routes/admin.routes';
 
 class App {
   public app: Application;
@@ -92,6 +98,8 @@ class App {
     this.app.use(env.apiPrefix, adhesionModuleRoutes);
     this.app.use(`${env.apiPrefix}/dashboard`, dashboardRoutes);
     this.app.use(`${env.apiPrefix}/exports`, exportRoutes);
+    this.app.use(`${env.apiPrefix}/org`, organisationRouter);
+    this.app.use(`${env.apiPrefix}/admin`, adminRouter);
 
     // Route par defaut pour les chemins non trouves
     this.app.use('*', (_req: Request, res: Response) => {
@@ -133,6 +141,26 @@ class App {
       // Création du super administrateur si nécessaire
       await seedSuperAdmin();
 
+      // Auto-seed en développement
+      if (env.nodeEnv === 'development') {
+        logger.info('Mode développement : exécution des seeders...');
+        try {
+          await seedRuleDefinitions();
+        } catch (e: any) {
+          logger.warn(`seedRuleDefinitions ignoré (données existantes): ${e.message}`);
+        }
+        try {
+          await seedTypeEvenementSecours(AppDataSource);
+        } catch (e: any) {
+          logger.warn(`seedTypeEvenementSecours ignoré (données existantes): ${e.message}`);
+        }
+        try {
+          await runDatabaseSeeder(AppDataSource);
+        } catch (e: any) {
+          logger.warn(`runDatabaseSeeder ignoré (données existantes): ${e.message}`);
+        }
+      }
+
       // Demarrage du serveur HTTP
       this.app.listen(env.port, () => {
         logger.info(`Serveur demarre sur le port ${env.port}`);
@@ -140,7 +168,7 @@ class App {
         logger.info(`Environnement: ${env.nodeEnv}`);
       });
     } catch (error) {
-      logger.error('Erreur lors du demarrage de l\'application:', error);
+      logger.error("Erreur lors du demarrage de l'application:", error);
       process.exit(1);
     }
   }
@@ -151,4 +179,3 @@ const application = new App();
 application.start();
 
 export default application.app;
-

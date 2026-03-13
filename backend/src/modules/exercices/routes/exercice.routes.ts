@@ -161,7 +161,11 @@ router.get('/', authenticate, exerciceController.findAll.bind(exerciceController
  *       404:
  *         description: Aucun exercice ouvert
  */
-router.get('/tontine/:tontineId/ouvert', authenticate, exerciceController.findExerciceOuvert.bind(exerciceController));
+router.get(
+  '/tontine/:tontineId/ouvert',
+  authenticate,
+  exerciceController.findExerciceOuvert.bind(exerciceController)
+);
 
 /**
  * @swagger

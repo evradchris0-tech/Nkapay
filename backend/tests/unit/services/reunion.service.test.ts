@@ -1,155 +1,301 @@
 /**
- * Tests unitaires pour le service Réunion
+ * Tests unitaires pour ReunionService
  */
 
-import { 
-  TestNotFoundError as NotFoundError, 
-  TestBadRequestError as BadRequestError, 
-  TestConflictError as ConflictError 
-} from '../../helpers/test-errors';
+import { createMockRepo } from '../../helpers/mock-repo';
 
-describe('Reunion Service', () => {
-  describe('Validation des données de réunion', () => {
-    it('devrait valider une date de réunion future', () => {
-      const dateReunion = new Date();
-      dateReunion.setDate(dateReunion.getDate() + 7);
-      expect(dateReunion.getTime()).toBeGreaterThan(Date.now());
+// ─── Mocks modules ────────────────────────────────────────────────────────────
+
+const mockReunionRepo = createMockRepo();
+const mockExerciceRepo = createMockRepo();
+const mockExerciceMembreRepo = createMockRepo();
+const mockPresenceRepo = createMockRepo();
+
+jest.mock('../../../src/config', () => ({
+  AppDataSource: {
+    getRepository: jest.fn((entity: any) => {
+      const name = typeof entity === 'string' ? entity : entity?.name ?? String(entity);
+      if (name === 'Reunion') return mockReunionRepo;
+      if (name === 'Exercice') return mockExerciceRepo;
+      if (name === 'ExerciceMembre') return mockExerciceMembreRepo;
+      if (name === 'PresenceReunion') return mockPresenceRepo;
+      return createMockRepo();
+    }),
+    isInitialized: true,
+  },
+  env: { nodeEnv: 'test', db: {} },
+  isDevelopment: false,
+}));
+
+jest.mock('../../../src/shared/errors/app-error', () => ({
+  NotFoundError: class NotFoundError extends Error {
+    statusCode = 404;
+    constructor(message: string) { super(`NotFoundError: ${message}`); this.name = 'NotFoundError'; }
+  },
+  BadRequestError: class BadRequestError extends Error {
+    statusCode = 400;
+    constructor(message: string) { super(`BadRequestError: ${message}`); this.name = 'BadRequestError'; }
+  },
+}));
+
+jest.mock('../../../src/modules/transactions/services/cotisation-due.service', () => ({
+  cotisationDueService: { genererPourReunion: jest.fn().mockResolvedValue(undefined) },
+}));
+jest.mock('../../../src/modules/transactions/services/pot-du.service', () => ({
+  potDuService: { genererPourReunion: jest.fn().mockResolvedValue(undefined) },
+}));
+jest.mock('../../../src/modules/transactions/services/epargne-due.service', () => ({
+  epargneDueService: { genererPourReunion: jest.fn().mockResolvedValue(undefined) },
+}));
+jest.mock('../../../src/modules/exercices/services/regle-exercice.service', () => ({
+  regleExerciceService: { getEffectiveValueByCle: jest.fn().mockResolvedValue(null) },
+}));
+
+// ─── Import sous test ─────────────────────────────────────────────────────────
+
+import { ReunionService } from '../../../src/modules/reunions/services/reunion.service';
+import { StatutReunion } from '../../../src/modules/reunions/entities/reunion.entity';
+import { StatutExercice } from '../../../src/modules/exercices/entities/exercice.entity';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function makeMockReunion(overrides: any = {}) {
+  return {
+    id: 'reunion-uuid-1',
+    exerciceId: 'exercice-uuid-1',
+    numeroReunion: 1,
+    dateReunion: new Date('2024-01-15'),
+    heureDebut: '18:00',
+    lieu: 'Domicile du président',
+    hoteExerciceMembreId: null,
+    statut: StatutReunion.PLANIFIEE,
+    ouverteLe: null,
+    clotureeLe: null,
+    clotureeParExerciceMembreId: null,
+    hote: null,
+    presences: [],
+    creeLe: new Date(),
+    modifieLe: null,
+    ...overrides,
+  };
+}
+
+function makeMockExercice(overrides: any = {}) {
+  return {
+    id: 'exercice-uuid-1',
+    tontineId: 'tontine-uuid-1',
+    statut: StatutExercice.OUVERT,
+    ...overrides,
+  };
+}
+
+// ─── Tests ────────────────────────────────────────────────────────────────────
+
+describe('ReunionService', () => {
+  let service: ReunionService;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    service = new ReunionService();
+
+    mockReunionRepo.create.mockImplementation((data: any) => ({ ...data }));
+    mockReunionRepo.save.mockImplementation((data: any) =>
+      Promise.resolve({ id: 'reunion-uuid-1', ...data })
+    );
+    mockPresenceRepo.create.mockImplementation((data: any) => ({ ...data }));
+    mockPresenceRepo.save.mockResolvedValue([]);
+    mockPresenceRepo.find.mockResolvedValue([]);
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // planifier()
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('planifier()', () => {
+    it('crée en statut PLANIFIEE', async () => {
+      mockExerciceRepo.findOne.mockResolvedValue(makeMockExercice());
+      mockReunionRepo.findOne
+        .mockResolvedValueOnce(null) // unicité numero
+        .mockResolvedValueOnce(makeMockReunion()); // findById
+
+      const dto = {
+        exerciceId: 'exercice-uuid-1',
+        numeroReunion: 1,
+        dateReunion: '2024-01-15',
+      };
+
+      const result = await service.planifier(dto);
+
+      expect(mockReunionRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ statut: StatutReunion.PLANIFIEE })
+      );
+      expect(result).toHaveProperty('id');
     });
 
-    it('devrait accepter un lieu de réunion valide', () => {
-      const lieux = ['Domicile Jean', 'Salle communautaire', 'Restaurant Le Palm'];
-      lieux.forEach(lieu => {
-        expect(lieu.length).toBeGreaterThan(0);
-        expect(lieu.length).toBeLessThanOrEqual(200);
-      });
+    it('lève NotFoundError si exercice inexistant', async () => {
+      mockExerciceRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.planifier({ exerciceId: 'exo-unknown', numeroReunion: 1, dateReunion: '2024-01-15' })
+      ).rejects.toThrow('NotFoundError');
     });
 
-    it('devrait valider un numéro d\'ordre positif', () => {
-      const validNumeros = [1, 5, 12, 52];
-      validNumeros.forEach(numero => {
-        expect(numero).toBeGreaterThan(0);
-        expect(Number.isInteger(numero)).toBe(true);
-      });
+    it('lève BadRequestError si exercice pas OUVERT', async () => {
+      mockExerciceRepo.findOne.mockResolvedValue(makeMockExercice({ statut: StatutExercice.BROUILLON }));
+
+      await expect(
+        service.planifier({ exerciceId: 'exercice-uuid-1', numeroReunion: 1, dateReunion: '2024-01-15' })
+      ).rejects.toThrow('BadRequestError');
+    });
+
+    it('lève BadRequestError si numéro réunion dupliqué', async () => {
+      mockExerciceRepo.findOne.mockResolvedValue(makeMockExercice());
+      mockReunionRepo.findOne.mockResolvedValueOnce(makeMockReunion()); // exists
+
+      await expect(
+        service.planifier({ exerciceId: 'exercice-uuid-1', numeroReunion: 1, dateReunion: '2024-01-15' })
+      ).rejects.toThrow('BadRequestError');
     });
   });
 
-  describe('Statuts de réunion', () => {
-    const statuts = ['PLANIFIEE', 'EN_COURS', 'TERMINEE', 'ANNULEE'];
+  // ─────────────────────────────────────────────────────────────────────────
+  // ouvrir()
+  // ─────────────────────────────────────────────────────────────────────────
 
-    it('devrait valider les statuts disponibles', () => {
-      expect(statuts).toHaveLength(4);
-      expect(statuts).toContain('PLANIFIEE');
-      expect(statuts).toContain('TERMINEE');
+  describe('ouvrir()', () => {
+    it('PLANIFIEE → OUVERTE', async () => {
+      const planifiee = makeMockReunion({ statut: StatutReunion.PLANIFIEE });
+      mockReunionRepo.findOne
+        .mockResolvedValueOnce(planifiee)   // in ouvrir()
+        .mockResolvedValueOnce({ ...planifiee, statut: StatutReunion.OUVERTE, presences: [] }); // findById
+      mockExerciceMembreRepo.find.mockResolvedValue([]);
+
+      await service.ouvrir('reunion-uuid-1');
+
+      expect(mockReunionRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ statut: StatutReunion.OUVERTE })
+      );
     });
 
-    it('devrait permettre transition PLANIFIEE -> EN_COURS', () => {
-      const transitions: Record<string, string[]> = {
-        'PLANIFIEE': ['EN_COURS', 'ANNULEE'],
-        'EN_COURS': ['TERMINEE'],
-        'TERMINEE': [],
-        'ANNULEE': [],
-      };
-      expect(transitions['PLANIFIEE']).toContain('EN_COURS');
-    });
+    it('crée les enregistrements de présence pour les membres actifs', async () => {
+      const planifiee = makeMockReunion({ statut: StatutReunion.PLANIFIEE });
+      mockReunionRepo.findOne
+        .mockResolvedValueOnce(planifiee)
+        .mockResolvedValueOnce({ ...planifiee, statut: StatutReunion.OUVERTE, presences: [] });
 
-    it('devrait rejeter transition TERMINEE -> EN_COURS', () => {
-      const transitions: Record<string, string[]> = {
-        'PLANIFIEE': ['EN_COURS', 'ANNULEE'],
-        'EN_COURS': ['TERMINEE'],
-        'TERMINEE': [],
-        'ANNULEE': [],
-      };
-      expect(transitions['TERMINEE']).not.toContain('EN_COURS');
-    });
-  });
-
-  describe('Génération automatique de réunions', () => {
-    it('devrait générer 12 réunions pour périodicité MENSUELLE', () => {
-      const reunionsParAn: Record<string, number> = {
-        'HEBDOMADAIRE': 52,
-        'BIMENSUELLE': 24,
-        'MENSUELLE': 12,
-        'TRIMESTRIELLE': 4,
-      };
-      expect(reunionsParAn['MENSUELLE']).toBe(12);
-    });
-
-    it('devrait calculer les dates de réunion mensuelles', () => {
-      const dateDebut = new Date('2024-01-15');
-      const nombreReunions = 12;
-      const dates: Date[] = [];
-      for (let i = 0; i < nombreReunions; i++) {
-        const date = new Date(dateDebut);
-        date.setMonth(date.getMonth() + i);
-        dates.push(date);
-      }
-      expect(dates).toHaveLength(12);
-      expect(dates[0].getMonth()).toBe(0);
-      expect(dates[11].getMonth()).toBe(11);
-    });
-  });
-
-  describe('Désignation du bénéficiaire', () => {
-    it('devrait sélectionner un membre éligible', () => {
       const membres = [
-        { id: 'm1', aDejaRecuPot: false, estActif: true },
-        { id: 'm2', aDejaRecuPot: true, estActif: true },
-        { id: 'm3', aDejaRecuPot: false, estActif: true },
+        { id: 'em-1', exerciceId: 'exercice-uuid-1' },
+        { id: 'em-2', exerciceId: 'exercice-uuid-1' },
       ];
-      const eligibles = membres.filter(m => !m.aDejaRecuPot && m.estActif);
-      expect(eligibles).toHaveLength(2);
-      expect(eligibles.map(e => e.id)).toContain('m1');
+      mockExerciceMembreRepo.find.mockResolvedValue(membres);
+
+      await service.ouvrir('reunion-uuid-1');
+
+      expect(mockPresenceRepo.save).toHaveBeenCalled();
     });
 
-    it('devrait rejeter un bénéficiaire déjà servi', () => {
-      const membre = { id: 'm1', aDejaRecuPot: true };
-      expect(membre.aDejaRecuPot).toBe(true);
-    });
-  });
+    it('lève BadRequestError si pas PLANIFIEE', async () => {
+      mockReunionRepo.findOne.mockResolvedValueOnce(
+        makeMockReunion({ statut: StatutReunion.OUVERTE })
+      );
 
-  describe('Calcul du pot de la réunion', () => {
-    it('devrait calculer le montant du pot', () => {
-      const montantCotisation = 10000;
-      const nombreMembres = 10;
-      const montantPot = montantCotisation * nombreMembres;
-      expect(montantPot).toBe(100000);
+      await expect(service.ouvrir('reunion-uuid-1')).rejects.toThrow('BadRequestError');
     });
 
-    it('devrait soustraire les pénalités non payées', () => {
-      const montantPot = 100000;
-      const penalitesNonPayees = 5000;
-      const montantNet = montantPot - penalitesNonPayees;
-      expect(montantNet).toBe(95000);
+    it('lève NotFoundError si reunion inexistante', async () => {
+      mockReunionRepo.findOne.mockResolvedValueOnce(null);
+
+      await expect(service.ouvrir('unknown-id')).rejects.toThrow('NotFoundError');
     });
   });
 
-  describe('Présences', () => {
-    it('devrait calculer le taux de présence', () => {
-      const nombreMembres = 10;
-      const nombrePresents = 8;
-      const tauxPresence = (nombrePresents / nombreMembres) * 100;
-      expect(tauxPresence).toBe(80);
+  // ─────────────────────────────────────────────────────────────────────────
+  // cloturer()
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('cloturer()', () => {
+    it('OUVERTE → CLOTUREE', async () => {
+      const ouverte = makeMockReunion({ statut: StatutReunion.OUVERTE });
+      mockReunionRepo.findOne
+        .mockResolvedValueOnce(ouverte)
+        .mockResolvedValueOnce({ ...ouverte, statut: StatutReunion.CLOTUREE, presences: [] });
+
+      await service.cloturer('reunion-uuid-1', { clotureeParExerciceMembreId: 'em-admin-1' });
+
+      expect(mockReunionRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ statut: StatutReunion.CLOTUREE })
+      );
     });
 
-    it('devrait identifier les absents', () => {
-      const membres = ['m1', 'm2', 'm3', 'm4', 'm5'];
-      const presents = ['m1', 'm2', 'm4'];
-      const absents = membres.filter(m => !presents.includes(m));
-      expect(absents).toEqual(['m3', 'm5']);
+    it('lève BadRequestError si pas OUVERTE', async () => {
+      mockReunionRepo.findOne.mockResolvedValueOnce(
+        makeMockReunion({ statut: StatutReunion.PLANIFIEE })
+      );
+
+      await expect(
+        service.cloturer('reunion-uuid-1', { clotureeParExerciceMembreId: 'em-admin-1' })
+      ).rejects.toThrow('BadRequestError');
     });
   });
 
-  describe('Erreurs métier', () => {
-    it('devrait lever NotFoundError pour réunion inexistante', () => {
-      expect(() => { throw new NotFoundError('Réunion non trouvée'); }).toThrow(NotFoundError);
+  // ─────────────────────────────────────────────────────────────────────────
+  // annuler()
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('annuler()', () => {
+    it('PLANIFIEE → ANNULEE', async () => {
+      const planifiee = makeMockReunion({ statut: StatutReunion.PLANIFIEE });
+      mockReunionRepo.findOne
+        .mockResolvedValueOnce(planifiee)
+        .mockResolvedValueOnce({ ...planifiee, statut: StatutReunion.ANNULEE, presences: [] });
+
+      await service.annuler('reunion-uuid-1');
+
+      expect(mockReunionRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ statut: StatutReunion.ANNULEE })
+      );
     });
 
-    it('devrait lever BadRequestError pour réunion dans le passé', () => {
-      expect(() => { throw new BadRequestError('La date doit être dans le futur'); }).toThrow(BadRequestError);
+    it('lève BadRequestError si déjà CLOTUREE', async () => {
+      mockReunionRepo.findOne.mockResolvedValueOnce(
+        makeMockReunion({ statut: StatutReunion.CLOTUREE })
+      );
+
+      await expect(service.annuler('reunion-uuid-1')).rejects.toThrow('BadRequestError');
     });
 
-    it('devrait lever ConflictError pour bénéficiaire déjà désigné', () => {
-      expect(() => { throw new ConflictError('Un bénéficiaire est déjà désigné'); }).toThrow(ConflictError);
+    it('lève NotFoundError si reunion inexistante', async () => {
+      mockReunionRepo.findOne.mockResolvedValueOnce(null);
+
+      await expect(service.annuler('unknown-id')).rejects.toThrow('NotFoundError');
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // findAll()
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('findAll()', () => {
+    it('filtre par exerciceId', async () => {
+      const qb = mockReunionRepo.createQueryBuilder();
+      qb.getMany.mockResolvedValue([]);
+
+      await service.findAll({ exerciceId: 'exercice-uuid-1' });
+
+      expect(qb.where).toHaveBeenCalledWith(
+        expect.stringContaining('exerciceId'),
+        expect.any(Object)
+      );
+    });
+
+    it('retourne un tableau de DTOs', async () => {
+      const qb = mockReunionRepo.createQueryBuilder();
+      const reunion = makeMockReunion({ presences: [] });
+      qb.getMany.mockResolvedValue([reunion]);
+
+      const result = await service.findAll({});
+
+      expect(Array.isArray(result)).toBe(true);
     });
   });
 });

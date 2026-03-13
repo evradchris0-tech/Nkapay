@@ -1,10 +1,7 @@
-/**
- * Controller pour la gestion des prets
- */
-
 import { Request, Response, NextFunction } from 'express';
 import { pretService } from '../services/pret.service';
 import { PretFiltersDto } from '../dto/pret.dto';
+import { ApiResponse, PaginationQuery } from '../../../shared';
 
 export class PretController {
   /**
@@ -28,7 +25,7 @@ export class PretController {
   async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const pret = await pretService.create(req.body);
-      res.status(201).json(pret);
+      res.status(201).json(ApiResponse.success(pret, 'Demande de prêt créée avec succès'));
     } catch (error) {
       next(error);
     }
@@ -62,14 +59,20 @@ export class PretController {
   async findAll(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const filters: PretFiltersDto = {
-        exerciceId: req.query.exerciceId as string,
-        exerciceMembreId: req.query.exerciceMembreId as string,
+        exerciceId: req.query.exerciceId as string | undefined,
+        exerciceMembreId: req.query.exerciceMembreId as string | undefined,
         statut: req.query.statut as any,
-        dateDebut: req.query.dateDebut as string,
-        dateFin: req.query.dateFin as string,
+        dateDebut: req.query.dateDebut as string | undefined,
+        dateFin: req.query.dateFin as string | undefined,
       };
-      const result = await pretService.findAll(filters);
-      res.json(result);
+      const pagination: PaginationQuery = {
+        page: req.query.page ? parseInt(req.query.page as string, 10) : undefined,
+        limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined,
+        sortBy: req.query.sortBy as string | undefined,
+        sortOrder: req.query.sortOrder as 'ASC' | 'DESC' | undefined,
+      };
+      const result = await pretService.findAll(filters, pagination);
+      res.json(ApiResponse.paginated(result.data, result.meta));
     } catch (error) {
       next(error);
     }
@@ -95,7 +98,7 @@ export class PretController {
         statut: req.query.statut as any,
       };
       const summary = await pretService.getSummary(filters);
-      res.json(summary);
+      res.json(ApiResponse.success(summary));
     } catch (error) {
       next(error);
     }
@@ -122,7 +125,7 @@ export class PretController {
   async findById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const pret = await pretService.findById(req.params.id);
-      res.json(pret);
+      res.json(ApiResponse.success(pret));
     } catch (error) {
       next(error);
     }
@@ -155,7 +158,7 @@ export class PretController {
   async approuver(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const pret = await pretService.approuver(req.params.id, req.body);
-      res.json(pret);
+      res.json(ApiResponse.success(pret, 'Prêt approuvé avec succès'));
     } catch (error) {
       next(error);
     }
@@ -188,7 +191,7 @@ export class PretController {
   async refuser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const pret = await pretService.refuser(req.params.id, req.body);
-      res.json(pret);
+      res.json(ApiResponse.success(pret, 'Prêt refusé'));
     } catch (error) {
       next(error);
     }
@@ -220,7 +223,7 @@ export class PretController {
   async decaisser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const pret = await pretService.decaisser(req.params.id, req.body || {});
-      res.json(pret);
+      res.json(ApiResponse.success(pret, 'Prêt décaissé avec succès'));
     } catch (error) {
       next(error);
     }
@@ -247,7 +250,7 @@ export class PretController {
   async solder(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const pret = await pretService.solder(req.params.id);
-      res.json(pret);
+      res.json(ApiResponse.success(pret, 'Prêt soldé'));
     } catch (error) {
       next(error);
     }
@@ -274,7 +277,7 @@ export class PretController {
   async mettreEnDefaut(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const pret = await pretService.mettreEnDefaut(req.params.id);
-      res.json(pret);
+      res.json(ApiResponse.success(pret, 'Prêt marqué en défaut'));
     } catch (error) {
       next(error);
     }

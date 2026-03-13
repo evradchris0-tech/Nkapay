@@ -7,7 +7,10 @@ import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
 import { Reunion, StatutReunion } from '../entities/reunion.entity';
 import { Exercice, StatutExercice } from '../../exercices/entities/exercice.entity';
-import { ExerciceMembre, StatutExerciceMembre } from '../../exercices/entities/exercice-membre.entity';
+import {
+  ExerciceMembre,
+  StatutExerciceMembre,
+} from '../../exercices/entities/exercice-membre.entity';
 import { PresenceReunion } from '../entities/presence-reunion.entity';
 import {
   PlanifierReunionDto,
@@ -39,7 +42,8 @@ export class ReunionService {
   }
 
   private get exerciceMembreRepository(): Repository<ExerciceMembre> {
-    if (!this._exerciceMembreRepo) this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
+    if (!this._exerciceMembreRepo)
+      this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
     return this._exerciceMembreRepo;
   }
 
@@ -71,9 +75,11 @@ export class ReunionService {
 
     // Verifier l'hote si fourni
     if (dto.hoteExerciceMembreId) {
-      const hote = await this.exerciceMembreRepository.findOne({ where: { id: dto.hoteExerciceMembreId } });
+      const hote = await this.exerciceMembreRepository.findOne({
+        where: { id: dto.hoteExerciceMembreId },
+      });
       if (!hote || hote.exerciceId !== dto.exerciceId) {
-        throw new BadRequestError('L\'hote n\'est pas un membre de cet exercice');
+        throw new BadRequestError("L'hote n'est pas un membre de cet exercice");
       }
     }
 
@@ -140,7 +146,8 @@ export class ReunionService {
     try {
       // 1. Cotisations
       const montantCotisation = await regleExerciceService.getEffectiveValueByCle(
-        reunion.exerciceId, 'COTISATION_MENSUELLE_MIN'
+        reunion.exerciceId,
+        'COTISATION_MENSUELLE_MIN'
       );
       if (montantCotisation) {
         await cotisationDueService.genererPourReunion(reunion.id, Number(montantCotisation));
@@ -148,7 +155,8 @@ export class ReunionService {
 
       // 2. Pots
       const montantPot = await regleExerciceService.getEffectiveValueByCle(
-        reunion.exerciceId, 'POT_MENSUEL_MONTANT'
+        reunion.exerciceId,
+        'POT_MENSUEL_MONTANT'
       );
       if (montantPot) {
         await potDuService.genererPourReunion(reunion.id, Number(montantPot));
@@ -156,12 +164,12 @@ export class ReunionService {
 
       // 3. Épargnes (si > 0)
       const montantEpargneMin = await regleExerciceService.getEffectiveValueByCle(
-        reunion.exerciceId, 'EPARGNE_MENSUELLE_MIN'
+        reunion.exerciceId,
+        'EPARGNE_MENSUELLE_MIN'
       );
       const montantEpargne = Number(montantEpargneMin || 0);
       // On génère toujours la ligne d'épargne, même à 0, pour permettre le suivi
       await epargneDueService.genererPourReunion(reunion.id, montantEpargne);
-
     } catch (error) {
       // Log warning but don't fail, manual generation possible
       console.warn('Erreur lors de la génération automatique des dues:', error);
@@ -237,9 +245,7 @@ export class ReunionService {
       queryBuilder.andWhere('reunion.dateReunion <= :dateFin', { dateFin: filters.dateFin });
     }
 
-    const reunions = await queryBuilder
-      .orderBy('reunion.numeroReunion', 'ASC')
-      .getMany();
+    const reunions = await queryBuilder.orderBy('reunion.numeroReunion', 'ASC').getMany();
 
     return Promise.all(reunions.map((r) => this.toResponseDto(r)));
   }
@@ -277,7 +283,8 @@ export class ReunionService {
     if (dto.dateReunion !== undefined) reunion.dateReunion = new Date(dto.dateReunion);
     if (dto.heureDebut !== undefined) reunion.heureDebut = dto.heureDebut;
     if (dto.lieu !== undefined) reunion.lieu = dto.lieu;
-    if (dto.hoteExerciceMembreId !== undefined) reunion.hoteExerciceMembreId = dto.hoteExerciceMembreId;
+    if (dto.hoteExerciceMembreId !== undefined)
+      reunion.hoteExerciceMembreId = dto.hoteExerciceMembreId;
 
     await this.reunionRepository.save(reunion);
 
@@ -321,15 +328,21 @@ export class ReunionService {
       id: entity.id,
       exerciceId: entity.exerciceId,
       numeroReunion: entity.numeroReunion,
-      dateReunion: entity.dateReunion instanceof Date ? entity.dateReunion.toISOString().split('T')[0] : String(entity.dateReunion),
+      dateReunion:
+        entity.dateReunion instanceof Date
+          ? entity.dateReunion.toISOString().split('T')[0]
+          : String(entity.dateReunion),
       heureDebut: entity.heureDebut,
       lieu: entity.lieu,
       hoteExerciceMembreId: entity.hoteExerciceMembreId,
-      hote: entity.hote && entity.hote.adhesionTontine?.utilisateur ? {
-        id: entity.hote.id,
-        utilisateurId: entity.hote.adhesionTontine.utilisateur.id,
-        utilisateurNom: `${entity.hote.adhesionTontine.utilisateur.prenom} ${entity.hote.adhesionTontine.utilisateur.nom}`,
-      } : null,
+      hote:
+        entity.hote && entity.hote.adhesionTontine?.utilisateur
+          ? {
+              id: entity.hote.id,
+              utilisateurId: entity.hote.adhesionTontine.utilisateur.id,
+              utilisateurNom: `${entity.hote.adhesionTontine.utilisateur.prenom} ${entity.hote.adhesionTontine.utilisateur.nom}`,
+            }
+          : null,
       statut: entity.statut,
       ouverteLe: entity.ouverteLe,
       clotureeLe: entity.clotureeLe,

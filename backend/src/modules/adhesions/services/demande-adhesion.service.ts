@@ -2,13 +2,17 @@
  * Service pour la gestion des demandes d'adhesion
  */
 
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { AppDataSource } from '../../../config';
-import { NotFoundError, BadRequestError } from '../../../shared';
+import { NotFoundError, BadRequestError, PaginationQuery, PaginatedResult, paginate } from '../../../shared';
 import { DemandeAdhesion, StatutDemandeAdhesion } from '../entities/demande-adhesion.entity';
 import { Utilisateur } from '../../utilisateurs/entities/utilisateur.entity';
 import { Tontine } from '../../tontines/entities/tontine.entity';
-import { AdhesionTontine, StatutAdhesion, RoleMembre } from '../../tontines/entities/adhesion-tontine.entity';
+import {
+  AdhesionTontine,
+  StatutAdhesion,
+  RoleMembre,
+} from '../../tontines/entities/adhesion-tontine.entity';
 import {
   CreateDemandeAdhesionDto,
   ApprouverDemandeDto,
@@ -49,7 +53,9 @@ export class DemandeAdhesionService {
    */
   async create(dto: CreateDemandeAdhesionDto): Promise<DemandeAdhesionResponseDto> {
     // Verifier l'utilisateur
-    const utilisateur = await this.utilisateurRepository.findOne({ where: { id: dto.utilisateurId } });
+    const utilisateur = await this.utilisateurRepository.findOne({
+      where: { id: dto.utilisateurId },
+    });
     if (!utilisateur) {
       throw new NotFoundError(`Utilisateur non trouve: ${dto.utilisateurId}`);
     }
@@ -69,7 +75,7 @@ export class DemandeAdhesionService {
       },
     });
     if (existingDemande) {
-      throw new BadRequestError('Une demande d\'adhesion est deja en cours pour cette tontine');
+      throw new BadRequestError("Une demande d'adhesion est deja en cours pour cette tontine");
     }
 
     // Verifier que l'utilisateur n'est pas deja membre
@@ -107,7 +113,10 @@ export class DemandeAdhesionService {
       throw new NotFoundError(`Demande non trouvee: ${id}`);
     }
 
-    if (demande.statut !== StatutDemandeAdhesion.SOUMISE && demande.statut !== StatutDemandeAdhesion.EN_COURS) {
+    if (
+      demande.statut !== StatutDemandeAdhesion.SOUMISE &&
+      demande.statut !== StatutDemandeAdhesion.EN_COURS
+    ) {
       throw new BadRequestError('Cette demande ne peut plus etre approuvee');
     }
 
@@ -138,7 +147,10 @@ export class DemandeAdhesionService {
       throw new NotFoundError(`Demande non trouvee: ${id}`);
     }
 
-    if (demande.statut !== StatutDemandeAdhesion.SOUMISE && demande.statut !== StatutDemandeAdhesion.EN_COURS) {
+    if (
+      demande.statut !== StatutDemandeAdhesion.SOUMISE &&
+      demande.statut !== StatutDemandeAdhesion.EN_COURS
+    ) {
       throw new BadRequestError('Cette demande ne peut plus etre refusee');
     }
 
@@ -173,7 +185,10 @@ export class DemandeAdhesionService {
   /**
    * Lister les demandes d'adhesion
    */
-  async findAll(filters?: DemandeAdhesionFiltersDto): Promise<{ demandes: DemandeAdhesionResponseDto[]; total: number }> {
+  async findAll(
+    filters?: DemandeAdhesionFiltersDto,
+    pagination?: PaginationQuery
+  ): Promise<PaginatedResult<DemandeAdhesionResponseDto>> {
     const queryBuilder = this.demandeRepository
       .createQueryBuilder('d')
       .leftJoinAndSelect('d.utilisateur', 'utilisateur')
@@ -183,7 +198,9 @@ export class DemandeAdhesionService {
       queryBuilder.andWhere('d.tontineId = :tontineId', { tontineId: filters.tontineId });
     }
     if (filters?.utilisateurId) {
-      queryBuilder.andWhere('d.utilisateurId = :utilisateurId', { utilisateurId: filters.utilisateurId });
+      queryBuilder.andWhere('d.utilisateurId = :utilisateurId', {
+        utilisateurId: filters.utilisateurId,
+      });
     }
     if (filters?.statut) {
       queryBuilder.andWhere('d.statut = :statut', { statut: filters.statut });
@@ -195,19 +212,12 @@ export class DemandeAdhesionService {
       queryBuilder.andWhere('d.soumiseLe <= :dateFin', { dateFin: filters.dateFin });
     }
 
-    const total = await queryBuilder.getCount();
+    queryBuilder.orderBy('d.soumiseLe', 'DESC');
 
-    if (filters?.page && filters?.limit) {
-      queryBuilder.skip((filters.page - 1) * filters.limit).take(filters.limit);
-    }
-
-    const demandes = await queryBuilder
-      .orderBy('d.soumiseLe', 'DESC')
-      .getMany();
-
+    const result = await paginate<DemandeAdhesion>(queryBuilder as SelectQueryBuilder<DemandeAdhesion>, pagination ?? {});
     return {
-      demandes: demandes.map((d) => this.toResponseDto(d)),
-      total,
+      data: result.data.map((d) => this.toResponseDto(d)),
+      meta: result.meta,
     };
   }
 
@@ -247,7 +257,7 @@ export class DemandeAdhesionService {
    * Obtenir le resume des demandes
    */
   async getSummary(filters?: DemandeAdhesionFiltersDto): Promise<DemandesSummaryDto> {
-    const { demandes } = await this.findAll(filters);
+    const { data: demandes } = await this.findAll(filters, { limit: 1000 });
 
     let demandesSoumises = 0;
     let demandesEnCours = 0;
@@ -292,18 +302,22 @@ export class DemandeAdhesionService {
     return {
       id: entity.id,
       utilisateurId: entity.utilisateurId,
-      utilisateur: entity.utilisateur ? {
-        id: entity.utilisateur.id,
-        nom: entity.utilisateur.nom,
-        prenom: entity.utilisateur.prenom,
+      utilisateur: entity.utilisateur
+        ? {
+            id: entity.utilisateur.id,
+            nom: entity.utilisateur.nom,
+            prenom: entity.utilisateur.prenom,
 
-        telephone: entity.utilisateur.telephone1,
-      } : undefined,
+            telephone: entity.utilisateur.telephone1,
+          }
+        : undefined,
       tontineId: entity.tontineId,
-      tontine: entity.tontine ? {
-        id: entity.tontine.id,
-        nom: entity.tontine.nom,
-      } : undefined,
+      tontine: entity.tontine
+        ? {
+            id: entity.tontine.id,
+            nom: entity.tontine.nom,
+          }
+        : undefined,
       message: entity.message,
       statut: entity.statut,
       soumiseLe: entity.soumiseLe,

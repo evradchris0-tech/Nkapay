@@ -9,12 +9,7 @@ import { ApiResponse } from '../utils';
 import { logger } from '../utils/logger.util';
 import { isDevelopment } from '../../config';
 
-export function errorHandler(
-  err: Error,
-  _req: Request,
-  res: Response,
-  _next: NextFunction
-): void {
+export function errorHandler(err: Error, _req: Request, res: Response, _next: NextFunction): void {
   // Log de l'erreur
   if (err instanceof AppError && err.isOperational) {
     logger.warn(`Erreur operationnelle: ${err.message}`, {

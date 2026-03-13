@@ -29,10 +29,13 @@ async function createAdminUser() {
       const passwordHash = await bcrypt.hash('Admin123!', 10);
       const adminId = uuidv4();
 
-      await queryRunner.query(`
+      await queryRunner.query(
+        `
         INSERT INTO utilisateur (id, nom, prenom, telephone1, password_hash, est_super_admin, doit_changer_mot_de_passe)
         VALUES (?, ?, ?, ?, ?, ?, ?)
-      `, [adminId, 'ADMIN', 'Super', '690000001', passwordHash, true, false]);
+      `,
+        [adminId, 'ADMIN', 'Super', '690000001', passwordHash, true, false]
+      );
 
       console.log('✅ Utilisateur admin créé:');
       console.log(`   Téléphone: 690000001`);
@@ -48,12 +51,13 @@ async function createAdminUser() {
     }
 
     // Afficher les tontines existantes
-    const tontines = await queryRunner.query(`SELECT id, nom_court, nom FROM tontine WHERE supprime_le IS NULL LIMIT 5`);
+    const tontines = await queryRunner.query(
+      `SELECT id, nom_court, nom FROM tontine WHERE supprime_le IS NULL LIMIT 5`
+    );
     console.log('\n📋 Tontines existantes:');
     for (const t of tontines) {
       console.log(`   - ${t.nom_court}: ${t.id}`);
     }
-
   } catch (error) {
     console.error('❌ Erreur:', error);
   } finally {

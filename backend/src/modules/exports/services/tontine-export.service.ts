@@ -9,7 +9,11 @@ import { Tontine } from '../../tontines/entities/tontine.entity';
 import { AdhesionTontine, StatutAdhesion } from '../../tontines/entities/adhesion-tontine.entity';
 import { Exercice, StatutExercice } from '../../exercices/entities/exercice.entity';
 import { Reunion, StatutReunion } from '../../reunions/entities/reunion.entity';
-import { Transaction, TypeTransaction, StatutTransaction } from '../../transactions/entities/transaction.entity';
+import {
+  Transaction,
+  TypeTransaction,
+  StatutTransaction,
+} from '../../transactions/entities/transaction.entity';
 import { createPDFService, TableColumn } from './pdf.service';
 
 /**
@@ -86,8 +90,9 @@ export class TontineExportService {
     pdf.addSpace();
 
     // Statistiques
-    const exerciceActif = tontine.exercices?.find(e => e.statut === StatutExercice.OUVERT);
-    const membresActifs = tontine.adhesions?.filter(a => a.statut === StatutAdhesion.ACTIVE).length || 0;
+    const exerciceActif = tontine.exercices?.find((e) => e.statut === StatutExercice.OUVERT);
+    const membresActifs =
+      tontine.adhesions?.filter((a) => a.statut === StatutAdhesion.ACTIVE).length || 0;
 
     pdf.addSummaryBoxes([
       {
@@ -126,7 +131,7 @@ export class TontineExportService {
         { header: 'Date adhésion', field: 'dateAdhesion', width: 100 },
       ];
 
-      const data = tontine.adhesions.map(a => ({
+      const data = tontine.adhesions.map((a) => ({
         matricule: a.matricule || '-',
         nom: a.utilisateur?.nom || '-',
         telephone: a.utilisateur?.telephone1 || '-',
@@ -147,7 +152,13 @@ export class TontineExportService {
   async exportExerciceBilan(exerciceId: string): Promise<Buffer> {
     const exercice = await this.exerciceRepository.findOne({
       where: { id: exerciceId },
-      relations: ['tontine', 'reunions', 'membres', 'membres.adhesionTontine', 'membres.adhesionTontine.utilisateur'],
+      relations: [
+        'tontine',
+        'reunions',
+        'membres',
+        'membres.adhesionTontine',
+        'membres.adhesionTontine.utilisateur',
+      ],
     });
 
     if (!exercice) {
@@ -166,7 +177,7 @@ export class TontineExportService {
     const dateDebut = `${exercice.moisDebut}/${exercice.anneeDebut}`;
     const dateFin = `${exercice.moisFin}/${exercice.anneeFin}`;
 
-    pdf.addSectionTitle('Informations de l\'Exercice');
+    pdf.addSectionTitle("Informations de l'Exercice");
     pdf.addKeyValue('Libellé', exercice.libelle);
     pdf.addKeyValue('Tontine', exercice.tontine?.nom || '-');
     pdf.addKeyValue('Période', `${dateDebut} - ${dateFin}`);
@@ -176,12 +187,13 @@ export class TontineExportService {
     pdf.addSpace();
 
     // Statistiques des réunions
-    const reunionsCloturees = exercice.reunions?.filter(r => r.statut === StatutReunion.CLOTUREE).length || 0;
+    const reunionsCloturees =
+      exercice.reunions?.filter((r) => r.statut === StatutReunion.CLOTUREE).length || 0;
     const reunionsTotal = exercice.reunions?.length || 0;
     const membresInscrits = exercice.membres?.length || 0;
 
     // Récupérer les transactions des réunions de cet exercice
-    const reunionIds = exercice.reunions?.map(r => r.id) || [];
+    const reunionIds = exercice.reunions?.map((r) => r.id) || [];
     let totalCotisations = 0;
     let totalDistributions = 0;
 
@@ -193,11 +205,11 @@ export class TontineExportService {
         .getMany();
 
       totalCotisations = transactions
-        .filter(t => t.typeTransaction === TypeTransaction.COTISATION)
+        .filter((t) => t.typeTransaction === TypeTransaction.COTISATION)
         .reduce((sum, t) => sum + Number(t.montant), 0);
 
       totalDistributions = transactions
-        .filter(t => t.typeTransaction === TypeTransaction.POT)
+        .filter((t) => t.typeTransaction === TypeTransaction.POT)
         .reduce((sum, t) => sum + Number(t.montant), 0);
     }
 
@@ -207,19 +219,27 @@ export class TontineExportService {
         items: [
           { label: 'Prévues', value: reunionsTotal.toString() },
           { label: 'Clôturées', value: reunionsCloturees.toString(), highlight: true },
-          { label: 'Progression', value: reunionsTotal > 0 ? `${Math.round((reunionsCloturees / reunionsTotal) * 100)}%` : '0%' },
+          {
+            label: 'Progression',
+            value:
+              reunionsTotal > 0
+                ? `${Math.round((reunionsCloturees / reunionsTotal) * 100)}%`
+                : '0%',
+          },
         ],
       },
       {
         title: 'Membres',
-        items: [
-          { label: 'Inscrits', value: membresInscrits.toString() },
-        ],
+        items: [{ label: 'Inscrits', value: membresInscrits.toString() }],
       },
       {
         title: 'Finances',
         items: [
-          { label: 'Cotisations', value: `${totalCotisations.toLocaleString('fr-FR')} FCFA`, highlight: true },
+          {
+            label: 'Cotisations',
+            value: `${totalCotisations.toLocaleString('fr-FR')} FCFA`,
+            highlight: true,
+          },
           { label: 'Pots distribués', value: `${totalDistributions.toLocaleString('fr-FR')} FCFA` },
         ],
       },
@@ -238,7 +258,7 @@ export class TontineExportService {
 
       const data = exercice.reunions
         .sort((a, b) => a.numeroReunion - b.numeroReunion)
-        .map(r => ({
+        .map((r) => ({
           numero: r.numeroReunion,
           date: formatDate(r.dateReunion),
           lieu: r.lieu || '-',
@@ -280,7 +300,14 @@ export class TontineExportService {
   async exportReunionRapport(reunionId: string): Promise<Buffer> {
     const reunion = await this.reunionRepository.findOne({
       where: { id: reunionId },
-      relations: ['exercice', 'exercice.tontine', 'presences', 'presences.exerciceMembre', 'presences.exerciceMembre.adhesionTontine', 'presences.exerciceMembre.adhesionTontine.utilisateur'],
+      relations: [
+        'exercice',
+        'exercice.tontine',
+        'presences',
+        'presences.exerciceMembre',
+        'presences.exerciceMembre.adhesionTontine',
+        'presences.exerciceMembre.adhesionTontine.utilisateur',
+      ],
     });
 
     if (!reunion) {
@@ -307,7 +334,7 @@ export class TontineExportService {
 
     // Statistiques de présence
     const totalMembres = reunion.presences?.length || 0;
-    const presents = reunion.presences?.filter(p => p.estPresent).length || 0;
+    const presents = reunion.presences?.filter((p) => p.estPresent).length || 0;
     const absents = totalMembres - presents;
     const tauxPresence = totalMembres > 0 ? Math.round((presents / totalMembres) * 100) : 0;
 
@@ -334,7 +361,7 @@ export class TontineExportService {
         { header: 'Note', field: 'note', width: 180 },
       ];
 
-      const data = reunion.presences.map(p => ({
+      const data = reunion.presences.map((p) => ({
         nom: p.exerciceMembre?.adhesionTontine?.utilisateur?.nom || '-',
         presence: p.estPresent ? '✓ Présent' : '✗ Absent',
         heureArrivee: p.heureArrivee || '-',
@@ -371,8 +398,10 @@ export class TontineExportService {
 
     // Statistiques
     const totalMembres = tontine.adhesions?.length || 0;
-    const membresActifs = tontine.adhesions?.filter(a => a.statut === StatutAdhesion.ACTIVE).length || 0;
-    const membresInactifs = tontine.adhesions?.filter(a => a.statut === StatutAdhesion.INACTIVE).length || 0;
+    const membresActifs =
+      tontine.adhesions?.filter((a) => a.statut === StatutAdhesion.ACTIVE).length || 0;
+    const membresInactifs =
+      tontine.adhesions?.filter((a) => a.statut === StatutAdhesion.INACTIVE).length || 0;
 
     pdf.addSummaryBoxes([
       {

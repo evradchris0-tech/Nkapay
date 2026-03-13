@@ -48,7 +48,7 @@ export class PDFService {
    */
   init(): void {
     const isLandscape = this.options.orientation === 'landscape';
-    
+
     this.doc = new PDFDocument({
       size: 'A4',
       layout: isLandscape ? 'landscape' : 'portrait',
@@ -165,18 +165,22 @@ export class PDFService {
     const fontSize = style?.fontSize || 11;
     const lineHeight = fontSize * 1.5;
     const estimatedLines = Math.ceil(text.length / 80);
-    
+
     this.checkNewPage(lineHeight * estimatedLines + 10);
 
-    const fontName = style?.font === 'bold' ? 'Helvetica-Bold' : 
-                     style?.font === 'italic' ? 'Helvetica-Oblique' : 'Helvetica';
+    const fontName =
+      style?.font === 'bold'
+        ? 'Helvetica-Bold'
+        : style?.font === 'italic'
+          ? 'Helvetica-Oblique'
+          : 'Helvetica';
 
     this.doc
       .fillColor(style?.color || '#374151')
       .fontSize(fontSize)
       .font(fontName)
       .text(text, this.margin, this.yPosition, {
-        width: this.pageWidth - (this.margin * 2),
+        width: this.pageWidth - this.margin * 2,
         align: style?.align || 'left',
         lineGap: 4,
       });
@@ -231,16 +235,16 @@ export class PDFService {
   addTable(columns: TableColumn[], data: Record<string, unknown>[]): void {
     if (!this.doc) return;
 
-    const tableWidth = this.pageWidth - (this.margin * 2);
+    const tableWidth = this.pageWidth - this.margin * 2;
     const defaultColWidth = tableWidth / columns.length;
     const rowHeight = 30;
     const headerHeight = 35;
 
     // Calculer les largeurs des colonnes
-    const colWidths = columns.map(col => col.width || defaultColWidth);
+    const colWidths = columns.map((col) => col.width || defaultColWidth);
     const totalWidth = colWidths.reduce((a, b) => a + b, 0);
     const scale = tableWidth / totalWidth;
-    const scaledWidths = colWidths.map(w => w * scale);
+    const scaledWidths = colWidths.map((w) => w * scale);
 
     // Vérifier l'espace pour au moins l'en-tête + 1 ligne
     this.checkNewPage(headerHeight + rowHeight + 20);
@@ -253,8 +257,7 @@ export class PDFService {
       .fill();
 
     columns.forEach((col, i) => {
-      this.doc!
-        .fillColor('#374151')
+      this.doc!.fillColor('#374151')
         .fontSize(10)
         .font('Helvetica-Bold')
         .text(col.header, xPos + 5, this.yPosition + 10, {
@@ -272,15 +275,13 @@ export class PDFService {
 
       // Fond alterné
       if (rowIndex % 2 === 0) {
-        this.doc!
-          .fillColor('#fafafa')
+        this.doc!.fillColor('#fafafa')
           .rect(this.margin, this.yPosition, tableWidth, rowHeight)
           .fill();
       }
 
       // Bordure du bas
-      this.doc!
-        .strokeColor('#e5e7eb')
+      this.doc!.strokeColor('#e5e7eb')
         .lineWidth(0.5)
         .moveTo(this.margin, this.yPosition + rowHeight)
         .lineTo(this.margin + tableWidth, this.yPosition + rowHeight)
@@ -294,8 +295,7 @@ export class PDFService {
           value = col.format(value);
         }
 
-        this.doc!
-          .fillColor('#1f2937')
+        this.doc!.fillColor('#1f2937')
           .fontSize(9)
           .font('Helvetica')
           .text(String(value ?? '-'), xPos + 5, this.yPosition + 8, {
@@ -315,13 +315,16 @@ export class PDFService {
   /**
    * Ajouter un résumé avec statistiques
    */
-  addSummaryBox(title: string, items: { label: string; value: string; highlight?: boolean }[]): void {
+  addSummaryBox(
+    title: string,
+    items: { label: string; value: string; highlight?: boolean }[]
+  ): void {
     if (!this.doc) return;
 
-    const boxHeight = 30 + (items.length * 25);
+    const boxHeight = 30 + items.length * 25;
     this.checkNewPage(boxHeight + 20);
 
-    const boxWidth = (this.pageWidth - (this.margin * 2)) / 2 - 10;
+    const boxWidth = (this.pageWidth - this.margin * 2) / 2 - 10;
 
     // Fond de la boîte
     this.doc
@@ -330,10 +333,7 @@ export class PDFService {
       .fill();
 
     // Bordure gauche colorée
-    this.doc
-      .fillColor('#3b82f6')
-      .rect(this.margin, this.yPosition, 4, boxHeight)
-      .fill();
+    this.doc.fillColor('#3b82f6').rect(this.margin, this.yPosition, 4, boxHeight).fill();
 
     // Titre de la boîte
     this.doc
@@ -343,15 +343,13 @@ export class PDFService {
       .text(title, this.margin + 15, this.yPosition + 10);
 
     let itemY = this.yPosition + 35;
-    items.forEach(item => {
-      this.doc!
-        .fillColor('#6b7280')
+    items.forEach((item) => {
+      this.doc!.fillColor('#6b7280')
         .fontSize(10)
         .font('Helvetica')
         .text(item.label + ' :', this.margin + 15, itemY, { continued: true });
 
-      this.doc!
-        .fillColor(item.highlight ? '#059669' : '#1f2937')
+      this.doc!.fillColor(item.highlight ? '#059669' : '#1f2937')
         .fontSize(10)
         .font('Helvetica-Bold')
         .text(' ' + item.value);
@@ -365,49 +363,44 @@ export class PDFService {
   /**
    * Ajouter plusieurs boîtes de résumé côte à côte
    */
-  addSummaryBoxes(boxes: { title: string; items: { label: string; value: string; highlight?: boolean }[] }[]): void {
+  addSummaryBoxes(
+    boxes: { title: string; items: { label: string; value: string; highlight?: boolean }[] }[]
+  ): void {
     if (!this.doc) return;
 
-    const maxItems = Math.max(...boxes.map(b => b.items.length));
-    const boxHeight = 30 + (maxItems * 25);
+    const maxItems = Math.max(...boxes.map((b) => b.items.length));
+    const boxHeight = 30 + maxItems * 25;
     this.checkNewPage(boxHeight + 20);
 
-    const totalWidth = this.pageWidth - (this.margin * 2);
+    const totalWidth = this.pageWidth - this.margin * 2;
     const gap = 15;
-    const boxWidth = (totalWidth - (gap * (boxes.length - 1))) / boxes.length;
+    const boxWidth = (totalWidth - gap * (boxes.length - 1)) / boxes.length;
 
     boxes.forEach((box, index) => {
       const xPos = this.margin + (boxWidth + gap) * index;
 
       // Fond de la boîte
-      this.doc!
-        .fillColor('#eff6ff')
+      this.doc!.fillColor('#eff6ff')
         .roundedRect(xPos, this.yPosition, boxWidth, boxHeight, 5)
         .fill();
 
       // Bordure gauche colorée
-      this.doc!
-        .fillColor('#3b82f6')
-        .rect(xPos, this.yPosition, 4, boxHeight)
-        .fill();
+      this.doc!.fillColor('#3b82f6').rect(xPos, this.yPosition, 4, boxHeight).fill();
 
       // Titre de la boîte
-      this.doc!
-        .fillColor('#1e40af')
+      this.doc!.fillColor('#1e40af')
         .fontSize(11)
         .font('Helvetica-Bold')
         .text(box.title, xPos + 12, this.yPosition + 10, { width: boxWidth - 20 });
 
       let itemY = this.yPosition + 35;
-      box.items.forEach(item => {
-        this.doc!
-          .fillColor('#6b7280')
+      box.items.forEach((item) => {
+        this.doc!.fillColor('#6b7280')
           .fontSize(9)
           .font('Helvetica')
           .text(item.label, xPos + 12, itemY, { width: boxWidth - 20 });
 
-        this.doc!
-          .fillColor(item.highlight ? '#059669' : '#1f2937')
+        this.doc!.fillColor(item.highlight ? '#059669' : '#1f2937')
           .fontSize(10)
           .font('Helvetica-Bold')
           .text(item.value, xPos + 12, itemY + 12, { width: boxWidth - 20 });
@@ -453,7 +446,7 @@ export class PDFService {
     if (!this.doc) return;
 
     const pageCount = this.doc.bufferedPageRange().count;
-    
+
     for (let i = 0; i < pageCount; i++) {
       this.doc.switchToPage(i);
 
@@ -470,20 +463,15 @@ export class PDFService {
         .fillColor('#9ca3af')
         .fontSize(9)
         .font('Helvetica')
-        .text(
-          'Nkapay Tontine System - Document confidentiel',
-          this.margin,
-          this.pageHeight - 30
-        );
+        .text('Nkapay Tontine System - Document confidentiel', this.margin, this.pageHeight - 30);
 
       // Numéro de page
-      this.doc
-        .text(
-          `Page ${i + 1} / ${pageCount}`,
-          this.pageWidth - this.margin - 80,
-          this.pageHeight - 30,
-          { width: 80, align: 'right' }
-        );
+      this.doc.text(
+        `Page ${i + 1} / ${pageCount}`,
+        this.pageWidth - this.margin - 80,
+        this.pageHeight - 30,
+        { width: 80, align: 'right' }
+      );
     }
   }
 

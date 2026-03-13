@@ -123,10 +123,7 @@ export class RegleTontineController {
    */
   async getValueByCle(req: Request, res: Response, next: NextFunction) {
     try {
-      const valeur = await regleTontineService.getValueByCle(
-        req.params.tontineId, 
-        req.params.cle
-      );
+      const valeur = await regleTontineService.getValueByCle(req.params.tontineId, req.params.cle);
       res.json({ cle: req.params.cle, valeur });
     } catch (error) {
       next(error);
@@ -252,7 +249,7 @@ export class RegleTontineController {
   async initializeDefaultRules(req: Request, res: Response, next: NextFunction) {
     try {
       await regleTontineService.initializeDefaultRules(
-        req.params.tontineId, 
+        req.params.tontineId,
         req.body.adhesionTontineId
       );
       res.json({ message: 'Règles par défaut initialisées' });

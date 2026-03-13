@@ -1,26 +1,26 @@
 /**
  * Entité Cassation
- * 
- * Représente la CASSATION - distribution de l'ÉPARGNE de chaque membre 
+ *
+ * Représente la CASSATION - distribution de l'ÉPARGNE de chaque membre
  * à la clôture d'un exercice.
- * 
+ *
  * LOGIQUE MÉTIER TONTINE:
  * - La CASSATION survient à la DERNIÈRE réunion de l'exercice
  * - Chaque membre récupère SON ÉPARGNE accumulée pendant l'exercice
  * - L'épargne est un montant fixe versé mensuellement (ex: 5 000 FCFA/mois)
  * - À la cassation, le membre récupère: 12 mois × 5 000 = 60 000 FCFA
- * 
+ *
  * IMPORTANT - NE PAS CONFONDRE:
  * - COTISATION: Redistribuée mensuellement à 1 bénéficiaire → Distribution
  * - ÉPARGNE: Accumulée individuellement → Cassation (retour au membre)
  * - SECOURS: Fonds mutualisé pour les événements (décès, maladie)
  * - POT: Dépenses de la réunion (collation)
- * 
+ *
  * CALCUL CASSATION:
  * - Épargne accumulée = montant_epargne × nombre_mois × nombre_parts
  * - Moins déductions éventuelles (prêts non remboursés)
  * - = Montant net à remettre au membre
- * 
+ *
  * @example
  * Membre avec 1 part, épargne 5 000 FCFA/mois, exercice 12 mois:
  * Cassation = 12 × 5 000 = 60 000 FCFA (son épargne lui est rendue)
@@ -41,9 +41,9 @@ import { ExerciceMembre } from './exercice-membre.entity';
 import { Transaction } from '../../transactions/entities/transaction.entity';
 
 export enum StatutCassation {
-  CALCULEE = 'CALCULEE',      // Montant calculé, en attente de distribution
-  DISTRIBUEE = 'DISTRIBUEE',  // Épargne remise au membre
-  ANNULEE = 'ANNULEE',        // Cassation annulée
+  CALCULEE = 'CALCULEE', // Montant calculé, en attente de distribution
+  DISTRIBUEE = 'DISTRIBUEE', // Épargne remise au membre
+  ANNULEE = 'ANNULEE', // Cassation annulée
 }
 
 @Entity('cassation')
@@ -72,11 +72,15 @@ export class Cassation {
   @Column({ name: 'nombre_parts', type: 'int', default: 1 })
   nombreParts: number;
 
-  /** Montant brut calculé avant déductions */
+  /** Montant brut de l'épargne personnelle du membre */
   @Column({ name: 'montant_brut', type: 'decimal', precision: 15, scale: 2 })
   montantBrut: number;
 
-  /** Déductions éventuelles (prêts non remboursés, pénalités, etc.) */
+  /** Part des bénéfices de la tontine (intérêts des prêts, pénalités) accordée au membre */
+  @Column({ name: 'part_benefice', type: 'decimal', precision: 15, scale: 2, default: 0 })
+  partBenefice: number;
+
+  /** Déductions éventuelles (prêts non remboursés, pénalités impayées, etc.) */
   @Column({ name: 'deductions', type: 'decimal', precision: 15, scale: 2, default: 0 })
   deductions: number;
 

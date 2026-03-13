@@ -5,7 +5,11 @@
 import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
-import { ExerciceMembre, TypeMembre, StatutExerciceMembre } from '../entities/exercice-membre.entity';
+import {
+  ExerciceMembre,
+  TypeMembre,
+  StatutExerciceMembre,
+} from '../entities/exercice-membre.entity';
 import { Exercice, StatutExercice } from '../entities/exercice.entity';
 import { AdhesionTontine } from '../../tontines/entities/adhesion-tontine.entity';
 import {
@@ -22,7 +26,8 @@ export class ExerciceMembreService {
   private _adhesionRepo?: Repository<AdhesionTontine>;
 
   private get exerciceMembreRepository(): Repository<ExerciceMembre> {
-    if (!this._exerciceMembreRepo) this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
+    if (!this._exerciceMembreRepo)
+      this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
     return this._exerciceMembreRepo;
   }
 
@@ -60,7 +65,7 @@ export class ExerciceMembreService {
 
     // Verifier que l'adhesion est pour la meme tontine
     if (adhesion.tontineId !== exercice.tontineId) {
-      throw new BadRequestError('L\'adhesion n\'appartient pas a la meme tontine que l\'exercice');
+      throw new BadRequestError("L'adhesion n'appartient pas a la meme tontine que l'exercice");
     }
 
     // Verifier que le membre n'est pas deja dans l'exercice
@@ -86,7 +91,13 @@ export class ExerciceMembreService {
 
     const reloaded = await this.exerciceMembreRepository.findOne({
       where: { id: saved.id },
-      relations: ['exercice', 'adhesionTontine', 'adhesionTontine.utilisateur', 'parrain', 'parrain.adhesionTontine'],
+      relations: [
+        'exercice',
+        'adhesionTontine',
+        'adhesionTontine.utilisateur',
+        'parrain',
+        'parrain.adhesionTontine',
+      ],
     });
 
     return this.toResponseDto(reloaded!);
@@ -95,7 +106,10 @@ export class ExerciceMembreService {
   /**
    * Lister les membres d'un exercice
    */
-  async findByExercice(exerciceId: string, filters?: ExerciceMembreFiltersDto): Promise<ExerciceMembreListItemDto[]> {
+  async findByExercice(
+    exerciceId: string,
+    filters?: ExerciceMembreFiltersDto
+  ): Promise<ExerciceMembreListItemDto[]> {
     const queryBuilder = this.exerciceMembreRepository
       .createQueryBuilder('em')
       .leftJoinAndSelect('em.adhesionTontine', 'adhesion')
@@ -109,9 +123,7 @@ export class ExerciceMembreService {
       queryBuilder.andWhere('em.statut = :statut', { statut: filters.statut });
     }
 
-    const membres = await queryBuilder
-      .orderBy('adhesion.matricule', 'ASC')
-      .getMany();
+    const membres = await queryBuilder.orderBy('adhesion.matricule', 'ASC').getMany();
 
     return membres.map((m) => this.toListItemDto(m));
   }
@@ -122,7 +134,13 @@ export class ExerciceMembreService {
   async findById(id: string): Promise<ExerciceMembreResponseDto> {
     const membre = await this.exerciceMembreRepository.findOne({
       where: { id },
-      relations: ['exercice', 'adhesionTontine', 'adhesionTontine.utilisateur', 'parrain', 'parrain.adhesionTontine'],
+      relations: [
+        'exercice',
+        'adhesionTontine',
+        'adhesionTontine.utilisateur',
+        'parrain',
+        'parrain.adhesionTontine',
+      ],
     });
 
     if (!membre) {
@@ -138,7 +156,13 @@ export class ExerciceMembreService {
   async update(id: string, dto: UpdateExerciceMembreDto): Promise<ExerciceMembreResponseDto> {
     const membre = await this.exerciceMembreRepository.findOne({
       where: { id },
-      relations: ['exercice', 'adhesionTontine', 'adhesionTontine.utilisateur', 'parrain', 'parrain.adhesionTontine'],
+      relations: [
+        'exercice',
+        'adhesionTontine',
+        'adhesionTontine.utilisateur',
+        'parrain',
+        'parrain.adhesionTontine',
+      ],
     });
 
     if (!membre) {
@@ -149,13 +173,20 @@ export class ExerciceMembreService {
     if (dto.moisEntree !== undefined) membre.moisEntree = dto.moisEntree;
     if (dto.nombreParts !== undefined) membre.nombreParts = dto.nombreParts;
     if (dto.statut !== undefined) membre.statut = dto.statut;
-    if (dto.parrainExerciceMembreId !== undefined) membre.parrainExerciceMembreId = dto.parrainExerciceMembreId;
+    if (dto.parrainExerciceMembreId !== undefined)
+      membre.parrainExerciceMembreId = dto.parrainExerciceMembreId;
 
     await this.exerciceMembreRepository.save(membre);
 
     const reloaded = await this.exerciceMembreRepository.findOne({
       where: { id: membre.id },
-      relations: ['exercice', 'adhesionTontine', 'adhesionTontine.utilisateur', 'parrain', 'parrain.adhesionTontine'],
+      relations: [
+        'exercice',
+        'adhesionTontine',
+        'adhesionTontine.utilisateur',
+        'parrain',
+        'parrain.adhesionTontine',
+      ],
     });
 
     return this.toResponseDto(reloaded!);
@@ -193,28 +224,37 @@ export class ExerciceMembreService {
   private toResponseDto(entity: ExerciceMembre): ExerciceMembreResponseDto {
     return {
       id: entity.id,
-      exercice: entity.exercice ? {
-        id: entity.exercice.id,
-        libelle: entity.exercice.libelle,
-      } : { id: '', libelle: '' },
-      adhesionTontine: entity.adhesionTontine ? {
-        id: entity.adhesionTontine.id,
-        matricule: entity.adhesionTontine.matricule,
-        utilisateur: entity.adhesionTontine.utilisateur ? {
-          id: entity.adhesionTontine.utilisateur.id,
-          nom: entity.adhesionTontine.utilisateur.nom,
-          prenom: entity.adhesionTontine.utilisateur.prenom,
-        } : { id: '', nom: '', prenom: '' },
-      } : { id: '', matricule: '', utilisateur: { id: '', nom: '', prenom: '' } },
+      exercice: entity.exercice
+        ? {
+            id: entity.exercice.id,
+            libelle: entity.exercice.libelle,
+          }
+        : { id: '', libelle: '' },
+      adhesionTontine: entity.adhesionTontine
+        ? {
+            id: entity.adhesionTontine.id,
+            matricule: entity.adhesionTontine.matricule,
+            utilisateur: entity.adhesionTontine.utilisateur
+              ? {
+                  id: entity.adhesionTontine.utilisateur.id,
+                  nom: entity.adhesionTontine.utilisateur.nom,
+                  prenom: entity.adhesionTontine.utilisateur.prenom,
+                }
+              : { id: '', nom: '', prenom: '' },
+          }
+        : { id: '', matricule: '', utilisateur: { id: '', nom: '', prenom: '' } },
       typeMembre: entity.typeMembre,
       moisEntree: entity.moisEntree,
       dateEntreeExercice: entity.dateEntreeExercice,
       nombreParts: Number(entity.nombreParts),
       statut: entity.statut,
-      parrain: entity.parrain && entity.parrain.adhesionTontine ? {
-        id: entity.parrain.id,
-        matricule: entity.parrain.adhesionTontine.matricule,
-      } : null,
+      parrain:
+        entity.parrain && entity.parrain.adhesionTontine
+          ? {
+              id: entity.parrain.id,
+              matricule: entity.parrain.adhesionTontine.matricule,
+            }
+          : null,
       creeLe: entity.creeLe,
       modifieLe: entity.modifieLe,
     };

@@ -5,12 +5,16 @@
 import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
-import { RuleDefinition, CategorieRegle, TypeValeurRegle } from '../entities/rule-definition.entity';
+import {
+  RuleDefinition,
+  CategorieRegle,
+  TypeValeurRegle,
+} from '../entities/rule-definition.entity';
 import {
   CreateRuleDefinitionDto,
   UpdateRuleDefinitionDto,
   RuleDefinitionResponseDto,
-  RuleDefinitionFiltersDto
+  RuleDefinitionFiltersDto,
 } from '../dto/rule-definition.dto';
 
 export class RuleDefinitionService {
@@ -27,7 +31,7 @@ export class RuleDefinitionService {
   async create(data: CreateRuleDefinitionDto): Promise<RuleDefinitionResponseDto> {
     // Vérifier que la clé n'existe pas déjà
     const existing = await this.ruleDefinitionRepository.findOne({
-      where: { cle: data.cle }
+      where: { cle: data.cle },
     });
 
     if (existing) {
@@ -47,7 +51,7 @@ export class RuleDefinitionService {
       estModifiableParExercice: data.estModifiableParExercice ?? true,
       categorie: data.categorie,
       description: data.description,
-      ordreAffichage: data.ordreAffichage ?? 0
+      ordreAffichage: data.ordreAffichage ?? 0,
     });
 
     await this.ruleDefinitionRepository.save(ruleDefinition);
@@ -73,7 +77,7 @@ export class RuleDefinitionService {
 
     if (filters?.estObligatoire !== undefined) {
       queryBuilder.andWhere('rd.estObligatoire = :estObligatoire', {
-        estObligatoire: filters.estObligatoire
+        estObligatoire: filters.estObligatoire,
       });
     }
 
@@ -87,7 +91,7 @@ export class RuleDefinitionService {
   async findByCategorie(categorie: CategorieRegle): Promise<RuleDefinitionResponseDto[]> {
     const ruleDefinitions = await this.ruleDefinitionRepository.find({
       where: { categorie },
-      order: { ordreAffichage: 'ASC' }
+      order: { ordreAffichage: 'ASC' },
     });
     return ruleDefinitions.map((rd: RuleDefinition) => this.formatResponse(rd));
   }
@@ -97,7 +101,7 @@ export class RuleDefinitionService {
    */
   async findById(id: string): Promise<RuleDefinitionResponseDto> {
     const ruleDefinition = await this.ruleDefinitionRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!ruleDefinition) {
@@ -112,7 +116,7 @@ export class RuleDefinitionService {
    */
   async findByCle(cle: string): Promise<RuleDefinitionResponseDto> {
     const ruleDefinition = await this.ruleDefinitionRepository.findOne({
-      where: { cle }
+      where: { cle },
     });
 
     if (!ruleDefinition) {
@@ -127,7 +131,7 @@ export class RuleDefinitionService {
    */
   async update(id: string, data: UpdateRuleDefinitionDto): Promise<RuleDefinitionResponseDto> {
     const ruleDefinition = await this.ruleDefinitionRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!ruleDefinition) {
@@ -144,7 +148,7 @@ export class RuleDefinitionService {
    */
   async delete(id: string): Promise<void> {
     const ruleDefinition = await this.ruleDefinitionRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!ruleDefinition) {
@@ -160,7 +164,7 @@ export class RuleDefinitionService {
   async findModifiablesByTontine(): Promise<RuleDefinitionResponseDto[]> {
     const ruleDefinitions = await this.ruleDefinitionRepository.find({
       where: { estModifiableParTontine: true },
-      order: { categorie: 'ASC', ordreAffichage: 'ASC' }
+      order: { categorie: 'ASC', ordreAffichage: 'ASC' },
     });
     return ruleDefinitions.map((rd: RuleDefinition) => this.formatResponse(rd));
   }
@@ -171,7 +175,7 @@ export class RuleDefinitionService {
   async findModifiablesByExercice(): Promise<RuleDefinitionResponseDto[]> {
     const ruleDefinitions = await this.ruleDefinitionRepository.find({
       where: { estModifiableParExercice: true },
-      order: { categorie: 'ASC', ordreAffichage: 'ASC' }
+      order: { categorie: 'ASC', ordreAffichage: 'ASC' },
     });
     return ruleDefinitions.map((rd: RuleDefinition) => this.formatResponse(rd));
   }
@@ -192,7 +196,7 @@ export class RuleDefinitionService {
       categorie: ruleDefinition.categorie,
       description: ruleDefinition.description,
       ordreAffichage: ruleDefinition.ordreAffichage,
-      creeLe: ruleDefinition.creeLe
+      creeLe: ruleDefinition.creeLe,
     };
   }
 }

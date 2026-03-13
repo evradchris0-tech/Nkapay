@@ -9,11 +9,7 @@ import { CotisationDueMensuelle } from '../entities/cotisation-due-mensuelle.ent
 import { StatutDu } from '../entities/inscription-due-exercice.entity';
 import { Reunion } from '../../reunions/entities/reunion.entity';
 import { ExerciceMembre } from '../../exercices/entities/exercice-membre.entity';
-import {
-  CotisationDueResponseDto,
-  DueFiltersDto,
-  UpdateDuePaymentDto
-} from '../dto/dues.dto';
+import { CotisationDueResponseDto, DueFiltersDto, UpdateDuePaymentDto } from '../dto/dues.dto';
 
 export class CotisationDueService {
   private _cotisationDueRepo?: Repository<CotisationDueMensuelle>;
@@ -21,7 +17,8 @@ export class CotisationDueService {
   private _exerciceMembreRepo?: Repository<ExerciceMembre>;
 
   private get cotisationDueRepository(): Repository<CotisationDueMensuelle> {
-    if (!this._cotisationDueRepo) this._cotisationDueRepo = AppDataSource.getRepository(CotisationDueMensuelle);
+    if (!this._cotisationDueRepo)
+      this._cotisationDueRepo = AppDataSource.getRepository(CotisationDueMensuelle);
     return this._cotisationDueRepo;
   }
 
@@ -31,17 +28,21 @@ export class CotisationDueService {
   }
 
   private get exerciceMembreRepository(): Repository<ExerciceMembre> {
-    if (!this._exerciceMembreRepo) this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
+    if (!this._exerciceMembreRepo)
+      this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
     return this._exerciceMembreRepo;
   }
 
   /**
    * Générer les cotisations dues pour une réunion
    */
-  async genererPourReunion(reunionId: string, montantDu: number): Promise<CotisationDueResponseDto[]> {
+  async genererPourReunion(
+    reunionId: string,
+    montantDu: number
+  ): Promise<CotisationDueResponseDto[]> {
     const reunion = await this.reunionRepository.findOne({
       where: { id: reunionId },
-      relations: ['exercice', 'exercice.membres']
+      relations: ['exercice', 'exercice.membres'],
     });
 
     if (!reunion) {
@@ -54,8 +55,8 @@ export class CotisationDueService {
       const existing = await this.cotisationDueRepository.findOne({
         where: {
           reunionId,
-          exerciceMembreId: exerciceMembre.id
-        }
+          exerciceMembreId: exerciceMembre.id,
+        },
       });
 
       if (!existing) {
@@ -65,7 +66,7 @@ export class CotisationDueService {
           montantDu,
           montantPaye: 0,
           soldeRestant: montantDu,
-          statut: StatutDu.EN_RETARD
+          statut: StatutDu.EN_RETARD,
         });
         await this.cotisationDueRepository.save(cotisationDue);
         cotisationsDues.push(this.formatResponse(cotisationDue));
@@ -87,19 +88,19 @@ export class CotisationDueService {
 
     if (filters?.reunionId) {
       queryBuilder.andWhere('cotisation.reunionId = :reunionId', {
-        reunionId: filters.reunionId
+        reunionId: filters.reunionId,
       });
     }
 
     if (filters?.exerciceMembreId) {
       queryBuilder.andWhere('cotisation.exerciceMembreId = :exerciceMembreId', {
-        exerciceMembreId: filters.exerciceMembreId
+        exerciceMembreId: filters.exerciceMembreId,
       });
     }
 
     if (filters?.statut) {
       queryBuilder.andWhere('cotisation.statut = :statut', {
-        statut: filters.statut
+        statut: filters.statut,
       });
     }
 
@@ -115,7 +116,7 @@ export class CotisationDueService {
   async findById(id: string): Promise<CotisationDueResponseDto> {
     const cotisationDue = await this.cotisationDueRepository.findOne({
       where: { id },
-      relations: ['reunion', 'exerciceMembre', 'exerciceMembre.adhesionTontine']
+      relations: ['reunion', 'exerciceMembre', 'exerciceMembre.adhesionTontine'],
     });
 
     if (!cotisationDue) {
@@ -132,23 +133,27 @@ export class CotisationDueService {
     const cotisations = await this.cotisationDueRepository.find({
       where: { reunionId },
       relations: ['reunion', 'exerciceMembre', 'exerciceMembre.adhesionTontine'],
-      order: { creeLe: 'ASC' }
+      order: { creeLe: 'ASC' },
     });
     return cotisations.map((c: CotisationDueMensuelle) => this.formatResponse(c));
   }
-
 
   /**
    * Enregistrer un paiement par contexte (Réunion + Membre)
    * Utile pour les transactions validées qui n'ont pas l'ID de la cotisation due
    */
-  async payerParContexte(reunionId: string, exerciceMembreId: string, montant: number, transactionalEntityManager?: any): Promise<CotisationDueResponseDto | null> {
+  async payerParContexte(
+    reunionId: string,
+    exerciceMembreId: string,
+    montant: number,
+    transactionalEntityManager?: any
+  ): Promise<CotisationDueResponseDto | null> {
     const repository = transactionalEntityManager
       ? transactionalEntityManager.getRepository(CotisationDueMensuelle)
       : this.cotisationDueRepository;
 
     const cotisationDue = await repository.findOne({
-      where: { reunionId, exerciceMembreId }
+      where: { reunionId, exerciceMembreId },
     });
 
     if (!cotisationDue) {
@@ -162,20 +167,27 @@ export class CotisationDueService {
   /**
    * Enregistrer un paiement de cotisation (alias)
    */
-  async enregistrerPaiement(id: string, data: UpdateDuePaymentDto): Promise<CotisationDueResponseDto> {
+  async enregistrerPaiement(
+    id: string,
+    data: UpdateDuePaymentDto
+  ): Promise<CotisationDueResponseDto> {
     return this.payer(id, data);
   }
 
   /**
    * Enregistrer un paiement de cotisation
    */
-  async payer(id: string, data: UpdateDuePaymentDto, transactionalEntityManager?: any): Promise<CotisationDueResponseDto> {
+  async payer(
+    id: string,
+    data: UpdateDuePaymentDto,
+    transactionalEntityManager?: any
+  ): Promise<CotisationDueResponseDto> {
     const repository = transactionalEntityManager
       ? transactionalEntityManager.getRepository(CotisationDueMensuelle)
       : this.cotisationDueRepository;
 
     const cotisationDue = await repository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!cotisationDue) {
@@ -225,7 +237,7 @@ export class CotisationDueService {
     enRetard: number;
   }> {
     const cotisations = await this.cotisationDueRepository.find({
-      where: { reunionId }
+      where: { reunionId },
     });
 
     const stats = {
@@ -234,7 +246,7 @@ export class CotisationDueService {
       totalMontantPaye: 0,
       tauxRecouvrement: 0,
       aJour: 0,
-      enRetard: 0
+      enRetard: 0,
     };
 
     cotisations.forEach((c: CotisationDueMensuelle) => {
@@ -248,7 +260,8 @@ export class CotisationDueService {
     });
 
     if (stats.totalMontantDu > 0) {
-      stats.tauxRecouvrement = Math.round((stats.totalMontantPaye / stats.totalMontantDu) * 10000) / 100;
+      stats.tauxRecouvrement =
+        Math.round((stats.totalMontantPaye / stats.totalMontantDu) * 10000) / 100;
     }
 
     return stats;
@@ -263,7 +276,7 @@ export class CotisationDueService {
       montantPaye: Number(cotisationDue.montantPaye),
       soldeRestant: Number(cotisationDue.soldeRestant),
       statut: cotisationDue.statut,
-      creeLe: cotisationDue.creeLe
+      creeLe: cotisationDue.creeLe,
     };
   }
 }

@@ -56,7 +56,9 @@ export class ExerciceMembre {
   @Column({ name: 'adhesion_tontine_id', type: 'uuid' })
   adhesionTontineId: string;
 
-  @ManyToOne(() => AdhesionTontine, (adhesion) => adhesion.exerciceMembres, { onDelete: 'RESTRICT' })
+  @ManyToOne(() => AdhesionTontine, (adhesion) => adhesion.exerciceMembres, {
+    onDelete: 'RESTRICT',
+  })
   @JoinColumn({ name: 'adhesion_tontine_id' })
   adhesionTontine: AdhesionTontine;
 

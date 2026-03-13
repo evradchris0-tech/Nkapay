@@ -5,8 +5,19 @@
 import { Repository } from 'typeorm';
 import { eventBus, AppEvents } from '../../../shared/utils/event-bus.util';
 import { AppDataSource } from '../../../config';
-import { NotFoundError, BadRequestError, PaginationQuery, PaginatedResult, paginate } from '../../../shared';
-import { Transaction, TypeTransaction, StatutTransaction, ModeCreationTransaction } from '../entities/transaction.entity';
+import {
+  NotFoundError,
+  BadRequestError,
+  PaginationQuery,
+  PaginatedResult,
+  paginate,
+} from '../../../shared';
+import {
+  Transaction,
+  TypeTransaction,
+  StatutTransaction,
+  ModeCreationTransaction,
+} from '../entities/transaction.entity';
 import { ExerciceMembre } from '../../exercices/entities/exercice-membre.entity';
 import { Reunion } from '../../reunions/entities/reunion.entity';
 import {
@@ -33,38 +44,40 @@ import { StateMachine } from '../../../shared/utils/state-machine.util';
 // Machine à États (Design Pattern: State)
 // =============================================================================
 
-const transactionStateMachine = new StateMachine<StatutTransaction>([
-  { from: StatutTransaction.BROUILLON, to: StatutTransaction.SOUMIS, action: 'soumettre' },
-  { from: StatutTransaction.SOUMIS, to: StatutTransaction.VALIDE, action: 'valider' },
-  { from: StatutTransaction.SOUMIS, to: StatutTransaction.REJETE, action: 'rejeter' },
-  { from: StatutTransaction.VALIDE, to: StatutTransaction.ANNULE, action: 'annuler' },
-], 'Transaction');
+const transactionStateMachine = new StateMachine<StatutTransaction>(
+  [
+    { from: StatutTransaction.BROUILLON, to: StatutTransaction.SOUMIS, action: 'soumettre' },
+    { from: StatutTransaction.SOUMIS, to: StatutTransaction.VALIDE, action: 'valider' },
+    { from: StatutTransaction.SOUMIS, to: StatutTransaction.REJETE, action: 'rejeter' },
+    { from: StatutTransaction.VALIDE, to: StatutTransaction.ANNULE, action: 'annuler' },
+  ],
+  'Transaction'
+);
 
 import { RepositoryFactory } from '../../../shared/utils/repository.factory';
+import { TransactionBuilder } from '../builders/transaction.builder';
 
 export class TransactionService {
   // Repositories (Design Pattern: Repository Factory)
-  private get transactionRepository() { return RepositoryFactory.getRepository(Transaction); }
-  private get exerciceMembreRepository() { return RepositoryFactory.getRepository(ExerciceMembre); }
-  private get reunionRepository() { return RepositoryFactory.getRepository(Reunion); }
-
-  /**
-   * Generer une reference unique pour la transaction
-   */
-  private generateReference(type: TypeTransaction): string {
-    const prefix = type.substring(0, 3).toUpperCase();
-    const timestamp = Date.now().toString(36).toUpperCase();
-    const random = uuidv4().substring(0, 6).toUpperCase();
-    return `${prefix}-${timestamp}-${random}`;
+  private get transactionRepository() {
+    return RepositoryFactory.getRepository(Transaction);
+  }
+  private get exerciceMembreRepository() {
+    return RepositoryFactory.getRepository(ExerciceMembre);
+  }
+  private get reunionRepository() {
+    return RepositoryFactory.getRepository(Reunion);
   }
 
   /**
-   * Creer une transaction
+   * Creer une transaction (Design Pattern: Builder)
    */
   async create(dto: CreateTransactionDto): Promise<TransactionResponseDto> {
     // Verifier le membre si fourni
     if (dto.exerciceMembreId) {
-      const membre = await this.exerciceMembreRepository.findOne({ where: { id: dto.exerciceMembreId } });
+      const membre = await this.exerciceMembreRepository.findOne({
+        where: { id: dto.exerciceMembreId },
+      });
       if (!membre) {
         throw new NotFoundError(`Membre d'exercice non trouve: ${dto.exerciceMembreId}`);
       }
@@ -78,21 +91,18 @@ export class TransactionService {
       }
     }
 
-    const transaction = this.transactionRepository.create({
-      reunionId: dto.reunionId || null,
-      typeTransaction: dto.typeTransaction,
-      exerciceMembreId: dto.exerciceMembreId || null,
-      projetId: dto.projetId || null,
-      montant: dto.montant,
-      reference: this.generateReference(dto.typeTransaction),
-      description: dto.description || null,
-      statut: dto.autoSoumis ? StatutTransaction.SOUMIS : StatutTransaction.BROUILLON,
-      modeCreation: dto.modeCreation || ModeCreationTransaction.MANUEL,
-      creeParUtilisateurId: dto.creeParUtilisateurId || null,
-      creeParExerciceMembreId: dto.creeParExerciceMembreId || null,
-      autoSoumis: dto.autoSoumis || false,
-      soumisLe: dto.autoSoumis ? new Date() : null,
-    });
+    // Construction via Builder
+    const builder = new TransactionBuilder(dto.typeTransaction).withMontant(dto.montant);
+
+    if (dto.exerciceMembreId) builder.forMembre(dto.exerciceMembreId);
+    if (dto.reunionId) builder.atReunion(dto.reunionId);
+    if (dto.projetId) builder.forProjet(dto.projetId);
+    if (dto.description) builder.withDescription(dto.description);
+    if (dto.modeCreation) builder.withModeCreation(dto.modeCreation);
+    if (dto.autoSoumis) builder.autoSoumettre();
+    builder.creePar(dto.creeParUtilisateurId, dto.creeParExerciceMembreId);
+
+    const transaction = this.transactionRepository.create(builder.build());
 
     const saved = await this.transactionRepository.save(transaction);
     return this.findById(saved.id);
@@ -105,9 +115,14 @@ export class TransactionService {
     // Validation du montant minimum via les règles
     const reunion = await this.reunionRepository.findOne({ where: { id: dto.reunionId } });
     if (reunion) {
-      const minCotisation = await regleExerciceService.getEffectiveValueByCle(reunion.exerciceId, 'COTISATION_MENSUELLE_MIN');
+      const minCotisation = await regleExerciceService.getEffectiveValueByCle(
+        reunion.exerciceId,
+        'COTISATION_MENSUELLE_MIN'
+      );
       if (minCotisation && dto.montant < Number(minCotisation)) {
-        throw new BadRequestError(`Le montant de la cotisation doit être au moins de ${minCotisation} FCFA`);
+        throw new BadRequestError(
+          `Le montant de la cotisation doit être au moins de ${minCotisation} FCFA`
+        );
       }
     }
 
@@ -130,7 +145,10 @@ export class TransactionService {
     // Validation du montant exact/minimum via les règles
     const reunion = await this.reunionRepository.findOne({ where: { id: dto.reunionId } });
     if (reunion) {
-      const montantPot = await regleExerciceService.getEffectiveValueByCle(reunion.exerciceId, 'POT_MENSUEL_MONTANT');
+      const montantPot = await regleExerciceService.getEffectiveValueByCle(
+        reunion.exerciceId,
+        'POT_MENSUEL_MONTANT'
+      );
       // On peut être strict (exactement le montant) ou souple (au moins le montant)
       // Ici on choisit "au moins" pour permettre les rattrapages ou avances,
       // mais idéalement le pot est fixe. Disons "au moins" pour la flexibilité.
@@ -159,7 +177,7 @@ export class TransactionService {
       typeTransaction: TypeTransaction.INSCRIPTION,
       exerciceMembreId: dto.exerciceMembreId,
       montant: dto.montant,
-      description: 'Frais d\'inscription',
+      description: "Frais d'inscription",
       modeCreation: dto.modeCreation,
       creeParExerciceMembreId: dto.creeParExerciceMembreId,
       autoSoumis: dto.autoSoumis,
@@ -239,7 +257,10 @@ export class TransactionService {
             try {
               const { PotDuMensuel } = await import('../entities/pot-du-mensuel.entity');
               const potDu = await queryRunner.manager.findOne(PotDuMensuel, {
-                where: { reunionId: transaction.reunionId, exerciceMembreId: transaction.exerciceMembreId }
+                where: {
+                  reunionId: transaction.reunionId,
+                  exerciceMembreId: transaction.exerciceMembreId,
+                },
               });
               if (potDu) {
                 await potDuService.enregistrerPaiement(potDu.id, { montantPaye: montant });
@@ -252,9 +273,10 @@ export class TransactionService {
           case TypeTransaction.INSCRIPTION:
             // Les inscriptions sont liées à l'exerciceMembre, pas à une réunion
             try {
-              const { InscriptionDueExercice } = await import('../entities/inscription-due-exercice.entity');
+              const { InscriptionDueExercice } =
+                await import('../entities/inscription-due-exercice.entity');
               const inscriptionDue = await queryRunner.manager.findOne(InscriptionDueExercice, {
-                where: { exerciceMembreId: transaction.exerciceMembreId }
+                where: { exerciceMembreId: transaction.exerciceMembreId },
               });
               if (inscriptionDue) {
                 await inscriptionDueService.payer(inscriptionDue.id, { montantPaye: montant });
@@ -323,7 +345,10 @@ export class TransactionService {
   /**
    * Lister les transactions
    */
-  async findAll(filters?: TransactionFiltersDto, pagination?: PaginationQuery): Promise<PaginatedResult<TransactionResponseDto>> {
+  async findAll(
+    filters?: TransactionFiltersDto,
+    pagination?: PaginationQuery
+  ): Promise<PaginatedResult<TransactionResponseDto>> {
     const queryBuilder = this.transactionRepository
       .createQueryBuilder('t')
       .leftJoinAndSelect('t.exerciceMembre', 'em')
@@ -338,10 +363,14 @@ export class TransactionService {
       queryBuilder.andWhere('em.exerciceId = :exerciceId', { exerciceId: filters.exerciceId });
     }
     if (filters?.exerciceMembreId) {
-      queryBuilder.andWhere('t.exerciceMembreId = :exerciceMembreId', { exerciceMembreId: filters.exerciceMembreId });
+      queryBuilder.andWhere('t.exerciceMembreId = :exerciceMembreId', {
+        exerciceMembreId: filters.exerciceMembreId,
+      });
     }
     if (filters?.typeTransaction) {
-      queryBuilder.andWhere('t.typeTransaction = :typeTransaction', { typeTransaction: filters.typeTransaction });
+      queryBuilder.andWhere('t.typeTransaction = :typeTransaction', {
+        typeTransaction: filters.typeTransaction,
+      });
     }
     if (filters?.statut) {
       queryBuilder.andWhere('t.statut = :statut', { statut: filters.statut });
@@ -369,7 +398,12 @@ export class TransactionService {
   async findById(id: string): Promise<TransactionResponseDto> {
     const transaction = await this.transactionRepository.findOne({
       where: { id },
-      relations: ['exerciceMembre', 'exerciceMembre.adhesionTontine', 'exerciceMembre.adhesionTontine.utilisateur', 'projet'],
+      relations: [
+        'exerciceMembre',
+        'exerciceMembre.adhesionTontine',
+        'exerciceMembre.adhesionTontine.utilisateur',
+        'projet',
+      ],
     });
 
     if (!transaction) {
@@ -385,7 +419,12 @@ export class TransactionService {
   async findByReference(reference: string): Promise<TransactionResponseDto> {
     const transaction = await this.transactionRepository.findOne({
       where: { reference },
-      relations: ['exerciceMembre', 'exerciceMembre.adhesionTontine', 'exerciceMembre.adhesionTontine.utilisateur', 'projet'],
+      relations: [
+        'exerciceMembre',
+        'exerciceMembre.adhesionTontine',
+        'exerciceMembre.adhesionTontine.utilisateur',
+        'projet',
+      ],
     });
 
     if (!transaction) {
@@ -447,10 +486,14 @@ export class TransactionService {
       queryBuilder.andWhere('em.exerciceId = :exerciceId', { exerciceId: filters.exerciceId });
     }
     if (filters?.exerciceMembreId) {
-      queryBuilder.andWhere('t.exerciceMembreId = :exerciceMembreId', { exerciceMembreId: filters.exerciceMembreId });
+      queryBuilder.andWhere('t.exerciceMembreId = :exerciceMembreId', {
+        exerciceMembreId: filters.exerciceMembreId,
+      });
     }
     if (filters?.typeTransaction) {
-      queryBuilder.andWhere('t.typeTransaction = :typeTransaction', { typeTransaction: filters.typeTransaction });
+      queryBuilder.andWhere('t.typeTransaction = :typeTransaction', {
+        typeTransaction: filters.typeTransaction,
+      });
     }
     if (filters?.statut) {
       queryBuilder.andWhere('t.statut = :statut', { statut: filters.statut });
@@ -514,16 +557,20 @@ export class TransactionService {
       reunionId: entity.reunionId,
       typeTransaction: entity.typeTransaction,
       exerciceMembreId: entity.exerciceMembreId,
-      exerciceMembre: entity.exerciceMembre ? {
-        id: entity.exerciceMembre.id,
-        utilisateurId: utilisateur?.id || '',
-        utilisateurNom: utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}` : undefined,
-      } : null,
+      exerciceMembre: entity.exerciceMembre
+        ? {
+            id: entity.exerciceMembre.id,
+            utilisateurId: utilisateur?.id || '',
+            utilisateurNom: utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}` : undefined,
+          }
+        : null,
       projetId: entity.projetId,
-      projet: entity.projet ? {
-        id: entity.projet.id,
-        nom: entity.projet.nom,
-      } : null,
+      projet: entity.projet
+        ? {
+            id: entity.projet.id,
+            nom: entity.projet.nom,
+          }
+        : null,
       montant: Number(entity.montant),
       reference: entity.reference,
       description: entity.description,

@@ -63,7 +63,11 @@ router.post('/', authenticate, adhesionTontineController.create.bind(adhesionTon
  *       200:
  *         description: Liste des membres
  */
-router.get('/tontine/:tontineId', authenticate, adhesionTontineController.findByTontine.bind(adhesionTontineController));
+router.get(
+  '/tontine/:tontineId',
+  authenticate,
+  adhesionTontineController.findByTontine.bind(adhesionTontineController)
+);
 
 /**
  * @swagger
@@ -84,7 +88,11 @@ router.get('/tontine/:tontineId', authenticate, adhesionTontineController.findBy
  *       200:
  *         description: Liste des adhesions
  */
-router.get('/user/:utilisateurId', authenticate, adhesionTontineController.findByUser.bind(adhesionTontineController));
+router.get(
+  '/user/:utilisateurId',
+  authenticate,
+  adhesionTontineController.findByUser.bind(adhesionTontineController)
+);
 
 /**
  * @swagger
@@ -105,7 +113,11 @@ router.get('/user/:utilisateurId', authenticate, adhesionTontineController.findB
  *       200:
  *         description: Adhesion trouvee
  */
-router.get('/:id', authenticate, adhesionTontineController.findById.bind(adhesionTontineController));
+router.get(
+  '/:id',
+  authenticate,
+  adhesionTontineController.findById.bind(adhesionTontineController)
+);
 
 /**
  * @swagger
@@ -147,7 +159,11 @@ router.put('/:id', authenticate, adhesionTontineController.update.bind(adhesionT
  *       200:
  *         description: Role mis a jour
  */
-router.put('/:id/role', authenticate, adhesionTontineController.changeRole.bind(adhesionTontineController));
+router.put(
+  '/:id/role',
+  authenticate,
+  adhesionTontineController.changeRole.bind(adhesionTontineController)
+);
 
 /**
  * @swagger
@@ -158,7 +174,11 @@ router.put('/:id/role', authenticate, adhesionTontineController.changeRole.bind(
  *     security:
  *       - bearerAuth: []
  */
-router.post('/:id/deactivate', authenticate, adhesionTontineController.deactivate.bind(adhesionTontineController));
+router.post(
+  '/:id/deactivate',
+  authenticate,
+  adhesionTontineController.deactivate.bind(adhesionTontineController)
+);
 
 /**
  * @swagger
@@ -169,7 +189,11 @@ router.post('/:id/deactivate', authenticate, adhesionTontineController.deactivat
  *     security:
  *       - bearerAuth: []
  */
-router.post('/:id/reactivate', authenticate, adhesionTontineController.reactivate.bind(adhesionTontineController));
+router.post(
+  '/:id/reactivate',
+  authenticate,
+  adhesionTontineController.reactivate.bind(adhesionTontineController)
+);
 
 /**
  * @swagger
@@ -180,6 +204,10 @@ router.post('/:id/reactivate', authenticate, adhesionTontineController.reactivat
  *     security:
  *       - bearerAuth: []
  */
-router.delete('/:id', authenticate, adhesionTontineController.delete.bind(adhesionTontineController));
+router.delete(
+  '/:id',
+  authenticate,
+  adhesionTontineController.delete.bind(adhesionTontineController)
+);
 
 export default router;

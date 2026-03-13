@@ -14,6 +14,9 @@ import { logger } from '../utils/logger.util';
  */
 interface JwtTokenPayload {
   sub: string; // utilisateurId
+  org?: string; // organisationId active
+  orgRole?: string; // ORG_ADMIN | ORG_MEMBRE | ORG_VIEWER
+  estSuperAdmin?: boolean;
   type: 'access' | 'refresh';
   iat: number;
   exp: number;
@@ -23,12 +26,18 @@ interface JwtTokenPayload {
  * Interface exposee sur req.user pour faciliter l'acces
  */
 export interface AuthUser {
-  id: string;       // alias pour sub (utilisateurId)
-  sub: string;      // utilisateurId original
+  id: string; // alias pour sub (utilisateurId)
+  sub: string; // utilisateurId original
+  organisationId?: string; // organisationId active (depuis le JWT)
+  orgRole?: string; // role dans l'organisation active
+  estSuperAdmin: boolean; // platform-level admin
   type: 'access' | 'refresh';
   iat: number;
   exp: number;
 }
+
+/** Alias pour rétrocompatibilité */
+export type JwtPayload = AuthUser;
 
 declare global {
   namespace Express {
@@ -46,7 +55,7 @@ export function authenticate(req: Request, _res: Response, next: NextFunction): 
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedError('Token d\'authentification manquant');
+      throw new UnauthorizedError("Token d'authentification manquant");
     }
 
     const token = authHeader.substring(7);
@@ -62,6 +71,9 @@ export function authenticate(req: Request, _res: Response, next: NextFunction): 
     req.user = {
       id: decoded.sub,
       sub: decoded.sub,
+      organisationId: decoded.org,
+      orgRole: decoded.orgRole,
+      estSuperAdmin: decoded.estSuperAdmin ?? false,
       type: decoded.type,
       iat: decoded.iat,
       exp: decoded.exp,
@@ -84,8 +96,8 @@ export function authenticate(req: Request, _res: Response, next: NextFunction): 
       return;
     }
 
-    logger.error('Erreur d\'authentification:', error);
-    next(new UnauthorizedError('Erreur d\'authentification'));
+    logger.error("Erreur d'authentification:", error);
+    next(new UnauthorizedError("Erreur d'authentification"));
   }
 }
 
@@ -103,6 +115,9 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction): 
       req.user = {
         id: decoded.sub,
         sub: decoded.sub,
+        organisationId: decoded.org,
+        orgRole: decoded.orgRole,
+        estSuperAdmin: decoded.estSuperAdmin ?? false,
         type: decoded.type,
         iat: decoded.iat,
         exp: decoded.exp,

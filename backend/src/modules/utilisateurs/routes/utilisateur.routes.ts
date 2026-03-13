@@ -40,6 +40,27 @@ const router = Router();
  *         schema:
  *           type: integer
  *           default: 20
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Recherche dans nom ou prénom
+ *       - in: query
+ *         name: telephone
+ *         schema:
+ *           type: string
+ *         description: Filtrer par numéro de téléphone
+ *       - in: query
+ *         name: estSuperAdmin
+ *         schema:
+ *           type: boolean
+ *         description: Filtrer les super admins uniquement
+ *       - in: query
+ *         name: organisationId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filtrer les membres d'une organisation
  *     responses:
  *       200:
  *         description: Liste paginee

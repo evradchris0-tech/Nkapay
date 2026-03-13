@@ -217,7 +217,7 @@ export class PaiementMobileController {
   async marquerEnvoye(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await paiementMobileService.marquerEnvoye(
-        req.params.id, 
+        req.params.id,
         req.body.referenceOperateur
       );
       res.json(result);
@@ -255,7 +255,7 @@ export class PaiementMobileController {
   async confirmer(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await paiementMobileService.confirmer(
-        req.params.id, 
+        req.params.id,
         req.body.referenceOperateur
       );
       res.json(result);
@@ -293,7 +293,7 @@ export class PaiementMobileController {
   async marquerEchoue(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await paiementMobileService.marquerEchoue(
-        req.params.id, 
+        req.params.id,
         req.body.messageOperateur
       );
       res.json(result);

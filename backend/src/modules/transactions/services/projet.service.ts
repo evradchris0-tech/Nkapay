@@ -12,7 +12,7 @@ import {
   CreateProjetDto,
   UpdateProjetDto,
   ProjetResponseDto,
-  ProjetFiltersDto
+  ProjetFiltersDto,
 } from '../dto/projet.dto';
 
 export class ProjetService {
@@ -31,7 +31,8 @@ export class ProjetService {
   }
 
   private get exerciceMembreRepository(): Repository<ExerciceMembre> {
-    if (!this._exerciceMembreRepo) this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
+    if (!this._exerciceMembreRepo)
+      this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
     return this._exerciceMembreRepo;
   }
 
@@ -40,7 +41,7 @@ export class ProjetService {
    */
   async create(data: CreateProjetDto): Promise<ProjetResponseDto> {
     const exercice = await this.exerciceRepository.findOne({
-      where: { id: data.exerciceId }
+      where: { id: data.exerciceId },
     });
 
     if (!exercice) {
@@ -48,7 +49,7 @@ export class ProjetService {
     }
 
     const createur = await this.exerciceMembreRepository.findOne({
-      where: { id: data.creeParExerciceMembreId }
+      where: { id: data.creeParExerciceMembreId },
     });
 
     if (!createur) {
@@ -61,7 +62,7 @@ export class ProjetService {
       description: data.description || null,
       budgetPrevu: data.budgetPrevu || null,
       creeParExerciceMembreId: data.creeParExerciceMembreId,
-      statut: 'ACTIF'
+      statut: 'ACTIF',
     });
 
     await this.projetRepository.save(projet);
@@ -99,7 +100,7 @@ export class ProjetService {
     const projets = await this.projetRepository.find({
       where: { exerciceId },
       relations: ['exercice', 'creeParExerciceMembre', 'creeParExerciceMembre.adhesionTontine'],
-      order: { creeLe: 'DESC' }
+      order: { creeLe: 'DESC' },
     });
     return projets.map((p: Projet) => this.formatResponse(p));
   }
@@ -110,7 +111,7 @@ export class ProjetService {
   async findById(id: string): Promise<ProjetResponseDto> {
     const projet = await this.projetRepository.findOne({
       where: { id },
-      relations: ['exercice', 'creeParExerciceMembre', 'creeParExerciceMembre.adhesionTontine']
+      relations: ['exercice', 'creeParExerciceMembre', 'creeParExerciceMembre.adhesionTontine'],
     });
 
     if (!projet) {
@@ -125,7 +126,7 @@ export class ProjetService {
    */
   async update(id: string, data: UpdateProjetDto): Promise<ProjetResponseDto> {
     const projet = await this.projetRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!projet) {
@@ -146,7 +147,7 @@ export class ProjetService {
    */
   async cloturer(id: string): Promise<ProjetResponseDto> {
     const projet = await this.projetRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!projet) {
@@ -169,7 +170,7 @@ export class ProjetService {
    */
   async annuler(id: string): Promise<ProjetResponseDto> {
     const projet = await this.projetRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!projet) {
@@ -191,7 +192,7 @@ export class ProjetService {
    */
   async delete(id: string): Promise<void> {
     const projet = await this.projetRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!projet) {
@@ -212,7 +213,7 @@ export class ProjetService {
     budgetPrevuTotal: number;
   }> {
     const projets = await this.projetRepository.find({
-      where: { exerciceId }
+      where: { exerciceId },
     });
 
     const stats = {
@@ -220,7 +221,7 @@ export class ProjetService {
       actifs: 0,
       clotures: 0,
       annules: 0,
-      budgetPrevuTotal: 0
+      budgetPrevuTotal: 0,
     };
 
     projets.forEach((p: Projet) => {
@@ -243,7 +244,7 @@ export class ProjetService {
       statut: projet.statut,
       creeParExerciceMembreId: projet.creeParExerciceMembreId,
       creeLe: projet.creeLe,
-      clotureLe: projet.clotureLe
+      clotureLe: projet.clotureLe,
     };
   }
 }

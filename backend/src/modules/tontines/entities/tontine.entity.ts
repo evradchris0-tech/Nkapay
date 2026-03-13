@@ -19,6 +19,7 @@ import { TontineType } from './tontine-type.entity';
 import { AdhesionTontine } from './adhesion-tontine.entity';
 import { Exercice } from '../../exercices/entities/exercice.entity';
 import { RegleTontine } from './regle-tontine.entity';
+import { Organisation } from '../../organisations/entities/organisation.entity';
 
 export enum StatutTontine {
   ACTIVE = 'ACTIVE',
@@ -62,6 +63,14 @@ export class Tontine {
   @ManyToOne(() => TontineType, (type) => type.tontines)
   @JoinColumn({ name: 'tontine_type_id' })
   tontineType: TontineType;
+
+  @Index()
+  @Column({ name: 'organisation_id', type: 'uuid', nullable: true })
+  organisationId: string | null;
+
+  @ManyToOne(() => Organisation)
+  @JoinColumn({ name: 'organisation_id' })
+  organisation: Organisation | null;
 
   @Column({ name: 'document_statuts', type: 'varchar', length: 500, nullable: true })
   documentStatuts: string | null;

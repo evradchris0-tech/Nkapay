@@ -38,7 +38,7 @@ export interface DemandeAdhesionResponseDto {
     id: string;
     nom: string;
     prenom: string;
-    
+
     telephone: string;
   };
   tontineId: string;
@@ -71,8 +71,6 @@ export interface DemandeAdhesionFiltersDto {
   statut?: StatutDemandeAdhesion;
   dateDebut?: string;
   dateFin?: string;
-  page?: number;
-  limit?: number;
 }
 
 /**

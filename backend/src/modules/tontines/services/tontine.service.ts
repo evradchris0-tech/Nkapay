@@ -13,6 +13,7 @@ import {
   UpdateTontineDto,
   TontineResponseDto,
   TontineListItemDto,
+  TontineFiltersDto,
 } from '../dto/tontine.dto';
 
 export class TontineService {
@@ -31,8 +32,9 @@ export class TontineService {
 
   /**
    * Creer une nouvelle tontine
+   * @param organisationId - Tenant owner (requis en mode SaaS)
    */
-  async create(dto: CreateTontineDto): Promise<TontineResponseDto> {
+  async create(dto: CreateTontineDto, organisationId?: string): Promise<TontineResponseDto> {
     // Verifier que le type de tontine existe
     const tontineType = await this.tontineTypeRepository.findOne({
       where: { id: dto.tontineTypeId },
@@ -60,6 +62,7 @@ export class TontineService {
       numeroEnregistrement: dto.numeroEnregistrement || null,
       documentStatuts: dto.documentStatuts || null,
       statut: StatutTontine.ACTIVE,
+      organisationId: organisationId ?? null,
     });
 
     const saved = await this.tontineRepository.save(tontine);
@@ -74,9 +77,12 @@ export class TontineService {
   }
 
   /**
-   * Lister toutes les tontines
+   * Lister toutes les tontines avec filtres
    */
-  async findAll(filters?: { statut?: StatutTontine }): Promise<TontineListItemDto[]> {
+  async findAll(
+    filters?: TontineFiltersDto,
+    organisationId?: string
+  ): Promise<TontineListItemDto[]> {
     const queryBuilder = this.tontineRepository
       .createQueryBuilder('tontine')
       .leftJoinAndSelect('tontine.tontineType', 'tontineType')
@@ -86,16 +92,34 @@ export class TontineService {
       .groupBy('tontine.id')
       .addGroupBy('tontineType.id');
 
+    // organisationId peut venir du paramètre direct ou des filtres
+    const orgId = organisationId ?? filters?.organisationId;
+    if (orgId) {
+      queryBuilder.andWhere('tontine.organisation_id = :orgId', { orgId });
+    }
+
     if (filters?.statut) {
-      queryBuilder.where('tontine.statut = :statut', { statut: filters.statut });
+      queryBuilder.andWhere('tontine.statut = :statut', { statut: filters.statut });
+    }
+
+    if (filters?.search) {
+      queryBuilder.andWhere(
+        '(tontine.nom LIKE :search OR tontine.nomCourt LIKE :search)',
+        { search: `%${filters.search}%` }
+      );
+    }
+
+    if (filters?.tontineTypeId) {
+      queryBuilder.andWhere('tontine.tontineTypeId = :tontineTypeId', {
+        tontineTypeId: filters.tontineTypeId,
+      });
     }
 
     const tontines = await queryBuilder.orderBy('tontine.nom', 'ASC').getRawAndEntities();
 
-    return tontines.entities.map((tontine: Tontine, index: number) => this.toListItemDto(
-      tontine,
-      parseInt(tontines.raw[index].nombreMembres) || 0
-    ));
+    return tontines.entities.map((tontine: Tontine, index: number) =>
+      this.toListItemDto(tontine, parseInt(tontines.raw[index].nombreMembres) || 0)
+    );
   }
 
   /**
@@ -158,8 +182,10 @@ export class TontineService {
     if (dto.anneeFondation !== undefined) tontine.anneeFondation = dto.anneeFondation;
     if (dto.motto !== undefined) tontine.motto = dto.motto;
     if (dto.logo !== undefined) tontine.logo = dto.logo;
-    if (dto.estOfficiellementDeclaree !== undefined) tontine.estOfficiellementDeclaree = dto.estOfficiellementDeclaree;
-    if (dto.numeroEnregistrement !== undefined) tontine.numeroEnregistrement = dto.numeroEnregistrement;
+    if (dto.estOfficiellementDeclaree !== undefined)
+      tontine.estOfficiellementDeclaree = dto.estOfficiellementDeclaree;
+    if (dto.numeroEnregistrement !== undefined)
+      tontine.numeroEnregistrement = dto.numeroEnregistrement;
     if (dto.documentStatuts !== undefined) tontine.documentStatuts = dto.documentStatuts;
     if (dto.statut !== undefined) tontine.statut = dto.statut;
 
@@ -213,11 +239,13 @@ export class TontineService {
       estOfficiellementDeclaree: entity.estOfficiellementDeclaree,
       numeroEnregistrement: entity.numeroEnregistrement,
       statut: entity.statut,
-      tontineType: entity.tontineType ? {
-        id: entity.tontineType.id,
-        code: entity.tontineType.code,
-        libelle: entity.tontineType.libelle,
-      } : { id: '', code: '', libelle: '' },
+      tontineType: entity.tontineType
+        ? {
+            id: entity.tontineType.id,
+            code: entity.tontineType.code,
+            libelle: entity.tontineType.libelle,
+          }
+        : { id: '', code: '', libelle: '' },
       documentStatuts: entity.documentStatuts,
       creeLe: entity.creeLe,
       modifieLe: entity.modifieLe,
@@ -230,20 +258,20 @@ export class TontineService {
    * Transformer en DTO de liste
    */
   private toListItemDto(entity: Tontine, nombreMembres: number): TontineListItemDto {
-    const exerciceActif = entity.exercices?.find(
-      (e) => e.statut === StatutExercice.OUVERT
-    );
+    const exerciceActif = entity.exercices?.find((e) => e.statut === StatutExercice.OUVERT);
 
     return {
       id: entity.id,
       nom: entity.nom,
       nomCourt: entity.nomCourt,
       statut: entity.statut,
-      tontineType: entity.tontineType ? {
-        id: entity.tontineType.id,
-        code: entity.tontineType.code,
-        libelle: entity.tontineType.libelle,
-      } : { id: '', code: '', libelle: '' },
+      tontineType: entity.tontineType
+        ? {
+            id: entity.tontineType.id,
+            code: entity.tontineType.code,
+            libelle: entity.tontineType.libelle,
+          }
+        : { id: '', code: '', libelle: '' },
       nombreMembres,
       exerciceActif: exerciceActif
         ? { id: exerciceActif.id, libelle: exerciceActif.libelle }

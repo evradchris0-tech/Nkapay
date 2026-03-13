@@ -66,7 +66,9 @@ export class OperateurPaiementService {
    * Trouver un operateur par code
    */
   async findByCode(code: string): Promise<OperateurPaiementResponseDto> {
-    const operateur = await this.operateurRepository.findOne({ where: { code: code.toUpperCase() } });
+    const operateur = await this.operateurRepository.findOne({
+      where: { code: code.toUpperCase() },
+    });
     if (!operateur) {
       throw new NotFoundError(`Operateur non trouve: ${code}`);
     }

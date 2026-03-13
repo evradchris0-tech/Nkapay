@@ -1,19 +1,19 @@
 /**
  * Entité CotisationDueMensuelle
- * 
+ *
  * Représente la COTISATION que chaque membre doit payer lors d'une réunion.
- * 
+ *
  * LOGIQUE MÉTIER TONTINE:
  * - La COTISATION est le cœur de la tontine
  * - Chaque membre cotise un montant fixe (ex: 10 000 FCFA/mois)
  * - Le TOTAL des cotisations du mois est DISTRIBUÉ à UN bénéficiaire
  * - Chaque membre sera bénéficiaire une fois dans l'exercice
- * 
+ *
  * FLUX MENSUEL:
  * 1. Réunion ouverte → cotisations générées pour chaque membre
  * 2. Membres paient leurs cotisations
  * 3. À la clôture, total cotisations → distribué au bénéficiaire du mois
- * 
+ *
  * @example
  * 4 membres × 10 000 FCFA = 40 000 FCFA distribués au bénéficiaire
  */

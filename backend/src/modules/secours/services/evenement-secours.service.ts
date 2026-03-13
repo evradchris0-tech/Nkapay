@@ -1,7 +1,7 @@
 /**
  * Service pour la gestion des evenements de secours
  * Workflow : DECLARE → EN_COURS_VALIDATION → VALIDE → PAYE
- * 
+ *
  * Fonctionnalités CAYA:
  * - Déclaration d'événement avec montant par défaut selon le type
  * - Validation par le bureau (Président/Trésorier)
@@ -12,12 +12,23 @@
 
 import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
-import { NotFoundError, BadRequestError, PaginationQuery, PaginatedResult, paginate } from '../../../shared';
+import {
+  NotFoundError,
+  BadRequestError,
+  PaginationQuery,
+  PaginatedResult,
+  paginate,
+} from '../../../shared';
 import { EvenementSecours, StatutEvenementSecours } from '../entities/evenement-secours.entity';
 import { TypeEvenementSecours } from '../entities/type-evenement-secours.entity';
 import { PieceJustificativeSecours } from '../entities/piece-justificative-secours.entity';
 import { ExerciceMembre } from '../../exercices/entities/exercice-membre.entity';
-import { Transaction, TypeTransaction, ModeCreationTransaction, StatutTransaction } from '../../transactions/entities/transaction.entity';
+import {
+  Transaction,
+  TypeTransaction,
+  ModeCreationTransaction,
+  StatutTransaction,
+} from '../../transactions/entities/transaction.entity';
 import { BilanSecoursExercice } from '../entities/bilan-secours-exercice.entity';
 import { Exercice } from '../../exercices/entities/exercice.entity';
 import {
@@ -95,9 +106,13 @@ export class EvenementSecoursService {
     }
 
     // Vérifier que le type d'événement existe
-    const typeEvenement = await this.typeEvenementSecoursRepository.findOne({ where: { id: dto.typeEvenementSecoursId } });
+    const typeEvenement = await this.typeEvenementSecoursRepository.findOne({
+      where: { id: dto.typeEvenementSecoursId },
+    });
     if (!typeEvenement) {
-      throw new NotFoundError(`Type d'événement de secours non trouvé: ${dto.typeEvenementSecoursId}`);
+      throw new NotFoundError(
+        `Type d'événement de secours non trouvé: ${dto.typeEvenementSecoursId}`
+      );
     }
 
     if (!typeEvenement.estActif) {
@@ -105,7 +120,9 @@ export class EvenementSecoursService {
     }
 
     // Déterminer le montant : priorité au montant demandé, sinon montant par défaut du type
-    const montantDemande = dto.montantDemande || (typeEvenement.montantParDefaut ? Number(typeEvenement.montantParDefaut) : null);
+    const montantDemande =
+      dto.montantDemande ||
+      (typeEvenement.montantParDefaut ? Number(typeEvenement.montantParDefaut) : null);
 
     const evenement = this.evenementSecoursRepository.create({
       exerciceMembreId: dto.exerciceMembreId,
@@ -150,7 +167,10 @@ export class EvenementSecoursService {
       throw new NotFoundError(`Événement de secours non trouvé: ${id}`);
     }
 
-    if (evenement.statut !== StatutEvenementSecours.EN_COURS_VALIDATION && evenement.statut !== StatutEvenementSecours.DECLARE) {
+    if (
+      evenement.statut !== StatutEvenementSecours.EN_COURS_VALIDATION &&
+      evenement.statut !== StatutEvenementSecours.DECLARE
+    ) {
       throw new BadRequestError('Cet événement ne peut pas être validé dans son état actuel');
     }
 
@@ -172,7 +192,10 @@ export class EvenementSecoursService {
       throw new NotFoundError(`Événement de secours non trouvé: ${id}`);
     }
 
-    if (evenement.statut !== StatutEvenementSecours.EN_COURS_VALIDATION && evenement.statut !== StatutEvenementSecours.DECLARE) {
+    if (
+      evenement.statut !== StatutEvenementSecours.EN_COURS_VALIDATION &&
+      evenement.statut !== StatutEvenementSecours.DECLARE
+    ) {
       throw new BadRequestError('Cet événement ne peut pas être refusé dans son état actuel');
     }
 
@@ -211,7 +234,7 @@ export class EvenementSecoursService {
   /**
    * ÉTAPE 4b — Décaisser un événement (workflow automatisé CAYA)
    * Crée la transaction DEPENSE_SECOURS + met à jour le bilan + vérifie le solde
-   * 
+   *
    * Workflow:
    * 1. Vérifie que l'événement est validé
    * 2. Vérifie le solde du fonds de secours (warn si insuffisant)
@@ -220,7 +243,10 @@ export class EvenementSecoursService {
    * 5. Marque l'événement comme PAYE
    * 6. Retourne aussi les infos de renflouement si nécessaire
    */
-  async decaisser(id: string, dto: DecaisserEvenementSecoursDto): Promise<{
+  async decaisser(
+    id: string,
+    dto: DecaisserEvenementSecoursDto
+  ): Promise<{
     evenement: EvenementSecoursResponseDto;
     transaction: { id: string; reference: string; montant: number };
     bilanApres: { soldeFinal: number; totalDepenses: number; nombreEvenements: number };
@@ -229,7 +255,13 @@ export class EvenementSecoursService {
     // Lecture préalable HORS transaction (lecture seule)
     const evenement = await this.evenementSecoursRepository.findOne({
       where: { id },
-      relations: ['exerciceMembre', 'exerciceMembre.adhesionTontine', 'exerciceMembre.adhesionTontine.utilisateur', 'typeEvenementSecours', 'exerciceMembre.exercice'],
+      relations: [
+        'exerciceMembre',
+        'exerciceMembre.adhesionTontine',
+        'exerciceMembre.adhesionTontine.utilisateur',
+        'typeEvenementSecours',
+        'exerciceMembre.exercice',
+      ],
     });
     if (!evenement) {
       throw new NotFoundError(`Événement de secours non trouvé: ${id}`);
@@ -246,7 +278,7 @@ export class EvenementSecoursService {
 
     const exerciceId = evenement.exerciceMembre?.exercice?.id;
     if (!exerciceId) {
-      throw new BadRequestError('Impossible de déterminer l\'exercice pour ce membre');
+      throw new BadRequestError("Impossible de déterminer l'exercice pour ce membre");
     }
 
     // ============================================================
@@ -288,7 +320,8 @@ export class EvenementSecoursService {
         exerciceMembreId: evenement.exerciceMembreId,
         montant: montant,
         reference: reference,
-        description: `Secours ${typeEvt?.libelle || 'N/A'} pour ${utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}` : 'N/A'} — ${evenement.description || ''}`.trim(),
+        description:
+          `Secours ${typeEvt?.libelle || 'N/A'} pour ${utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}` : 'N/A'} — ${evenement.description || ''}`.trim(),
         statut: StatutTransaction.VALIDE,
         modeCreation: ModeCreationTransaction.AUTOMATIQUE,
         creeParExerciceMembreId: dto.decaisseParExerciceMembreId || null,
@@ -304,7 +337,8 @@ export class EvenementSecoursService {
       // 3. Mettre à jour le bilan
       bilan.totalDepenses = Number(bilan.totalDepenses) + montant;
       bilan.nombreEvenements = bilan.nombreEvenements + 1;
-      bilan.soldeFinal = Number(bilan.soldeInitial) + Number(bilan.totalCotisations) - Number(bilan.totalDepenses);
+      bilan.soldeFinal =
+        Number(bilan.soldeInitial) + Number(bilan.totalCotisations) - Number(bilan.totalDepenses);
       await queryRunner.manager.save(BilanSecoursExercice, bilan);
 
       bilanFinal = {
@@ -357,7 +391,10 @@ export class EvenementSecoursService {
    * Calculer le montant de renflouement nécessaire
    * Répartit le déficit entre tous les membres actifs de l'exercice
    */
-  async calculerRenflouement(exerciceId: string, montantCible?: number): Promise<RenflouementInfoDto> {
+  async calculerRenflouement(
+    exerciceId: string,
+    montantCible?: number
+  ): Promise<RenflouementInfoDto> {
     const bilan = await this.getOrCreateBilan(exerciceId);
     const soldeFinal = Number(bilan.soldeFinal);
 
@@ -392,7 +429,10 @@ export class EvenementSecoursService {
   /**
    * Lister les événements de secours avec filtres
    */
-  async findAll(filters?: EvenementSecoursFiltersDto, pagination?: PaginationQuery): Promise<PaginatedResult<EvenementSecoursResponseDto>> {
+  async findAll(
+    filters?: EvenementSecoursFiltersDto,
+    pagination?: PaginationQuery
+  ): Promise<PaginatedResult<EvenementSecoursResponseDto>> {
     const queryBuilder = this.evenementSecoursRepository
       .createQueryBuilder('es')
       .leftJoinAndSelect('es.exerciceMembre', 'em')
@@ -405,10 +445,14 @@ export class EvenementSecoursService {
       queryBuilder.andWhere('em.exerciceId = :exerciceId', { exerciceId: filters.exerciceId });
     }
     if (filters?.exerciceMembreId) {
-      queryBuilder.andWhere('es.exerciceMembreId = :exerciceMembreId', { exerciceMembreId: filters.exerciceMembreId });
+      queryBuilder.andWhere('es.exerciceMembreId = :exerciceMembreId', {
+        exerciceMembreId: filters.exerciceMembreId,
+      });
     }
     if (filters?.typeEvenementSecoursId) {
-      queryBuilder.andWhere('es.typeEvenementSecoursId = :typeEvenementSecoursId', { typeEvenementSecoursId: filters.typeEvenementSecoursId });
+      queryBuilder.andWhere('es.typeEvenementSecoursId = :typeEvenementSecoursId', {
+        typeEvenementSecoursId: filters.typeEvenementSecoursId,
+      });
     }
     if (filters?.statut) {
       queryBuilder.andWhere('es.statut = :statut', { statut: filters.statut });
@@ -460,10 +504,19 @@ export class EvenementSecoursService {
     const evenements = result.data;
 
     const totalEvenements = evenements.length;
-    const totalMontantDemande = evenements.reduce((sum, e) => sum + Number(e.montantDemande || 0), 0);
-    const totalMontantApprouve = evenements.reduce((sum, e) => sum + Number(e.montantApprouve || 0), 0);
+    const totalMontantDemande = evenements.reduce(
+      (sum, e) => sum + Number(e.montantDemande || 0),
+      0
+    );
+    const totalMontantApprouve = evenements.reduce(
+      (sum, e) => sum + Number(e.montantApprouve || 0),
+      0
+    );
     const evenementsPaues = evenements.filter((e) => e.statut === StatutEvenementSecours.PAYE);
-    const totalMontantPaye = evenementsPaues.reduce((sum, e) => sum + Number(e.montantDecaisse || e.montantApprouve || 0), 0);
+    const totalMontantPaye = evenementsPaues.reduce(
+      (sum, e) => sum + Number(e.montantDecaisse || e.montantApprouve || 0),
+      0
+    );
 
     // Ajouter le solde du fonds si on a un exerciceId
     let soldeFonds: number | undefined;
@@ -479,10 +532,16 @@ export class EvenementSecoursService {
       totalMontantDemande,
       totalMontantApprouve,
       totalMontantPaye,
-      evenementsEnAttente: evenements.filter((e) => e.statut === StatutEvenementSecours.DECLARE || e.statut === StatutEvenementSecours.EN_COURS_VALIDATION).length,
-      evenementsValides: evenements.filter((e) => e.statut === StatutEvenementSecours.VALIDE).length,
+      evenementsEnAttente: evenements.filter(
+        (e) =>
+          e.statut === StatutEvenementSecours.DECLARE ||
+          e.statut === StatutEvenementSecours.EN_COURS_VALIDATION
+      ).length,
+      evenementsValides: evenements.filter((e) => e.statut === StatutEvenementSecours.VALIDE)
+        .length,
       evenementsPaues: evenementsPaues.length,
-      evenementsRefuses: evenements.filter((e) => e.statut === StatutEvenementSecours.REFUSE).length,
+      evenementsRefuses: evenements.filter((e) => e.statut === StatutEvenementSecours.REFUSE)
+        .length,
       soldeFonds,
     };
   }
@@ -498,7 +557,15 @@ export class EvenementSecoursService {
   /**
    * Obtenir le solde actuel du fonds
    */
-  async getSoldeFonds(exerciceId: string): Promise<{ solde: number; details: { soldeInitial: number; totalCotisations: number; totalDepenses: number; nombreEvenements: number } }> {
+  async getSoldeFonds(exerciceId: string): Promise<{
+    solde: number;
+    details: {
+      soldeInitial: number;
+      totalCotisations: number;
+      totalDepenses: number;
+      nombreEvenements: number;
+    };
+  }> {
     const bilan = await this.getOrCreateBilan(exerciceId);
     return {
       solde: Number(bilan.soldeFinal),
@@ -518,14 +585,17 @@ export class EvenementSecoursService {
   /**
    * Ajouter une pièce justificative à un événement
    */
-  async ajouterPieceJustificative(evenementId: string, data: {
-    typePiece: string;
-    nomFichier: string;
-    cheminFichier: string;
-    typeMime?: string;
-    tailleOctets?: number;
-    commentaire?: string;
-  }): Promise<PieceJustificativeSecours> {
+  async ajouterPieceJustificative(
+    evenementId: string,
+    data: {
+      typePiece: string;
+      nomFichier: string;
+      cheminFichier: string;
+      typeMime?: string;
+      tailleOctets?: number;
+      commentaire?: string;
+    }
+  ): Promise<PieceJustificativeSecours> {
     const evenement = await this.evenementSecoursRepository.findOne({ where: { id: evenementId } });
     if (!evenement) {
       throw new NotFoundError(`Événement de secours non trouvé: ${evenementId}`);
@@ -601,18 +671,24 @@ export class EvenementSecoursService {
     return {
       id: entity.id,
       exerciceMembreId: entity.exerciceMembreId,
-      exerciceMembre: entity.exerciceMembre ? {
-        id: entity.exerciceMembre.id,
-        utilisateurId: utilisateur?.id || '',
-        utilisateurNom: utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}` : undefined,
-      } : undefined,
+      exerciceMembre: entity.exerciceMembre
+        ? {
+            id: entity.exerciceMembre.id,
+            utilisateurId: utilisateur?.id || '',
+            utilisateurNom: utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}` : undefined,
+          }
+        : undefined,
       typeEvenementSecoursId: entity.typeEvenementSecoursId,
-      typeEvenementSecours: entity.typeEvenementSecours ? {
-        id: entity.typeEvenementSecours.id,
-        code: entity.typeEvenementSecours.code,
-        libelle: entity.typeEvenementSecours.libelle,
-        montantParDefaut: entity.typeEvenementSecours.montantParDefaut ? Number(entity.typeEvenementSecours.montantParDefaut) : undefined,
-      } : undefined,
+      typeEvenementSecours: entity.typeEvenementSecours
+        ? {
+            id: entity.typeEvenementSecours.id,
+            code: entity.typeEvenementSecours.code,
+            libelle: entity.typeEvenementSecours.libelle,
+            montantParDefaut: entity.typeEvenementSecours.montantParDefaut
+              ? Number(entity.typeEvenementSecours.montantParDefaut)
+              : undefined,
+          }
+        : undefined,
       dateEvenement: new Date(entity.dateEvenement).toISOString().split('T')[0],
       description: entity.description,
       montantDemande: entity.montantDemande ? Number(entity.montantDemande) : null,
@@ -626,12 +702,13 @@ export class EvenementSecoursService {
       transactionId: entity.transactionId,
       reunionId: entity.reunionId,
       motifRefus: entity.motifRefus,
-      piecesJustificatives: entity.piecesJustificatives?.map((pj) => ({
-        id: pj.id,
-        typePiece: pj.typePiece,
-        nomFichier: pj.nomFichier,
-        creeLe: pj.creeLe,
-      })) || [],
+      piecesJustificatives:
+        entity.piecesJustificatives?.map((pj) => ({
+          id: pj.id,
+          typePiece: pj.typePiece,
+          nomFichier: pj.nomFichier,
+          creeLe: pj.creeLe,
+        })) || [],
     };
   }
 }

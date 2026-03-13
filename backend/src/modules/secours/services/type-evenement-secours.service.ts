@@ -25,9 +25,13 @@ export class TypeEvenementSecoursService {
    */
   async create(dto: CreateTypeEvenementSecoursDto): Promise<TypeEvenementSecoursResponseDto> {
     // Verifier l'unicite du code
-    const existing = await this.typeEvenementSecoursRepository.findOne({ where: { code: dto.code } });
+    const existing = await this.typeEvenementSecoursRepository.findOne({
+      where: { code: dto.code },
+    });
     if (existing) {
-      throw new BadRequestError(`Un type d'evenement de secours avec le code "${dto.code}" existe deja`);
+      throw new BadRequestError(
+        `Un type d'evenement de secours avec le code "${dto.code}" existe deja`
+      );
     }
 
     const typeEvenement = this.typeEvenementSecoursRepository.create({
@@ -71,7 +75,10 @@ export class TypeEvenementSecoursService {
   /**
    * Mettre a jour un type d'evenement de secours
    */
-  async update(id: string, dto: UpdateTypeEvenementSecoursDto): Promise<TypeEvenementSecoursResponseDto> {
+  async update(
+    id: string,
+    dto: UpdateTypeEvenementSecoursDto
+  ): Promise<TypeEvenementSecoursResponseDto> {
     const typeEvenement = await this.typeEvenementSecoursRepository.findOne({ where: { id } });
     if (!typeEvenement) {
       throw new NotFoundError(`Type d'evenement de secours non trouve: ${id}`);

@@ -1,6 +1,6 @@
 /**
  * Routes pour la gestion des événements de secours
- * 
+ *
  * Endpoints:
  * POST   /                              — Déclarer un événement
  * GET    /                              — Lister les événements (avec filtres)
@@ -22,16 +22,16 @@ import { Router } from 'express';
 import { authenticate, validate } from '../../../shared';
 import { evenementSecoursController } from '../controllers/evenement-secours.controller';
 import {
-    createEvenementSecoursValidator,
-    validerEvenementSecoursValidator,
-    refuserEvenementSecoursValidator,
-    payerEvenementSecoursValidator,
-    decaisserEvenementSecoursValidator,
-    ajouterPieceValidator,
-    pieceIdParamValidator,
-    idParamValidator,
-    exerciceIdParamValidator,
-    filterEvenementSecoursValidator,
+  createEvenementSecoursValidator,
+  validerEvenementSecoursValidator,
+  refuserEvenementSecoursValidator,
+  payerEvenementSecoursValidator,
+  decaisserEvenementSecoursValidator,
+  ajouterPieceValidator,
+  pieceIdParamValidator,
+  idParamValidator,
+  exerciceIdParamValidator,
+  filterEvenementSecoursValidator,
 } from '../validators/evenement-secours.validator';
 
 const router = Router();
@@ -184,7 +184,13 @@ const router = Router();
  *       201:
  *         description: Événement de secours déclaré
  */
-router.post('/', authenticate, createEvenementSecoursValidator, validate, evenementSecoursController.create.bind(evenementSecoursController));
+router.post(
+  '/',
+  authenticate,
+  createEvenementSecoursValidator,
+  validate,
+  evenementSecoursController.create.bind(evenementSecoursController)
+);
 
 /**
  * @swagger
@@ -226,7 +232,13 @@ router.post('/', authenticate, createEvenementSecoursValidator, validate, evenem
  *       200:
  *         description: Liste des événements de secours
  */
-router.get('/', authenticate, filterEvenementSecoursValidator, validate, evenementSecoursController.findAll.bind(evenementSecoursController));
+router.get(
+  '/',
+  authenticate,
+  filterEvenementSecoursValidator,
+  validate,
+  evenementSecoursController.findAll.bind(evenementSecoursController)
+);
 
 /**
  * @swagger
@@ -245,7 +257,11 @@ router.get('/', authenticate, filterEvenementSecoursValidator, validate, eveneme
  *       200:
  *         description: Résumé des secours avec statistiques
  */
-router.get('/summary', authenticate, evenementSecoursController.getSummary.bind(evenementSecoursController));
+router.get(
+  '/summary',
+  authenticate,
+  evenementSecoursController.getSummary.bind(evenementSecoursController)
+);
 
 // ============================================================================
 // FONDS DE SECOURS
@@ -269,7 +285,13 @@ router.get('/summary', authenticate, evenementSecoursController.getSummary.bind(
  *       200:
  *         description: Solde et détails du fonds de secours
  */
-router.get('/fonds/:exerciceId', authenticate, exerciceIdParamValidator, validate, evenementSecoursController.getSoldeFonds.bind(evenementSecoursController));
+router.get(
+  '/fonds/:exerciceId',
+  authenticate,
+  exerciceIdParamValidator,
+  validate,
+  evenementSecoursController.getSoldeFonds.bind(evenementSecoursController)
+);
 
 /**
  * @swagger
@@ -298,7 +320,13 @@ router.get('/fonds/:exerciceId', authenticate, exerciceIdParamValidator, validat
  *             schema:
  *               $ref: '#/components/schemas/RenflouementInfo'
  */
-router.get('/renflouement/:exerciceId', authenticate, exerciceIdParamValidator, validate, evenementSecoursController.calculerRenflouement.bind(evenementSecoursController));
+router.get(
+  '/renflouement/:exerciceId',
+  authenticate,
+  exerciceIdParamValidator,
+  validate,
+  evenementSecoursController.calculerRenflouement.bind(evenementSecoursController)
+);
 
 // ============================================================================
 // ÉVÉNEMENT INDIVIDUEL
@@ -324,7 +352,13 @@ router.get('/renflouement/:exerciceId', authenticate, exerciceIdParamValidator, 
  *       404:
  *         description: Événement de secours non trouvé
  */
-router.get('/:id', authenticate, idParamValidator, validate, evenementSecoursController.findById.bind(evenementSecoursController));
+router.get(
+  '/:id',
+  authenticate,
+  idParamValidator,
+  validate,
+  evenementSecoursController.findById.bind(evenementSecoursController)
+);
 
 // ============================================================================
 // WORKFLOW D'ÉTAT
@@ -348,7 +382,11 @@ router.get('/:id', authenticate, idParamValidator, validate, evenementSecoursCon
  *       200:
  *         description: Événement soumis pour validation
  */
-router.post('/:id/soumettre', authenticate, evenementSecoursController.soumettre.bind(evenementSecoursController));
+router.post(
+  '/:id/soumettre',
+  authenticate,
+  evenementSecoursController.soumettre.bind(evenementSecoursController)
+);
 
 /**
  * @swagger
@@ -374,7 +412,13 @@ router.post('/:id/soumettre', authenticate, evenementSecoursController.soumettre
  *       200:
  *         description: Événement validé
  */
-router.post('/:id/valider', authenticate, validerEvenementSecoursValidator, validate, evenementSecoursController.valider.bind(evenementSecoursController));
+router.post(
+  '/:id/valider',
+  authenticate,
+  validerEvenementSecoursValidator,
+  validate,
+  evenementSecoursController.valider.bind(evenementSecoursController)
+);
 
 /**
  * @swagger
@@ -400,7 +444,13 @@ router.post('/:id/valider', authenticate, validerEvenementSecoursValidator, vali
  *       200:
  *         description: Événement refusé
  */
-router.post('/:id/refuser', authenticate, refuserEvenementSecoursValidator, validate, evenementSecoursController.refuser.bind(evenementSecoursController));
+router.post(
+  '/:id/refuser',
+  authenticate,
+  refuserEvenementSecoursValidator,
+  validate,
+  evenementSecoursController.refuser.bind(evenementSecoursController)
+);
 
 /**
  * @swagger
@@ -432,7 +482,13 @@ router.post('/:id/refuser', authenticate, refuserEvenementSecoursValidator, vali
  *       200:
  *         description: Événement payé
  */
-router.post('/:id/payer', authenticate, payerEvenementSecoursValidator, validate, evenementSecoursController.payer.bind(evenementSecoursController));
+router.post(
+  '/:id/payer',
+  authenticate,
+  payerEvenementSecoursValidator,
+  validate,
+  evenementSecoursController.payer.bind(evenementSecoursController)
+);
 
 /**
  * @swagger
@@ -461,7 +517,13 @@ router.post('/:id/payer', authenticate, payerEvenementSecoursValidator, validate
  *       200:
  *         description: Événement décaissé avec détails de transaction et bilan
  */
-router.post('/:id/decaisser', authenticate, decaisserEvenementSecoursValidator, validate, evenementSecoursController.decaisser.bind(evenementSecoursController));
+router.post(
+  '/:id/decaisser',
+  authenticate,
+  decaisserEvenementSecoursValidator,
+  validate,
+  evenementSecoursController.decaisser.bind(evenementSecoursController)
+);
 
 // ============================================================================
 // PIÈCES JUSTIFICATIVES
@@ -509,7 +571,13 @@ router.post('/:id/decaisser', authenticate, decaisserEvenementSecoursValidator, 
  *       201:
  *         description: Pièce justificative ajoutée
  */
-router.post('/:id/pieces', authenticate, ajouterPieceValidator, validate, evenementSecoursController.ajouterPiece.bind(evenementSecoursController));
+router.post(
+  '/:id/pieces',
+  authenticate,
+  ajouterPieceValidator,
+  validate,
+  evenementSecoursController.ajouterPiece.bind(evenementSecoursController)
+);
 
 /**
  * @swagger
@@ -529,7 +597,13 @@ router.post('/:id/pieces', authenticate, ajouterPieceValidator, validate, evenem
  *       200:
  *         description: Liste des pièces justificatives
  */
-router.get('/:id/pieces', authenticate, idParamValidator, validate, evenementSecoursController.getPieces.bind(evenementSecoursController));
+router.get(
+  '/:id/pieces',
+  authenticate,
+  idParamValidator,
+  validate,
+  evenementSecoursController.getPieces.bind(evenementSecoursController)
+);
 
 /**
  * @swagger
@@ -554,6 +628,12 @@ router.get('/:id/pieces', authenticate, idParamValidator, validate, evenementSec
  *       204:
  *         description: Pièce justificative supprimée
  */
-router.delete('/:id/pieces/:pieceId', authenticate, pieceIdParamValidator, validate, evenementSecoursController.supprimerPiece.bind(evenementSecoursController));
+router.delete(
+  '/:id/pieces/:pieceId',
+  authenticate,
+  pieceIdParamValidator,
+  validate,
+  evenementSecoursController.supprimerPiece.bind(evenementSecoursController)
+);
 
 export const evenementSecoursRoutes = router;

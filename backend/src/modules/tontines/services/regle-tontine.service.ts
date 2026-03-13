@@ -8,16 +8,18 @@ import { NotFoundError, BadRequestError } from '../../../shared';
 import { RegleTontine } from '../entities/regle-tontine.entity';
 import { RuleDefinition } from '../entities/rule-definition.entity';
 import { Tontine } from '../entities/tontine.entity';
+import { RegleOrganisation } from '../../organisations/entities/regle-organisation.entity';
 import {
   CreateRegleTontineDto,
   UpdateRegleTontineDto,
-  RegleTontineResponseDto
+  RegleTontineResponseDto,
 } from '../dto/regle-tontine.dto';
 
 export class RegleTontineService {
   private _regleTontineRepo?: Repository<RegleTontine>;
   private _ruleDefinitionRepo?: Repository<RuleDefinition>;
   private _tontineRepo?: Repository<Tontine>;
+  private _regleOrgRepo?: Repository<RegleOrganisation>;
 
   private get regleTontineRepository(): Repository<RegleTontine> {
     if (!this._regleTontineRepo) this._regleTontineRepo = AppDataSource.getRepository(RegleTontine);
@@ -25,7 +27,8 @@ export class RegleTontineService {
   }
 
   private get ruleDefinitionRepository(): Repository<RuleDefinition> {
-    if (!this._ruleDefinitionRepo) this._ruleDefinitionRepo = AppDataSource.getRepository(RuleDefinition);
+    if (!this._ruleDefinitionRepo)
+      this._ruleDefinitionRepo = AppDataSource.getRepository(RuleDefinition);
     return this._ruleDefinitionRepo;
   }
 
@@ -34,12 +37,17 @@ export class RegleTontineService {
     return this._tontineRepo;
   }
 
+  private get regleOrganisationRepository(): Repository<RegleOrganisation> {
+    if (!this._regleOrgRepo) this._regleOrgRepo = AppDataSource.getRepository(RegleOrganisation);
+    return this._regleOrgRepo;
+  }
+
   /**
    * Créer ou mettre à jour une règle pour une tontine
    */
   async upsert(data: CreateRegleTontineDto): Promise<RegleTontineResponseDto> {
     const tontine = await this.tontineRepository.findOne({
-      where: { id: data.tontineId }
+      where: { id: data.tontineId },
     });
 
     if (!tontine) {
@@ -47,7 +55,7 @@ export class RegleTontineService {
     }
 
     const ruleDefinition = await this.ruleDefinitionRepository.findOne({
-      where: { id: data.ruleDefinitionId }
+      where: { id: data.ruleDefinitionId },
     });
 
     if (!ruleDefinition) {
@@ -61,9 +69,9 @@ export class RegleTontineService {
     let regleTontine = await this.regleTontineRepository.findOne({
       where: {
         tontineId: data.tontineId,
-        ruleDefinitionId: data.ruleDefinitionId
+        ruleDefinitionId: data.ruleDefinitionId,
       },
-      relations: ['ruleDefinition']
+      relations: ['ruleDefinition'],
     });
 
     if (regleTontine) {
@@ -79,7 +87,7 @@ export class RegleTontineService {
         valeur: data.valeur,
         estActive: true,
         modifieLe: new Date(),
-        modifieParAdhesionTontineId: data.modifieParAdhesionTontineId
+        modifieParAdhesionTontineId: data.modifieParAdhesionTontineId,
       });
     }
 
@@ -87,7 +95,7 @@ export class RegleTontineService {
 
     regleTontine = await this.regleTontineRepository.findOne({
       where: { id: regleTontine.id },
-      relations: ['ruleDefinition']
+      relations: ['ruleDefinition'],
     });
 
     return this.formatResponse(regleTontine!);
@@ -100,40 +108,57 @@ export class RegleTontineService {
     const regles = await this.regleTontineRepository.find({
       where: { tontineId },
       relations: ['ruleDefinition'],
-      order: { creeLe: 'ASC' }
+      order: { creeLe: 'ASC' },
     });
     return regles.map((r: RegleTontine) => this.formatResponse(r));
   }
 
   /**
-   * Récupérer les règles effectives d'une tontine (avec valeurs par défaut)
+   * Récupérer les règles effectives d'une tontine
+   * Cascade 3 niveaux : tontine → organisation → défaut global
    */
   async getEffectiveRules(tontineId: string): Promise<any[]> {
     const allDefinitions = await this.ruleDefinitionRepository.find({
       where: { estModifiableParTontine: true },
-      order: { categorie: 'ASC', ordreAffichage: 'ASC' }
+      order: { categorie: 'ASC', ordreAffichage: 'ASC' },
     });
 
     const tontineRules = await this.regleTontineRepository.find({
       where: { tontineId },
-      relations: ['ruleDefinition']
+      relations: ['ruleDefinition'],
     });
+    const tontineRulesMap = new Map(tontineRules.map((r: RegleTontine) => [r.ruleDefinitionId, r]));
 
-    const tontineRulesMap = new Map(
-      tontineRules.map((r: RegleTontine) => [r.ruleDefinitionId, r])
-    );
+    // Règles niveau organisation
+    const orgRulesMap = new Map<string, string>();
+    const tontine = await this.tontineRepository.findOne({ where: { id: tontineId } });
+    if (tontine?.organisationId) {
+      const orgRules = await this.regleOrganisationRepository.find({
+        where: { organisationId: tontine.organisationId, estActive: true },
+      });
+      for (const r of orgRules) orgRulesMap.set(r.ruleDefinitionId, r.valeur);
+    }
 
     return allDefinitions.map((def: RuleDefinition) => {
-      const customRule = tontineRulesMap.get(def.id);
+      const tontineRule = tontineRulesMap.get(def.id);
+      const orgValeur = orgRulesMap.get(def.id);
+
+      let valeur = def.valeurDefaut;
+      let source = 'DEFAUT';
+
+      if (orgValeur !== undefined) { valeur = orgValeur; source = 'ORGANISATION'; }
+      if (tontineRule?.estActive) { valeur = tontineRule.valeur; source = 'TONTINE'; }
+
       return {
         ruleDefinitionId: def.id,
         cle: def.cle,
         libelle: def.libelle,
         typeValeur: def.typeValeur,
         categorie: def.categorie,
-        valeur: customRule?.valeur ?? def.valeurDefaut,
-        estPersonnalisee: !!customRule,
-        estActive: customRule?.estActive ?? true
+        valeur,
+        source,
+        estPersonnalisee: !!tontineRule,
+        estActive: tontineRule?.estActive ?? true,
       };
     });
   }
@@ -144,7 +169,7 @@ export class RegleTontineService {
   async findById(id: string): Promise<RegleTontineResponseDto> {
     const regleTontine = await this.regleTontineRepository.findOne({
       where: { id },
-      relations: ['ruleDefinition']
+      relations: ['ruleDefinition'],
     });
 
     if (!regleTontine) {
@@ -155,22 +180,34 @@ export class RegleTontineService {
   }
 
   /**
-   * Récupérer la valeur d'une règle par clé
+   * Récupérer la valeur effective d'une règle par clé
+   * Cascade 3 niveaux : tontine → organisation → défaut global
    */
   async getValueByCle(tontineId: string, cle: string): Promise<string | null> {
-    const ruleDefinition = await this.ruleDefinitionRepository.findOne({
-      where: { cle }
-    });
+    const ruleDefinition = await this.ruleDefinitionRepository.findOne({ where: { cle } });
+    if (!ruleDefinition) return null;
 
-    if (!ruleDefinition) {
-      return null;
+    // Niveau 1 : tontine
+    const regleTontine = await this.regleTontineRepository.findOne({
+      where: { tontineId, ruleDefinitionId: ruleDefinition.id },
+    });
+    if (regleTontine?.estActive) return regleTontine.valeur;
+
+    // Niveau 2 : organisation
+    const tontine = await this.tontineRepository.findOne({ where: { id: tontineId } });
+    if (tontine?.organisationId) {
+      const regleOrg = await this.regleOrganisationRepository.findOne({
+        where: {
+          organisationId: tontine.organisationId,
+          ruleDefinitionId: ruleDefinition.id,
+          estActive: true,
+        },
+      });
+      if (regleOrg) return regleOrg.valeur;
     }
 
-    const regleTontine = await this.regleTontineRepository.findOne({
-      where: { tontineId, ruleDefinitionId: ruleDefinition.id }
-    });
-
-    return regleTontine?.valeur ?? ruleDefinition.valeurDefaut;
+    // Niveau 3 : défaut global
+    return ruleDefinition.valeurDefaut;
   }
 
   /**
@@ -179,7 +216,7 @@ export class RegleTontineService {
   async update(id: string, data: UpdateRegleTontineDto): Promise<RegleTontineResponseDto> {
     const regleTontine = await this.regleTontineRepository.findOne({
       where: { id },
-      relations: ['ruleDefinition']
+      relations: ['ruleDefinition'],
     });
 
     if (!regleTontine) {
@@ -206,7 +243,7 @@ export class RegleTontineService {
    */
   async delete(id: string): Promise<void> {
     const regleTontine = await this.regleTontineRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!regleTontine) {
@@ -221,7 +258,7 @@ export class RegleTontineService {
    */
   async initializeDefaultRules(tontineId: string, adhesionTontineId: string): Promise<void> {
     const obligatoryRules = await this.ruleDefinitionRepository.find({
-      where: { estObligatoire: true, estModifiableParTontine: true }
+      where: { estObligatoire: true, estModifiableParTontine: true },
     });
 
     for (const rule of obligatoryRules) {
@@ -230,7 +267,7 @@ export class RegleTontineService {
           tontineId,
           ruleDefinitionId: rule.id,
           valeur: rule.valeurDefaut,
-          modifieParAdhesionTontineId: adhesionTontineId
+          modifieParAdhesionTontineId: adhesionTontineId,
         });
       }
     }
@@ -241,18 +278,20 @@ export class RegleTontineService {
       id: regleTontine.id,
       tontineId: regleTontine.tontineId,
       ruleDefinitionId: regleTontine.ruleDefinitionId,
-      ruleDefinition: regleTontine.ruleDefinition ? {
-        id: regleTontine.ruleDefinition.id,
-        cle: regleTontine.ruleDefinition.cle,
-        libelle: regleTontine.ruleDefinition.libelle,
-        typeValeur: regleTontine.ruleDefinition.typeValeur,
-        categorie: regleTontine.ruleDefinition.categorie
-      } : undefined,
+      ruleDefinition: regleTontine.ruleDefinition
+        ? {
+            id: regleTontine.ruleDefinition.id,
+            cle: regleTontine.ruleDefinition.cle,
+            libelle: regleTontine.ruleDefinition.libelle,
+            typeValeur: regleTontine.ruleDefinition.typeValeur,
+            categorie: regleTontine.ruleDefinition.categorie,
+          }
+        : undefined,
       valeur: regleTontine.valeur,
       estActive: regleTontine.estActive,
       modifieLe: regleTontine.modifieLe,
       modifieParAdhesionTontineId: regleTontine.modifieParAdhesionTontineId,
-      creeLe: regleTontine.creeLe
+      creeLe: regleTontine.creeLe,
     };
   }
 }

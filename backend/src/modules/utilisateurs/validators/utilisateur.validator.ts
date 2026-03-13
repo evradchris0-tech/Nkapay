@@ -37,18 +37,13 @@ export const createUtilisateurValidator = [
   body('adresseResidence')
     .optional()
     .isLength({ max: 255 })
-    .withMessage('L\'adresse ne doit pas depasser 255 caracteres'),
+    .withMessage("L'adresse ne doit pas depasser 255 caracteres"),
 
-  body('languePrefereeId')
-    .optional()
-    .isUUID()
-    .withMessage('Format de langue invalide'),
+  body('languePrefereeId').optional().isUUID().withMessage('Format de langue invalide'),
 ];
 
 export const updateUtilisateurValidator = [
-  param('id')
-    .isUUID()
-    .withMessage('Format d\'identifiant invalide'),
+  param('id').isUUID().withMessage("Format d'identifiant invalide"),
 
   body('prenom')
     .optional()
@@ -67,9 +62,7 @@ export const updateUtilisateurValidator = [
 ];
 
 export const changePasswordValidator = [
-  body('ancienMotDePasse')
-    .notEmpty()
-    .withMessage('L\'ancien mot de passe est requis'),
+  body('ancienMotDePasse').notEmpty().withMessage("L'ancien mot de passe est requis"),
 
   body('nouveauMotDePasse')
     .notEmpty()
@@ -89,9 +82,7 @@ export const changePasswordValidator = [
 ];
 
 export const getUtilisateurByIdValidator = [
-  param('id')
-    .isUUID()
-    .withMessage('Format d\'identifiant invalide'),
+  param('id').isUUID().withMessage("Format d'identifiant invalide"),
 ];
 
 export const paginationValidator = [

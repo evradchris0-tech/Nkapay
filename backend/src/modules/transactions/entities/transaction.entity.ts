@@ -92,7 +92,12 @@ export class Transaction {
   @Column({ type: 'enum', enum: StatutTransaction, default: StatutTransaction.BROUILLON })
   statut: StatutTransaction;
 
-  @Column({ name: 'mode_creation', type: 'enum', enum: ModeCreationTransaction, default: ModeCreationTransaction.MANUEL })
+  @Column({
+    name: 'mode_creation',
+    type: 'enum',
+    enum: ModeCreationTransaction,
+    default: ModeCreationTransaction.MANUEL,
+  })
   modeCreation: ModeCreationTransaction;
 
   // Createur (l'un des deux obligatoire)

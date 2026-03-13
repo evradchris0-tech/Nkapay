@@ -124,7 +124,7 @@ export class RegleExerciceController {
   async getEffectiveValueByCle(req: Request, res: Response, next: NextFunction) {
     try {
       const valeur = await regleExerciceService.getEffectiveValueByCle(
-        req.params.exerciceId, 
+        req.params.exerciceId,
         req.params.cle
       );
       res.json({ cle: req.params.cle, valeur });
@@ -251,10 +251,7 @@ export class RegleExerciceController {
    */
   async initializeFromTontine(req: Request, res: Response, next: NextFunction) {
     try {
-      await regleExerciceService.initializeFromTontine(
-        req.params.exerciceId, 
-        req.body.tontineId
-      );
+      await regleExerciceService.initializeFromTontine(req.params.exerciceId, req.body.tontineId);
       res.json({ message: 'Règles initialisées depuis la tontine' });
     } catch (error) {
       next(error);

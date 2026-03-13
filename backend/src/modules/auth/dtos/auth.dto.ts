@@ -18,9 +18,17 @@ export interface LoginResponseDto {
     prenom: string;
     nom: string;
     telephone1: string;
+    email: string | null;
     estSuperAdmin: boolean;
     doitChangerMotDePasse: boolean;
   };
+  organisations: {
+    id: string;
+    nom: string;
+    slug: string;
+    role: string;
+    statut: string;
+  }[];
 }
 
 /**

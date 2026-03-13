@@ -4,7 +4,7 @@
 
 import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
-import { NotFoundError, BadRequestError } from '../../../shared';
+import { NotFoundError, BadRequestError, PaginationQuery, PaginatedResult, paginate } from '../../../shared';
 import { Penalite, StatutPenalite } from '../entities/penalite.entity';
 import { TypePenalite } from '../entities/type-penalite.entity';
 import { ExerciceMembre } from '../../exercices/entities/exercice-membre.entity';
@@ -34,7 +34,8 @@ export class PenaliteService {
   }
 
   private get exerciceMembreRepository(): Repository<ExerciceMembre> {
-    if (!this._exerciceMembreRepo) this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
+    if (!this._exerciceMembreRepo)
+      this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
     return this._exerciceMembreRepo;
   }
 
@@ -52,7 +53,9 @@ export class PenaliteService {
     }
 
     // Verifier que le type de penalite existe
-    const typePenalite = await this.typePenaliteRepository.findOne({ where: { id: dto.typePenaliteId } });
+    const typePenalite = await this.typePenaliteRepository.findOne({
+      where: { id: dto.typePenaliteId },
+    });
     if (!typePenalite) {
       throw new NotFoundError(`Type de penalite non trouve: ${dto.typePenaliteId}`);
     }
@@ -61,7 +64,10 @@ export class PenaliteService {
     let montant = dto.montant;
     if (montant === undefined || montant === null) {
       // 1. Essayer de trouver une règle avec le CODE du type de pénalité (ex: 'PENALITE_RETARD_REUNION')
-      const ruleValue = await regleExerciceService.getEffectiveValueByCle(membre.exerciceId, typePenalite.code);
+      const ruleValue = await regleExerciceService.getEffectiveValueByCle(
+        membre.exerciceId,
+        typePenalite.code
+      );
       if (ruleValue) {
         montant = parseFloat(ruleValue);
       } else {
@@ -147,9 +153,12 @@ export class PenaliteService {
   }
 
   /**
-   * Lister les penalites
+   * Lister les penalites avec pagination
    */
-  async findAll(filters?: PenaliteFiltersDto): Promise<PenaliteResponseDto[]> {
+  async findAll(
+    filters?: PenaliteFiltersDto,
+    pagination?: PaginationQuery
+  ): Promise<PaginatedResult<PenaliteResponseDto>> {
     const queryBuilder = this.penaliteRepository
       .createQueryBuilder('p')
       .leftJoinAndSelect('p.exerciceMembre', 'em')
@@ -161,13 +170,17 @@ export class PenaliteService {
       queryBuilder.andWhere('em.exerciceId = :exerciceId', { exerciceId: filters.exerciceId });
     }
     if (filters?.exerciceMembreId) {
-      queryBuilder.andWhere('p.exerciceMembreId = :exerciceMembreId', { exerciceMembreId: filters.exerciceMembreId });
+      queryBuilder.andWhere('p.exerciceMembreId = :exerciceMembreId', {
+        exerciceMembreId: filters.exerciceMembreId,
+      });
     }
     if (filters?.reunionId) {
       queryBuilder.andWhere('p.reunionId = :reunionId', { reunionId: filters.reunionId });
     }
     if (filters?.typePenaliteId) {
-      queryBuilder.andWhere('p.typePenaliteId = :typePenaliteId', { typePenaliteId: filters.typePenaliteId });
+      queryBuilder.andWhere('p.typePenaliteId = :typePenaliteId', {
+        typePenaliteId: filters.typePenaliteId,
+      });
     }
     if (filters?.statut) {
       queryBuilder.andWhere('p.statut = :statut', { statut: filters.statut });
@@ -179,11 +192,13 @@ export class PenaliteService {
       queryBuilder.andWhere('p.dateApplication <= :dateFin', { dateFin: filters.dateFin });
     }
 
-    const penalites = await queryBuilder
-      .orderBy('p.dateApplication', 'DESC')
-      .getMany();
+    queryBuilder.orderBy('p.dateApplication', 'DESC');
 
-    return penalites.map((p) => this.toResponseDto(p));
+    const result = await paginate(queryBuilder, pagination ?? {});
+    return {
+      ...result,
+      data: result.data.map((p) => this.toResponseDto(p)),
+    };
   }
 
   /**
@@ -192,7 +207,12 @@ export class PenaliteService {
   async findById(id: string): Promise<PenaliteResponseDto> {
     const penalite = await this.penaliteRepository.findOne({
       where: { id },
-      relations: ['exerciceMembre', 'exerciceMembre.adhesionTontine', 'exerciceMembre.adhesionTontine.utilisateur', 'typePenalite'],
+      relations: [
+        'exerciceMembre',
+        'exerciceMembre.adhesionTontine',
+        'exerciceMembre.adhesionTontine.utilisateur',
+        'typePenalite',
+      ],
     });
 
     if (!penalite) {
@@ -206,7 +226,7 @@ export class PenaliteService {
    * Obtenir le resume des penalites
    */
   async getSummary(filters?: PenaliteFiltersDto): Promise<PenalitesSummaryDto> {
-    const penalites = await this.findAll(filters);
+    const { data: penalites } = await this.findAll(filters, { limit: 1000 });
 
     const totalPenalites = penalites.length;
     const totalMontant = penalites.reduce((sum, p) => sum + Number(p.montant), 0);
@@ -236,18 +256,22 @@ export class PenaliteService {
     return {
       id: entity.id,
       exerciceMembreId: entity.exerciceMembreId,
-      exerciceMembre: entity.exerciceMembre ? {
-        id: entity.exerciceMembre.id,
-        utilisateurId: utilisateur?.id || '',
-        utilisateurNom: utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}` : undefined,
-      } : undefined,
+      exerciceMembre: entity.exerciceMembre
+        ? {
+            id: entity.exerciceMembre.id,
+            utilisateurId: utilisateur?.id || '',
+            utilisateurNom: utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}` : undefined,
+          }
+        : undefined,
       reunionId: entity.reunionId,
       typePenaliteId: entity.typePenaliteId,
-      typePenalite: entity.typePenalite ? {
-        id: entity.typePenalite.id,
-        code: entity.typePenalite.code,
-        libelle: entity.typePenalite.libelle,
-      } : undefined,
+      typePenalite: entity.typePenalite
+        ? {
+            id: entity.typePenalite.id,
+            code: entity.typePenalite.code,
+            libelle: entity.typePenalite.libelle,
+          }
+        : undefined,
       montant: Number(entity.montant),
       motif: entity.motif,
       statut: entity.statut,

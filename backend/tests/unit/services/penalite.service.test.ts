@@ -1,157 +1,168 @@
 /**
- * Tests unitaires pour le service Pénalité
+ * Tests unitaires pour PenaliteService
  */
 
-import { 
-  TestNotFoundError as NotFoundError, 
-  TestBadRequestError as BadRequestError, 
-  TestConflictError as ConflictError 
-} from '../../helpers/test-errors';
+import { createMockRepo } from '../../helpers/mock-repo';
 
-describe('Penalite Service', () => {
-  describe('Types de pénalités', () => {
-    const types = ['ABSENCE', 'RETARD_COTISATION', 'RETARD_REUNION', 'NON_RESPECT_REGLEMENT', 'AUTRE'];
+const mockPenaliteRepo = createMockRepo();
+const mockTypePenaliteRepo = createMockRepo();
+const mockExerciceMembreRepo = createMockRepo();
 
-    it('devrait valider les types de pénalités', () => {
-      expect(types).toContain('ABSENCE');
-      expect(types).toContain('RETARD_COTISATION');
-    });
+jest.mock('../../../src/config', () => ({
+  AppDataSource: {
+    getRepository: jest.fn((entity: any) => {
+      const name = typeof entity === 'string' ? entity : entity?.name ?? String(entity);
+      if (name === 'Penalite') return mockPenaliteRepo;
+      if (name === 'TypePenalite') return mockTypePenaliteRepo;
+      if (name === 'ExerciceMembre') return mockExerciceMembreRepo;
+      return createMockRepo();
+    }),
+    isInitialized: true,
+  },
+  env: { nodeEnv: 'test', db: {} },
+  isDevelopment: false,
+}));
 
-    it('devrait avoir un montant par défaut par type', () => {
-      const montantsDefaut: Record<string, number> = {
-        'ABSENCE': 2000,
-        'RETARD_COTISATION': 1000,
-        'RETARD_REUNION': 500,
-        'NON_RESPECT_REGLEMENT': 5000,
-        'AUTRE': 0,
-      };
-      expect(montantsDefaut['ABSENCE']).toBe(2000);
-      expect(montantsDefaut['RETARD_REUNION']).toBe(500);
-    });
+jest.mock('../../../src/shared/errors/app-error', () => ({
+  NotFoundError: class NotFoundError extends Error {
+    statusCode = 404;
+    constructor(message: string) { super(`NotFoundError: ${message}`); this.name = 'NotFoundError'; }
+  },
+  BadRequestError: class BadRequestError extends Error {
+    statusCode = 400;
+    constructor(message: string) { super(`BadRequestError: ${message}`); this.name = 'BadRequestError'; }
+  },
+}));
+
+jest.mock('../../../src/modules/exercices/services/regle-exercice.service', () => ({
+  regleExerciceService: { getEffectiveValueByCle: jest.fn().mockResolvedValue(null) },
+}));
+
+import { PenaliteService } from '../../../src/modules/penalites/services/penalite.service';
+import { StatutPenalite } from '../../../src/modules/penalites/entities/penalite.entity';
+
+function makeMockPenalite(overrides: any = {}) {
+  return {
+    id: 'pen-uuid-1',
+    exerciceMembreId: 'em-uuid-1',
+    reunionId: 'reunion-uuid-1',
+    typePenaliteId: 'type-uuid-1',
+    montant: 2000,
+    motif: null,
+    statut: StatutPenalite.EN_ATTENTE,
+    transactionId: null,
+    exerciceMembre: null,
+    typePenalite: { id: 'type-uuid-1', code: 'ABSENCE', libelle: 'Absence', valeurDefaut: 2000 },
+    creeLe: new Date(),
+    ...overrides,
+  };
+}
+
+describe('PenaliteService', () => {
+  let service: PenaliteService;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    service = new PenaliteService();
+    mockPenaliteRepo.create.mockImplementation((data: any) => ({ ...data }));
+    mockPenaliteRepo.save.mockImplementation((data: any) =>
+      Promise.resolve({ id: 'pen-uuid-1', ...data })
+    );
   });
 
-  describe('Calcul des pénalités de retard', () => {
-    it('devrait calculer les pénalités de retard de cotisation', () => {
-      const montantCotisation = 10000;
-      const tauxPenalite = 5;
-      const joursRetard = 10;
-      const penalite = (montantCotisation * tauxPenalite * joursRetard) / 100;
-      expect(penalite).toBe(5000);
-    });
+  describe('create()', () => {
+    it('crée en statut EN_ATTENTE', async () => {
+      mockExerciceMembreRepo.findOne.mockResolvedValue({ id: 'em-uuid-1', exerciceId: 'exo-1' });
+      mockTypePenaliteRepo.findOne.mockResolvedValue({ id: 'type-uuid-1', code: 'ABSENCE', valeurDefaut: 2000 });
+      mockPenaliteRepo.findOne.mockResolvedValue(makeMockPenalite());
 
-    it('devrait plafonner la pénalité au montant de la cotisation', () => {
-      const montantCotisation = 10000;
-      const penaliteCalculee = 15000;
-      const plafond = montantCotisation;
-      const penaliteFinale = Math.min(penaliteCalculee, plafond);
-      expect(penaliteFinale).toBe(10000);
-    });
-  });
+      const result = await service.create({
+        exerciceMembreId: 'em-uuid-1',
+        typePenaliteId: 'type-uuid-1',
+        montant: 2000,
+      });
 
-  describe('Application automatique', () => {
-    it('devrait détecter les retards de cotisation', () => {
-      const dateEcheance = new Date('2024-01-15');
-      const datePaiement = new Date('2024-01-20');
-      const joursRetard = Math.floor(
-        (datePaiement.getTime() - dateEcheance.getTime()) / (1000 * 60 * 60 * 24)
+      expect(mockPenaliteRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ statut: StatutPenalite.EN_ATTENTE })
       );
-      expect(joursRetard).toBe(5);
+      expect(result).toHaveProperty('id');
     });
 
-    it('devrait identifier les absences non justifiées', () => {
-      const presences = [
-        { membreId: 'm1', present: true },
-        { membreId: 'm2', present: false, justifie: false },
-        { membreId: 'm3', present: false, justifie: true },
-      ];
-      const absentsNonJustifies = presences.filter(
-        p => !p.present && !('justifie' in p && p.justifie)
+    it('lève NotFoundError si ExerciceMembre inexistant', async () => {
+      mockExerciceMembreRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.create({ exerciceMembreId: 'em-unknown', typePenaliteId: 'type-uuid-1', montant: 1000 })
+      ).rejects.toThrow('NotFoundError');
+    });
+
+    it('lève NotFoundError si TypePenalite inexistant', async () => {
+      mockExerciceMembreRepo.findOne.mockResolvedValue({ id: 'em-uuid-1', exerciceId: 'exo-1' });
+      mockTypePenaliteRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.create({ exerciceMembreId: 'em-uuid-1', typePenaliteId: 'type-unknown', montant: 1000 })
+      ).rejects.toThrow('NotFoundError');
+    });
+
+    it('utilise le montant par défaut du TypePenalite si pas de règle', async () => {
+      mockExerciceMembreRepo.findOne.mockResolvedValue({ id: 'em-uuid-1', exerciceId: 'exo-1' });
+      mockTypePenaliteRepo.findOne.mockResolvedValue({ id: 'type-uuid-1', code: 'ABSENCE', valeurDefaut: 2000 });
+      mockPenaliteRepo.findOne.mockResolvedValue(makeMockPenalite({ montant: 2000 }));
+
+      const result = await service.create({ exerciceMembreId: 'em-uuid-1', typePenaliteId: 'type-uuid-1' , montant: 1000 });
+
+      expect(result.montant).toBe(2000);
+    });
+  });
+
+  describe('payer()', () => {
+    it('EN_ATTENTE → PAYEE', async () => {
+      const penalite = makeMockPenalite({ statut: StatutPenalite.EN_ATTENTE });
+      mockPenaliteRepo.findOne
+        .mockResolvedValueOnce(penalite)
+        .mockResolvedValueOnce({ ...penalite, statut: StatutPenalite.PAYEE });
+
+      await service.payer('pen-uuid-1', { transactionId: 'txn-uuid-1' });
+
+      expect(mockPenaliteRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ statut: StatutPenalite.PAYEE })
       );
-      expect(absentsNonJustifies).toHaveLength(1);
+    });
+
+    it('lève BadRequestError si pas EN_ATTENTE', async () => {
+      mockPenaliteRepo.findOne.mockResolvedValueOnce(
+        makeMockPenalite({ statut: StatutPenalite.PAYEE })
+      );
+
+      await expect(service.payer('pen-uuid-1', { transactionId: 'txn-1' })).rejects.toThrow('BadRequestError');
     });
   });
 
-  describe('Statuts de pénalité', () => {
-    const statuts = ['EN_ATTENTE', 'PAYEE', 'ANNULEE', 'EXONEREE'];
+  describe('annuler()', () => {
+    it('EN_ATTENTE → ANNULEE avec motif', async () => {
+      const penalite = makeMockPenalite({ statut: StatutPenalite.EN_ATTENTE });
+      mockPenaliteRepo.findOne
+        .mockResolvedValueOnce(penalite)
+        .mockResolvedValueOnce({ ...penalite, statut: StatutPenalite.ANNULEE });
 
-    it('devrait valider les statuts disponibles', () => {
-      expect(statuts).toHaveLength(4);
-    });
+      await service.annuler('pen-uuid-1', { motifAnnulation: 'Erreur de saisie' });
 
-    it('devrait permettre le paiement d\'une pénalité en attente', () => {
-      const transitions: Record<string, string[]> = {
-        'EN_ATTENTE': ['PAYEE', 'ANNULEE', 'EXONEREE'],
-        'PAYEE': [],
-        'ANNULEE': [],
-        'EXONEREE': [],
-      };
-      expect(transitions['EN_ATTENTE']).toContain('PAYEE');
-    });
-
-    it('devrait rejeter la modification d\'une pénalité payée', () => {
-      const penalite = { statut: 'PAYEE' };
-      const canModify = penalite.statut === 'EN_ATTENTE';
-      expect(canModify).toBe(false);
+      expect(mockPenaliteRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ statut: StatutPenalite.ANNULEE })
+      );
     });
   });
 
-  describe('Exonération', () => {
-    it('devrait permettre l\'exonération avec justification', () => {
-      const exoneration = {
-        penaliteId: 'pen-1',
-        motif: 'Maladie grave documentée',
-        approuvePar: 'admin-1',
-      };
-      expect(exoneration.motif.length).toBeGreaterThan(0);
-      expect(exoneration.approuvePar).toBeDefined();
-    });
+  describe('findAll()', () => {
+    it('retourne des résultats paginés', async () => {
+      const qb = mockPenaliteRepo.createQueryBuilder();
+      qb.getManyAndCount.mockResolvedValue([[makeMockPenalite()], 1]);
 
-    it('devrait rejeter l\'exonération sans motif', () => {
-      const motif = '';
-      expect(motif.length).toBe(0);
-    });
-  });
+      const result = await service.findAll({}, { page: 1, limit: 10 });
 
-  describe('Historique des pénalités par membre', () => {
-    it('devrait calculer le total des pénalités', () => {
-      const penalites = [
-        { montant: 2000, statut: 'EN_ATTENTE' },
-        { montant: 1000, statut: 'PAYEE' },
-        { montant: 500, statut: 'EN_ATTENTE' },
-        { montant: 1000, statut: 'EXONEREE' },
-      ];
-      const totalEnAttente = penalites
-        .filter(p => p.statut === 'EN_ATTENTE')
-        .reduce((acc, p) => acc + p.montant, 0);
-      expect(totalEnAttente).toBe(2500);
-    });
-
-    it('devrait compter le nombre de pénalités', () => {
-      const penalites = [
-        { type: 'ABSENCE' },
-        { type: 'ABSENCE' },
-        { type: 'RETARD_COTISATION' },
-      ];
-      const absences = penalites.filter(p => p.type === 'ABSENCE').length;
-      expect(absences).toBe(2);
-    });
-  });
-
-  describe('Erreurs métier', () => {
-    it('devrait lever NotFoundError pour pénalité inexistante', () => {
-      expect(() => { throw new NotFoundError('Pénalité non trouvée'); }).toThrow(NotFoundError);
-    });
-
-    it('devrait lever BadRequestError pour type invalide', () => {
-      expect(() => { throw new BadRequestError('Type de pénalité invalide'); }).toThrow(BadRequestError);
-    });
-
-    it('devrait lever ConflictError pour pénalité déjà payée', () => {
-      expect(() => { throw new ConflictError('Cette pénalité a déjà été payée'); }).toThrow(ConflictError);
-    });
-
-    it('devrait lever BadRequestError pour exonération sans motif', () => {
-      expect(() => { throw new BadRequestError('Motif requis pour exonération'); }).toThrow(BadRequestError);
+      expect(result).toHaveProperty('data');
+      expect(result).toHaveProperty('meta');
     });
   });
 });

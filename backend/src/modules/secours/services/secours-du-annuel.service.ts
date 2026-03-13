@@ -9,10 +9,7 @@ import { SecoursDuAnnuel } from '../entities/secours-du-annuel.entity';
 import { StatutDu } from '../../transactions/entities/inscription-due-exercice.entity';
 import { Exercice } from '../../exercices/entities/exercice.entity';
 import { ExerciceMembre } from '../../exercices/entities/exercice-membre.entity';
-import {
-  SecoursDuAnnuelResponseDto,
-  SecoursDuFiltersDto
-} from '../dto/bilan-secours.dto';
+import { SecoursDuAnnuelResponseDto, SecoursDuFiltersDto } from '../dto/bilan-secours.dto';
 import { UpdateDuePaymentDto } from '../../transactions/dto/dues.dto';
 
 export class SecoursDuAnnuelService {
@@ -31,17 +28,21 @@ export class SecoursDuAnnuelService {
   }
 
   private get exerciceMembreRepository(): Repository<ExerciceMembre> {
-    if (!this._exerciceMembreRepo) this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
+    if (!this._exerciceMembreRepo)
+      this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
     return this._exerciceMembreRepo;
   }
 
   /**
    * Générer les secours dus pour tous les membres d'un exercice
    */
-  async genererPourExercice(exerciceId: string, montantDu: number): Promise<SecoursDuAnnuelResponseDto[]> {
+  async genererPourExercice(
+    exerciceId: string,
+    montantDu: number
+  ): Promise<SecoursDuAnnuelResponseDto[]> {
     const exercice = await this.exerciceRepository.findOne({
       where: { id: exerciceId },
-      relations: ['membres']
+      relations: ['membres'],
     });
 
     if (!exercice) {
@@ -52,7 +53,7 @@ export class SecoursDuAnnuelService {
 
     for (const exerciceMembre of exercice.membres) {
       const existing = await this.secoursDuRepository.findOne({
-        where: { exerciceMembreId: exerciceMembre.id }
+        where: { exerciceMembreId: exerciceMembre.id },
       });
 
       if (!existing) {
@@ -61,7 +62,7 @@ export class SecoursDuAnnuelService {
           montantDu,
           montantPaye: 0,
           soldeRestant: montantDu,
-          statut: StatutDu.EN_RETARD
+          statut: StatutDu.EN_RETARD,
         });
         await this.secoursDuRepository.save(secoursDu);
         secoursDus.push(this.formatResponse(secoursDu));
@@ -83,13 +84,13 @@ export class SecoursDuAnnuelService {
 
     if (filters?.exerciceMembreId) {
       queryBuilder.andWhere('secoursDu.exerciceMembreId = :exerciceMembreId', {
-        exerciceMembreId: filters.exerciceMembreId
+        exerciceMembreId: filters.exerciceMembreId,
       });
     }
 
     if (filters?.statut) {
       queryBuilder.andWhere('secoursDu.statut = :statut', {
-        statut: filters.statut
+        statut: filters.statut,
       });
     }
 
@@ -105,7 +106,7 @@ export class SecoursDuAnnuelService {
   async findById(id: string): Promise<SecoursDuAnnuelResponseDto> {
     const secoursDu = await this.secoursDuRepository.findOne({
       where: { id },
-      relations: ['exerciceMembre', 'exerciceMembre.adhesionTontine']
+      relations: ['exerciceMembre', 'exerciceMembre.adhesionTontine'],
     });
 
     if (!secoursDu) {
@@ -153,7 +154,10 @@ export class SecoursDuAnnuelService {
   /**
    * Enregistrer un paiement de secours (alias)
    */
-  async enregistrerPaiement(id: string, data: UpdateDuePaymentDto): Promise<SecoursDuAnnuelResponseDto> {
+  async enregistrerPaiement(
+    id: string,
+    data: UpdateDuePaymentDto
+  ): Promise<SecoursDuAnnuelResponseDto> {
     return this.payer(id, data);
   }
 
@@ -162,7 +166,7 @@ export class SecoursDuAnnuelService {
    */
   async payer(id: string, data: UpdateDuePaymentDto): Promise<SecoursDuAnnuelResponseDto> {
     const secoursDu = await this.secoursDuRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!secoursDu) {
@@ -223,7 +227,7 @@ export class SecoursDuAnnuelService {
       totalMontantPaye: 0,
       tauxRecouvrement: 0,
       aJour: 0,
-      enRetard: 0
+      enRetard: 0,
     };
 
     secoursDus.forEach((s: SecoursDuAnnuel) => {
@@ -237,7 +241,8 @@ export class SecoursDuAnnuelService {
     });
 
     if (stats.totalMontantDu > 0) {
-      stats.tauxRecouvrement = Math.round((stats.totalMontantPaye / stats.totalMontantDu) * 10000) / 100;
+      stats.tauxRecouvrement =
+        Math.round((stats.totalMontantPaye / stats.totalMontantDu) * 10000) / 100;
     }
 
     return stats;
@@ -251,7 +256,7 @@ export class SecoursDuAnnuelService {
       montantPaye: Number(secoursDu.montantPaye),
       soldeRestant: Number(secoursDu.soldeRestant),
       statut: secoursDu.statut,
-      creeLe: secoursDu.creeLe
+      creeLe: secoursDu.creeLe,
     };
   }
 }

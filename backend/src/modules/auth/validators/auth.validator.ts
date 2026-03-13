@@ -19,16 +19,11 @@ export const loginValidator = [
 ];
 
 export const refreshTokenValidator = [
-  body('refreshToken')
-    .notEmpty()
-    .withMessage('Le token de rafraichissement est requis'),
+  body('refreshToken').notEmpty().withMessage('Le token de rafraichissement est requis'),
 ];
 
 export const logoutValidator = [
-  body('sessionId')
-    .optional()
-    .isUUID()
-    .withMessage('Format de session invalide'),
+  body('sessionId').optional().isUUID().withMessage('Format de session invalide'),
 
   body('toutesLesSessions')
     .optional()

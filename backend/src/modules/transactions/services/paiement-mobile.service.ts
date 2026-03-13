@@ -5,13 +5,17 @@
 import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
-import { PaiementMobile, StatutPaiementMobile, OperateurMobile } from '../entities/paiement-mobile.entity';
+import {
+  PaiementMobile,
+  StatutPaiementMobile,
+  OperateurMobile,
+} from '../entities/paiement-mobile.entity';
 import { Transaction } from '../entities/transaction.entity';
 import {
   CreatePaiementMobileDto,
   UpdatePaiementMobileDto,
   PaiementMobileResponseDto,
-  PaiementMobileFiltersDto
+  PaiementMobileFiltersDto,
 } from '../dto/paiement-mobile.dto';
 
 export class PaiementMobileService {
@@ -40,7 +44,7 @@ export class PaiementMobileService {
    */
   async create(data: CreatePaiementMobileDto): Promise<PaiementMobileResponseDto> {
     const transaction = await this.transactionRepository.findOne({
-      where: { id: data.transactionId }
+      where: { id: data.transactionId },
     });
 
     if (!transaction) {
@@ -51,7 +55,7 @@ export class PaiementMobileService {
       transactionId: data.transactionId,
       operateur: data.operateur,
       numeroTelephone: data.numeroTelephone,
-      statut: StatutPaiementMobile.EN_ATTENTE
+      statut: StatutPaiementMobile.EN_ATTENTE,
     });
 
     await this.paiementMobileRepository.save(paiement);
@@ -61,38 +65,42 @@ export class PaiementMobileService {
   /**
    * Récupérer tous les paiements avec filtres et pagination
    */
-  async findAll(filters?: PaiementMobileFiltersDto, page: number = 1, limit: number = 20): Promise<{ data: PaiementMobileResponseDto[]; total: number; page: number; limit: number }> {
+  async findAll(
+    filters?: PaiementMobileFiltersDto,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<{ data: PaiementMobileResponseDto[]; total: number; page: number; limit: number }> {
     const queryBuilder = this.paiementMobileRepository
       .createQueryBuilder('paiement')
       .leftJoinAndSelect('paiement.transaction', 'transaction');
 
     if (filters?.transactionId) {
       queryBuilder.andWhere('paiement.transactionId = :transactionId', {
-        transactionId: filters.transactionId
+        transactionId: filters.transactionId,
       });
     }
 
     if (filters?.operateur) {
       queryBuilder.andWhere('paiement.operateur = :operateur', {
-        operateur: filters.operateur
+        operateur: filters.operateur,
       });
     }
 
     if (filters?.statut) {
       queryBuilder.andWhere('paiement.statut = :statut', {
-        statut: filters.statut
+        statut: filters.statut,
       });
     }
 
     if (filters?.dateDebut) {
       queryBuilder.andWhere('paiement.dateInitiation >= :dateDebut', {
-        dateDebut: filters.dateDebut
+        dateDebut: filters.dateDebut,
       });
     }
 
     if (filters?.dateFin) {
       queryBuilder.andWhere('paiement.dateInitiation <= :dateFin', {
-        dateFin: filters.dateFin
+        dateFin: filters.dateFin,
       });
     }
 
@@ -108,7 +116,7 @@ export class PaiementMobileService {
       data: paiements.map((p: PaiementMobile) => this.formatResponse(p)),
       total,
       page,
-      limit
+      limit,
     };
   }
 
@@ -119,7 +127,7 @@ export class PaiementMobileService {
     const paiements = await this.paiementMobileRepository.find({
       where: { statut: StatutPaiementMobile.EN_ATTENTE },
       relations: ['transaction'],
-      order: { dateInitiation: 'ASC' }
+      order: { dateInitiation: 'ASC' },
     });
     return paiements.map((p: PaiementMobile) => this.formatResponse(p));
   }
@@ -130,7 +138,7 @@ export class PaiementMobileService {
   async findById(id: string): Promise<PaiementMobileResponseDto> {
     const paiement = await this.paiementMobileRepository.findOne({
       where: { id },
-      relations: ['transaction']
+      relations: ['transaction'],
     });
 
     if (!paiement) {
@@ -147,7 +155,7 @@ export class PaiementMobileService {
     const paiements = await this.paiementMobileRepository.find({
       where: { transactionId },
       relations: ['transaction'],
-      order: { dateInitiation: 'DESC' }
+      order: { dateInitiation: 'DESC' },
     });
     return paiements.map((p: PaiementMobile) => this.formatResponse(p));
   }
@@ -157,7 +165,7 @@ export class PaiementMobileService {
    */
   async marquerEnvoye(id: string, referenceExterne?: string): Promise<PaiementMobileResponseDto> {
     const paiement = await this.paiementMobileRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!paiement) {
@@ -182,15 +190,17 @@ export class PaiementMobileService {
    */
   async confirmer(id: string, codeConfirmation?: string): Promise<PaiementMobileResponseDto> {
     const paiement = await this.paiementMobileRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!paiement) {
       throw new NotFoundError('Paiement mobile non trouvé');
     }
 
-    if (paiement.statut !== StatutPaiementMobile.EN_ATTENTE &&
-      paiement.statut !== StatutPaiementMobile.ENVOYE) {
+    if (
+      paiement.statut !== StatutPaiementMobile.EN_ATTENTE &&
+      paiement.statut !== StatutPaiementMobile.ENVOYE
+    ) {
       throw new BadRequestError('Ce paiement ne peut pas être confirmé');
     }
 
@@ -209,7 +219,7 @@ export class PaiementMobileService {
    */
   async marquerEchoue(id: string, erreur?: string): Promise<PaiementMobileResponseDto> {
     const paiement = await this.paiementMobileRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!paiement) {
@@ -234,7 +244,7 @@ export class PaiementMobileService {
    */
   async annuler(id: string, raison?: string): Promise<PaiementMobileResponseDto> {
     const paiement = await this.paiementMobileRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!paiement) {
@@ -272,7 +282,10 @@ export class PaiementMobileService {
   /**
    * Statistiques des paiements
    */
-  async getStats(dateDebut?: Date, dateFin?: Date): Promise<{
+  async getStats(
+    dateDebut?: Date,
+    dateFin?: Date
+  ): Promise<{
     total: number;
     enAttente: number;
     envoyes: number;
@@ -299,7 +312,7 @@ export class PaiementMobileService {
       confirmes: 0,
       echoues: 0,
       annules: 0,
-      parOperateur: {} as Record<string, number>
+      parOperateur: {} as Record<string, number>,
     };
 
     paiements.forEach((p: PaiementMobile) => {
@@ -342,7 +355,7 @@ export class PaiementMobileService {
       messageOperateur: paiement.erreur || null,
       dateEnvoi: paiement.dateInitiation,
       dateConfirmation: paiement.dateConfirmation || null,
-      creeLe: paiement.dateInitiation
+      creeLe: paiement.dateInitiation,
     };
   }
 }

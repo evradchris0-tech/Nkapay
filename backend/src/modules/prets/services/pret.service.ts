@@ -4,7 +4,7 @@
 
 import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
-import { NotFoundError, BadRequestError } from '../../../shared';
+import { NotFoundError, BadRequestError, PaginationQuery, PaginatedResult } from '../../../shared';
 import { Pret, StatutPret } from '../entities/pret.entity';
 import { ExerciceMembre } from '../../exercices/entities/exercice-membre.entity';
 import { Reunion } from '../../reunions/entities/reunion.entity';
@@ -20,19 +20,23 @@ import {
 
 import { regleExerciceService } from '../../exercices/services/regle-exercice.service';
 import { StateMachine } from '../../../shared/utils/state-machine.util';
+import { PretBuilder } from '../builders/pret.builder';
 
 // =============================================================================
 // Machine à États (Design Pattern: State)
 // =============================================================================
 
-const pretStateMachine = new StateMachine<StatutPret>([
-  { from: StatutPret.DEMANDE, to: StatutPret.APPROUVE, action: 'approuver' },
-  { from: StatutPret.DEMANDE, to: StatutPret.REFUSE, action: 'refuser' },
-  { from: StatutPret.APPROUVE, to: StatutPret.DECAISSE, action: 'decaisser' },
-  { from: StatutPret.DECAISSE, to: StatutPret.EN_COURS, action: 'activer' },
-  { from: StatutPret.EN_COURS, to: StatutPret.SOLDE, action: 'solder' },
-  { from: StatutPret.EN_COURS, to: StatutPret.DEFAUT, action: 'mettre en defaut' },
-], 'Prêt');
+const pretStateMachine = new StateMachine<StatutPret>(
+  [
+    { from: StatutPret.DEMANDE, to: StatutPret.APPROUVE, action: 'approuver' },
+    { from: StatutPret.DEMANDE, to: StatutPret.REFUSE, action: 'refuser' },
+    { from: StatutPret.APPROUVE, to: StatutPret.DECAISSE, action: 'decaisser' },
+    { from: StatutPret.DECAISSE, to: StatutPret.EN_COURS, action: 'activer' },
+    { from: StatutPret.EN_COURS, to: StatutPret.SOLDE, action: 'solder' },
+    { from: StatutPret.EN_COURS, to: StatutPret.DEFAUT, action: 'mettre en defaut' },
+  ],
+  'Prêt'
+);
 
 export class PretService {
   private _pretRepo?: Repository<Pret>;
@@ -45,7 +49,8 @@ export class PretService {
   }
 
   private get exerciceMembreRepository(): Repository<ExerciceMembre> {
-    if (!this._exerciceMembreRepo) this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
+    if (!this._exerciceMembreRepo)
+      this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
     return this._exerciceMembreRepo;
   }
 
@@ -57,11 +62,13 @@ export class PretService {
   // ... getters existing ...
 
   /**
-   * Demander un pret
+   * Demander un pret (Design Pattern: Builder)
    */
   async create(dto: CreatePretDto): Promise<PretResponseDto> {
     // Verifier le membre
-    const membre = await this.exerciceMembreRepository.findOne({ where: { id: dto.exerciceMembreId } });
+    const membre = await this.exerciceMembreRepository.findOne({
+      where: { id: dto.exerciceMembreId },
+    });
     if (!membre) {
       throw new NotFoundError(`Membre d'exercice non trouve: ${dto.exerciceMembreId}`);
     }
@@ -75,51 +82,56 @@ export class PretService {
     // 1. Récupérer le taux d'intérêt effectif (règle 'PRET_TAUX_INTERET')
     let tauxInteret = dto.tauxInteret;
     if (tauxInteret === undefined) {
-      // Tenter de récupérer depuis la config
-      const ruleValue = await regleExerciceService.getEffectiveValueByCle(membre.exerciceId, 'PRET_TAUX_INTERET');
+      const ruleValue = await regleExerciceService.getEffectiveValueByCle(
+        membre.exerciceId,
+        'PRET_TAUX_INTERET'
+      );
       if (ruleValue) {
         tauxInteret = parseFloat(ruleValue);
       } else {
-        // Fallback si aucune règle trouvée (ne devrait pas arriver avec les seeds)
         tauxInteret = 0.05;
       }
     }
 
     // 2. Valider la durée max (règle 'PRET_DUREE_MAX')
-    const maxDureeValue = await regleExerciceService.getEffectiveValueByCle(membre.exerciceId, 'PRET_DUREE_MAX');
+    const maxDureeValue = await regleExerciceService.getEffectiveValueByCle(
+      membre.exerciceId,
+      'PRET_DUREE_MAX'
+    );
     if (maxDureeValue) {
       const maxDuree = parseInt(maxDureeValue, 10);
       if (dto.dureeMois > maxDuree) {
-        throw new BadRequestError(`La durée du prêt (${dto.dureeMois} mois) dépasse la durée maximale autorisée (${maxDuree} mois).`);
+        throw new BadRequestError(
+          `La durée du prêt (${dto.dureeMois} mois) dépasse la durée maximale autorisée (${maxDuree} mois).`
+        );
       }
     }
 
-    // 3. Valider le plafond (règle 'PRET_PLAFOND_MONTANT') - Optionnel
-    const plafondValue = await regleExerciceService.getEffectiveValueByCle(membre.exerciceId, 'PRET_PLAFOND_MONTANT');
+    // 3. Valider le plafond (règle 'PRET_PLAFOND_MONTANT')
+    const plafondValue = await regleExerciceService.getEffectiveValueByCle(
+      membre.exerciceId,
+      'PRET_PLAFOND_MONTANT'
+    );
     if (plafondValue) {
       const plafond = parseFloat(plafondValue);
       if (dto.montantCapital > plafond) {
-        throw new BadRequestError(`Le montant demandé (${dto.montantCapital}) dépasse le plafond autorisé (${plafond}).`);
+        throw new BadRequestError(
+          `Le montant demandé (${dto.montantCapital}) dépasse le plafond autorisé (${plafond}).`
+        );
       }
     }
 
-    const montantInteret = dto.montantCapital * tauxInteret * dto.dureeMois / 12; // Formule intérêt flat (à ajuster selon besoin)
-    // NOTE: Si intérêt composé ou amortissement, logique plus complexe ici.
+    // Construction via Builder (calcul automatique des intérêts)
+    const pretData = new PretBuilder()
+      .forMembre(dto.exerciceMembreId)
+      .atReunion(dto.reunionId)
+      .withCapital(dto.montantCapital)
+      .withTaux(tauxInteret)
+      .withDuree(dto.dureeMois);
 
-    const montantTotalDu = dto.montantCapital + montantInteret;
+    if (dto.commentaire) pretData.withCommentaire(dto.commentaire);
 
-    const pret = this.pretRepository.create({
-      reunionId: dto.reunionId,
-      exerciceMembreId: dto.exerciceMembreId,
-      montantCapital: dto.montantCapital,
-      tauxInteret,
-      montantInteret,
-      montantTotalDu,
-      dureeMois: dto.dureeMois,
-      capitalRestant: dto.montantCapital,
-      statut: StatutPret.DEMANDE,
-      commentaire: dto.commentaire || null,
-    });
+    const pret = this.pretRepository.create(pretData.build() as Partial<Pret>);
 
     const saved = await this.pretRepository.save(pret);
     return this.findById(saved.id);
@@ -145,7 +157,7 @@ export class PretService {
     }
 
     // Recalculer les interets
-    pret.montantInteret = Number(pret.montantCapital) * pret.tauxInteret * pret.dureeMois / 12;
+    pret.montantInteret = (Number(pret.montantCapital) * pret.tauxInteret * pret.dureeMois) / 12;
     pret.montantTotalDu = Number(pret.montantCapital) + pret.montantInteret;
 
     pret.statut = StatutPret.APPROUVE;
@@ -246,9 +258,15 @@ export class PretService {
   }
 
   /**
-   * Lister les prets
+   * Lister les prets avec pagination
    */
-  async findAll(filters?: PretFiltersDto): Promise<{ prets: PretResponseDto[]; total: number }> {
+  async findAll(
+    filters?: PretFiltersDto,
+    pagination?: PaginationQuery
+  ): Promise<PaginatedResult<PretResponseDto>> {
+    const page = pagination?.page ?? 1;
+    const limit = Math.min(pagination?.limit ?? 20, 100);
+
     const queryBuilder = this.pretRepository
       .createQueryBuilder('p')
       .leftJoinAndSelect('p.exerciceMembre', 'em')
@@ -266,7 +284,9 @@ export class PretService {
       queryBuilder.andWhere('em.exerciceId = :exerciceId', { exerciceId: filters.exerciceId });
     }
     if (filters?.exerciceMembreId) {
-      queryBuilder.andWhere('p.exerciceMembreId = :exerciceMembreId', { exerciceMembreId: filters.exerciceMembreId });
+      queryBuilder.andWhere('p.exerciceMembreId = :exerciceMembreId', {
+        exerciceMembreId: filters.exerciceMembreId,
+      });
     }
     if (filters?.statut) {
       queryBuilder.andWhere('p.statut = :statut', { statut: filters.statut });
@@ -278,9 +298,15 @@ export class PretService {
       queryBuilder.andWhere('p.dateDemande <= :dateFin', { dateFin: filters.dateFin });
     }
 
-    const results = await queryBuilder
+    // Compter le total avant pagination
+    const total = await queryBuilder.getCount();
+
+    queryBuilder
       .orderBy('p.dateDemande', 'DESC')
-      .getRawAndEntities();
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const results = await queryBuilder.getRawAndEntities();
 
     const prets = results.entities.map((pret, index) => {
       const raw = results.raw[index];
@@ -291,8 +317,13 @@ export class PretService {
     });
 
     return {
-      prets,
-      total: prets.length,
+      data: prets,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 
@@ -302,7 +333,12 @@ export class PretService {
   async findById(id: string): Promise<PretResponseDto> {
     const pret = await this.pretRepository.findOne({
       where: { id },
-      relations: ['exerciceMembre', 'exerciceMembre.adhesionTontine', 'exerciceMembre.adhesionTontine.utilisateur', 'remboursements'],
+      relations: [
+        'exerciceMembre',
+        'exerciceMembre.adhesionTontine',
+        'exerciceMembre.adhesionTontine.utilisateur',
+        'remboursements',
+      ],
     });
 
     if (!pret) {
@@ -310,7 +346,8 @@ export class PretService {
     }
 
     const nombreRemboursements = pret.remboursements?.length || 0;
-    const montantTotalRembourse = pret.remboursements?.reduce((sum, r) => sum + Number(r.montantTotal), 0) || 0;
+    const montantTotalRembourse =
+      pret.remboursements?.reduce((sum, r) => sum + Number(r.montantTotal), 0) || 0;
 
     return this.toResponseDto(pret, { nombreRemboursements, montantTotalRembourse });
   }
@@ -319,7 +356,7 @@ export class PretService {
    * Obtenir le resume des prets
    */
   async getSummary(filters?: PretFiltersDto): Promise<PretsSummaryDto> {
-    const { prets } = await this.findAll(filters);
+    const { data: prets } = await this.findAll(filters, { limit: 1000 });
 
     let totalCapitalPrete = 0;
     let totalCapitalRestant = 0;
@@ -366,11 +403,13 @@ export class PretService {
       id: entity.id,
       reunionId: entity.reunionId,
       exerciceMembreId: entity.exerciceMembreId,
-      exerciceMembre: entity.exerciceMembre ? {
-        id: entity.exerciceMembre.id,
-        utilisateurId: utilisateur?.id || '',
-        utilisateurNom: utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}` : undefined,
-      } : undefined,
+      exerciceMembre: entity.exerciceMembre
+        ? {
+            id: entity.exerciceMembre.id,
+            utilisateurId: utilisateur?.id || '',
+            utilisateurNom: utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}` : undefined,
+          }
+        : undefined,
       montantCapital: Number(entity.montantCapital),
       tauxInteret: Number(entity.tauxInteret),
       montantInteret: Number(entity.montantInteret),

@@ -7,10 +7,7 @@ import { AppDataSource } from '../../../config';
 import { NotFoundError, BadRequestError } from '../../../shared';
 import { BilanSecoursExercice } from '../entities/bilan-secours-exercice.entity';
 import { Exercice } from '../../exercices/entities/exercice.entity';
-import {
-  BilanSecoursExerciceResponseDto,
-  UpdateBilanSecoursDto
-} from '../dto/bilan-secours.dto';
+import { BilanSecoursExerciceResponseDto, UpdateBilanSecoursDto } from '../dto/bilan-secours.dto';
 
 export class BilanSecoursService {
   private _bilanRepo?: Repository<BilanSecoursExercice>;
@@ -29,15 +26,18 @@ export class BilanSecoursService {
   /**
    * Récupérer ou créer un bilan pour un exercice
    */
-  async getOrCreate(exerciceId: string, soldeInitial: number = 0): Promise<BilanSecoursExerciceResponseDto> {
+  async getOrCreate(
+    exerciceId: string,
+    soldeInitial: number = 0
+  ): Promise<BilanSecoursExerciceResponseDto> {
     let bilan = await this.bilanSecoursRepository.findOne({
       where: { exerciceId },
-      relations: ['exercice']
+      relations: ['exercice'],
     });
 
     if (!bilan) {
       const exercice = await this.exerciceRepository.findOne({
-        where: { id: exerciceId }
+        where: { id: exerciceId },
       });
 
       if (!exercice) {
@@ -50,7 +50,7 @@ export class BilanSecoursService {
         totalCotisations: 0,
         totalDepenses: 0,
         soldeFinal: soldeInitial,
-        nombreEvenements: 0
+        nombreEvenements: 0,
       });
 
       await this.bilanSecoursRepository.save(bilan);
@@ -85,7 +85,7 @@ export class BilanSecoursService {
   async findById(id: string): Promise<BilanSecoursExerciceResponseDto> {
     const bilan = await this.bilanSecoursRepository.findOne({
       where: { id },
-      relations: ['exercice']
+      relations: ['exercice'],
     });
 
     if (!bilan) {
@@ -98,9 +98,12 @@ export class BilanSecoursService {
   /**
    * Mettre à jour le solde initial d'un bilan
    */
-  async updateSoldeInitial(exerciceId: string, soldeInitial: number): Promise<BilanSecoursExerciceResponseDto> {
+  async updateSoldeInitial(
+    exerciceId: string,
+    soldeInitial: number
+  ): Promise<BilanSecoursExerciceResponseDto> {
     let bilan = await this.bilanSecoursRepository.findOne({
-      where: { exerciceId }
+      where: { exerciceId },
     });
 
     if (!bilan) {
@@ -110,11 +113,12 @@ export class BilanSecoursService {
         totalCotisations: 0,
         totalDepenses: 0,
         soldeFinal: soldeInitial,
-        nombreEvenements: 0
+        nombreEvenements: 0,
       });
     } else {
       bilan.soldeInitial = soldeInitial;
-      bilan.soldeFinal = soldeInitial + Number(bilan.totalCotisations) - Number(bilan.totalDepenses);
+      bilan.soldeFinal =
+        soldeInitial + Number(bilan.totalCotisations) - Number(bilan.totalDepenses);
     }
 
     await this.bilanSecoursRepository.save(bilan);
@@ -126,7 +130,7 @@ export class BilanSecoursService {
    */
   async update(id: string, data: UpdateBilanSecoursDto): Promise<BilanSecoursExerciceResponseDto> {
     const bilan = await this.bilanSecoursRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!bilan) {
@@ -144,7 +148,8 @@ export class BilanSecoursService {
     }
 
     // Recalculer le solde final
-    bilan.soldeFinal = Number(bilan.soldeInitial) + Number(bilan.totalCotisations) - Number(bilan.totalDepenses);
+    bilan.soldeFinal =
+      Number(bilan.soldeInitial) + Number(bilan.totalCotisations) - Number(bilan.totalDepenses);
 
     await this.bilanSecoursRepository.save(bilan);
     return this.findById(id);
@@ -155,7 +160,7 @@ export class BilanSecoursService {
    */
   async recalculer(exerciceId: string): Promise<BilanSecoursExerciceResponseDto> {
     const bilan = await this.bilanSecoursRepository.findOne({
-      where: { exerciceId }
+      where: { exerciceId },
     });
 
     if (!bilan) {
@@ -164,7 +169,8 @@ export class BilanSecoursService {
 
     // TODO: Récupérer les données réelles depuis les tables de transactions et demandes de secours
     // Pour l'instant, recalcule juste le solde final
-    bilan.soldeFinal = Number(bilan.soldeInitial) + Number(bilan.totalCotisations) - Number(bilan.totalDepenses);
+    bilan.soldeFinal =
+      Number(bilan.soldeInitial) + Number(bilan.totalCotisations) - Number(bilan.totalDepenses);
 
     await this.bilanSecoursRepository.save(bilan);
     return this.getOrCreate(exerciceId);
@@ -173,9 +179,12 @@ export class BilanSecoursService {
   /**
    * Clôturer un bilan d'exercice et reporter le solde à l'exercice suivant
    */
-  async cloturer(exerciceId: string, exerciceSuivantId?: string): Promise<BilanSecoursExerciceResponseDto> {
+  async cloturer(
+    exerciceId: string,
+    exerciceSuivantId?: string
+  ): Promise<BilanSecoursExerciceResponseDto> {
     const bilan = await this.bilanSecoursRepository.findOne({
-      where: { exerciceId }
+      where: { exerciceId },
     });
 
     if (!bilan) {
@@ -183,7 +192,8 @@ export class BilanSecoursService {
     }
 
     // Recalcul final
-    bilan.soldeFinal = Number(bilan.soldeInitial) + Number(bilan.totalCotisations) - Number(bilan.totalDepenses);
+    bilan.soldeFinal =
+      Number(bilan.soldeInitial) + Number(bilan.totalCotisations) - Number(bilan.totalDepenses);
     await this.bilanSecoursRepository.save(bilan);
 
     // Si exercice suivant spécifié, créer le nouveau bilan avec le solde reporté
@@ -199,7 +209,7 @@ export class BilanSecoursService {
    */
   async ajouterCotisation(exerciceId: string, montant: number): Promise<void> {
     let bilan = await this.bilanSecoursRepository.findOne({
-      where: { exerciceId }
+      where: { exerciceId },
     });
 
     if (!bilan) {
@@ -209,12 +219,13 @@ export class BilanSecoursService {
         totalCotisations: 0,
         totalDepenses: 0,
         soldeFinal: 0,
-        nombreEvenements: 0
+        nombreEvenements: 0,
       });
     }
 
     bilan.totalCotisations = Number(bilan.totalCotisations) + montant;
-    bilan.soldeFinal = Number(bilan.soldeInitial) + Number(bilan.totalCotisations) - Number(bilan.totalDepenses);
+    bilan.soldeFinal =
+      Number(bilan.soldeInitial) + Number(bilan.totalCotisations) - Number(bilan.totalDepenses);
 
     await this.bilanSecoursRepository.save(bilan);
   }
@@ -223,8 +234,8 @@ export class BilanSecoursService {
    * Ajouter une dépense (secours versé) au bilan
    */
   async ajouterDepense(exerciceId: string, montant: number): Promise<void> {
-    let bilan = await this.bilanSecoursRepository.findOne({
-      where: { exerciceId }
+    const bilan = await this.bilanSecoursRepository.findOne({
+      where: { exerciceId },
     });
 
     if (!bilan) {
@@ -233,7 +244,8 @@ export class BilanSecoursService {
 
     bilan.totalDepenses = Number(bilan.totalDepenses) + montant;
     bilan.nombreEvenements = bilan.nombreEvenements + 1;
-    bilan.soldeFinal = Number(bilan.soldeInitial) + Number(bilan.totalCotisations) - Number(bilan.totalDepenses);
+    bilan.soldeFinal =
+      Number(bilan.soldeInitial) + Number(bilan.totalCotisations) - Number(bilan.totalDepenses);
 
     await this.bilanSecoursRepository.save(bilan);
   }
@@ -247,7 +259,7 @@ export class BilanSecoursService {
       totalDepenses: Number(bilan.totalDepenses),
       soldeFinal: Number(bilan.soldeFinal),
       nombreEvenements: bilan.nombreEvenements,
-      creeLe: bilan.creeLe
+      creeLe: bilan.creeLe,
     };
   }
 }

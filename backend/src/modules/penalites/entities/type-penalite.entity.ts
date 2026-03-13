@@ -34,7 +34,12 @@ export class TypePenalite {
   @Column({ type: 'text', nullable: true })
   description: string | null;
 
-  @Column({ name: 'mode_calcul', type: 'enum', enum: ModeCalculPenalite, default: ModeCalculPenalite.MONTANT_FIXE })
+  @Column({
+    name: 'mode_calcul',
+    type: 'enum',
+    enum: ModeCalculPenalite,
+    default: ModeCalculPenalite.MONTANT_FIXE,
+  })
   modeCalcul: ModeCalculPenalite;
 
   @Column({ name: 'valeur_defaut', type: 'decimal', precision: 15, scale: 2, nullable: true })

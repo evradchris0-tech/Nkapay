@@ -5,7 +5,11 @@ import { Tontine, StatutTontine } from '../../tontines/entities/tontine.entity';
 import { Exercice, StatutExercice } from '../../exercices/entities/exercice.entity';
 import { Utilisateur } from '../../utilisateurs/entities/utilisateur.entity';
 import { Reunion, StatutReunion } from '../../reunions/entities/reunion.entity';
-import { Transaction, TypeTransaction, StatutTransaction } from '../../transactions/entities/transaction.entity';
+import {
+  Transaction,
+  TypeTransaction,
+  StatutTransaction,
+} from '../../transactions/entities/transaction.entity';
 import { Pret, StatutPret } from '../../prets/entities/pret.entity';
 import { Distribution, StatutDistribution } from '../../distributions/entities/distribution.entity';
 import { Penalite, StatutPenalite } from '../../penalites/entities/penalite.entity';
@@ -120,7 +124,14 @@ export class DashboardService {
     const pretsEnCoursRaw = await this.pretRepo
       .createQueryBuilder('p')
       .select('COALESCE(SUM(p.capitalRestant), 0)', 'sum')
-      .where('p.statut IN (:...statuts)', { statuts: [StatutPret.DEMANDE, StatutPret.APPROUVE, StatutPret.DECAISSE, StatutPret.EN_COURS] })
+      .where('p.statut IN (:...statuts)', {
+        statuts: [
+          StatutPret.DEMANDE,
+          StatutPret.APPROUVE,
+          StatutPret.DECAISSE,
+          StatutPret.EN_COURS,
+        ],
+      })
       .getRawOne<{ sum: string }>();
 
     const totalPenalitesRaw = await this.penaliteRepo
@@ -134,7 +145,9 @@ export class DashboardService {
       .leftJoinAndSelect('r.exercice', 'e')
       .leftJoinAndSelect('e.tontine', 't')
       .where('r.dateReunion >= :today', { today: now })
-      .andWhere('r.statut IN (:...statuts)', { statuts: [StatutReunion.PLANIFIEE, StatutReunion.OUVERTE] })
+      .andWhere('r.statut IN (:...statuts)', {
+        statuts: [StatutReunion.PLANIFIEE, StatutReunion.OUVERTE],
+      })
       .orderBy('r.dateReunion', 'ASC')
       .addOrderBy('r.heureDebut', 'ASC')
       .getOne();
@@ -170,7 +183,10 @@ export class DashboardService {
         prochaine: prochaineReunion
           ? {
               id: prochaineReunion.id,
-              date: prochaineReunion.dateReunion instanceof Date ? prochaineReunion.dateReunion.toISOString() : String(prochaineReunion.dateReunion),
+              date:
+                prochaineReunion.dateReunion instanceof Date
+                  ? prochaineReunion.dateReunion.toISOString()
+                  : String(prochaineReunion.dateReunion),
               lieu: prochaineReunion.lieu || '',
               tontine: prochaineReunion.exercice?.tontine?.nom || '',
             }
@@ -196,7 +212,11 @@ export class DashboardService {
 
     for (const tx of transactions) {
       let type: RecentActivityDto['type'] = 'cotisation';
-      if ([TypeTransaction.DECAISSEMENT_PRET, TypeTransaction.REMBOURSEMENT_PRET].includes(tx.typeTransaction)) {
+      if (
+        [TypeTransaction.DECAISSEMENT_PRET, TypeTransaction.REMBOURSEMENT_PRET].includes(
+          tx.typeTransaction
+        )
+      ) {
         type = 'pret';
       } else if (tx.typeTransaction === TypeTransaction.COTISATION) {
         type = 'cotisation';

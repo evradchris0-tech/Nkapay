@@ -6,12 +6,14 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/auth.service';
 import { UtilisateurService } from '../../utilisateurs/services/utilisateur.service';
+import { OnboardingService } from '../../organisations/services/onboarding.service';
 import { LoginDto, RefreshTokenDto, LogoutDto } from '../dtos/auth.dto';
 import { ApiResponse } from '../../../shared/utils/api-response.util';
 
 // Lazy initialization pour eviter d'appeler getRepository() avant DataSource.initialize()
 let authService: AuthService;
 let utilisateurService: UtilisateurService;
+let onboardingService: OnboardingService;
 
 function getAuthService(): AuthService {
   if (!authService) authService = new AuthService();
@@ -21,6 +23,26 @@ function getAuthService(): AuthService {
 function getUtilisateurService(): UtilisateurService {
   if (!utilisateurService) utilisateurService = new UtilisateurService();
   return utilisateurService;
+}
+
+function getOnboardingService(): OnboardingService {
+  if (!onboardingService) onboardingService = new OnboardingService();
+  return onboardingService;
+}
+
+/**
+ * POST /auth/register-organisation
+ * Onboarding self-service : crée un utilisateur + une organisation en une seule requête
+ */
+export async function registerOrganisation(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const adresseIp = (req.ip || req.socket.remoteAddress || 'unknown') as string;
+    const userAgent = req.headers['user-agent'];
+    const result = await getOnboardingService().registerOrganisation(req.body, adresseIp, userAgent);
+    res.status(201).json(ApiResponse.created(result, 'Organisation créée avec succès'));
+  } catch (err) {
+    next(err);
+  }
 }
 
 /**
@@ -113,7 +135,11 @@ export async function getSessions(req: Request, res: Response, next: NextFunctio
  * GET /auth/me
  * Informations de l'utilisateur connecte
  */
-export async function getCurrentUser(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function getCurrentUser(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
   try {
     const userId = req.user?.id;
 
@@ -124,9 +150,8 @@ export async function getCurrentUser(req: Request, res: Response, next: NextFunc
 
     // Charger l'utilisateur depuis la base de donnees (le JWT ne contient que l'ID)
     const utilisateur = await getUtilisateurService().findById(userId);
-    const responseDto = getUtilisateurService().toResponseDto(utilisateur);
 
-    res.json(ApiResponse.success(responseDto));
+    res.json(ApiResponse.success(utilisateur));
   } catch (error) {
     next(error);
   }

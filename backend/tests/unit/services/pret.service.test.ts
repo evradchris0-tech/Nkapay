@@ -1,157 +1,287 @@
 /**
- * Tests unitaires pour le service Prêt
+ * Tests unitaires pour PretService
  */
 
-import { 
-  TestNotFoundError as NotFoundError, 
-  TestBadRequestError as BadRequestError, 
-  TestConflictError as ConflictError 
-} from '../../helpers/test-errors';
+import { createMockRepo } from '../../helpers/mock-repo';
 
-describe('Pret Service', () => {
-  describe('Validation du montant de prêt', () => {
-    it('devrait valider un montant positif', () => {
-      const montants = [50000, 100000, 500000];
-      montants.forEach(montant => {
-        expect(montant).toBeGreaterThan(0);
-      });
-    });
+// ─── Mocks modules ────────────────────────────────────────────────────────────
 
-    it('devrait respecter le plafond de prêt', () => {
-      const plafond = 1000000;
-      const montantDemande = 500000;
-      expect(montantDemande).toBeLessThanOrEqual(plafond);
-    });
+const mockPretRepo = createMockRepo();
+const mockExerciceMembreRepo = createMockRepo();
+const mockReunionRepo = createMockRepo();
 
-    it('devrait rejeter un montant dépassant le plafond', () => {
-      const plafond = 1000000;
-      const montantDemande = 1500000;
-      expect(montantDemande).toBeGreaterThan(plafond);
-    });
+jest.mock('../../../src/config', () => ({
+  AppDataSource: {
+    getRepository: jest.fn((entity: any) => {
+      const name = typeof entity === 'string' ? entity : entity?.name ?? String(entity);
+      if (name === 'Pret') return mockPretRepo;
+      if (name === 'ExerciceMembre') return mockExerciceMembreRepo;
+      if (name === 'Reunion') return mockReunionRepo;
+      return createMockRepo();
+    }),
+    isInitialized: true,
+  },
+  env: { nodeEnv: 'test', db: {} },
+  isDevelopment: false,
+}));
+
+jest.mock('../../../src/shared/errors/app-error', () => ({
+  NotFoundError: class NotFoundError extends Error {
+    statusCode = 404;
+    constructor(message: string) { super(`NotFoundError: ${message}`); this.name = 'NotFoundError'; }
+  },
+  BadRequestError: class BadRequestError extends Error {
+    statusCode = 400;
+    constructor(message: string) { super(`BadRequestError: ${message}`); this.name = 'BadRequestError'; }
+  },
+}));
+
+const mockRegleExerciceService = {
+  getEffectiveValueByCle: jest.fn().mockResolvedValue(null),
+};
+jest.mock('../../../src/modules/exercices/services/regle-exercice.service', () => ({
+  regleExerciceService: mockRegleExerciceService,
+}));
+
+// ─── Import sous test ─────────────────────────────────────────────────────────
+
+import { PretService } from '../../../src/modules/prets/services/pret.service';
+import { StatutPret } from '../../../src/modules/prets/entities/pret.entity';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function makeMockPret(overrides: any = {}) {
+  return {
+    id: 'pret-uuid-1',
+    exerciceMembreId: 'em-uuid-1',
+    reunionId: 'reunion-uuid-1',
+    montantCapital: 100000,
+    tauxInteret: 0.05,
+    montantInteret: 5000,
+    montantTotalDu: 105000,
+    dureeMois: 12,
+    capitalRestant: 100000,
+    statut: StatutPret.DEMANDE,
+    dateDemande: new Date(),
+    dateApprobation: null,
+    dateDecaissement: null,
+    dateEcheance: null,
+    dateSolde: null,
+    exerciceMembre: null,
+    remboursements: [],
+    ...overrides,
+  };
+}
+
+// ─── Tests ────────────────────────────────────────────────────────────────────
+
+describe('PretService', () => {
+  let service: PretService;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockRegleExerciceService.getEffectiveValueByCle.mockReset();
+    service = new PretService();
+
+    mockPretRepo.create.mockImplementation((data: any) => ({ ...data }));
+    mockPretRepo.save.mockImplementation((data: any) =>
+      Promise.resolve({ id: 'pret-uuid-1', ...data })
+    );
   });
 
-  describe('Calcul des intérêts', () => {
-    it('devrait calculer les intérêts simples', () => {
-      const capital = 100000;
-      const tauxAnnuel = 10;
-      const dureeEnMois = 6;
-      const interets = (capital * tauxAnnuel * dureeEnMois) / (12 * 100);
-      expect(interets).toBe(5000);
-    });
+  // ─────────────────────────────────────────────────────────────────────────
+  // create()
+  // ─────────────────────────────────────────────────────────────────────────
 
-    it('devrait calculer le montant total à rembourser', () => {
-      const capital = 100000;
-      const interets = 5000;
-      const montantTotal = capital + interets;
-      expect(montantTotal).toBe(105000);
-    });
+  describe('create()', () => {
+    it('crée avec statut DEMANDE', async () => {
+      mockExerciceMembreRepo.findOne.mockResolvedValue({ id: 'em-uuid-1', exerciceId: 'exo-1' });
+      mockReunionRepo.findOne.mockResolvedValue({ id: 'reunion-uuid-1' });
+      mockPretRepo.findOne.mockResolvedValue(makeMockPret());
 
-    it('devrait calculer la mensualité fixe', () => {
-      const montantTotal = 105000;
-      const dureeEnMois = 6;
-      const mensualite = Math.ceil(montantTotal / dureeEnMois);
-      expect(mensualite).toBe(17500);
-    });
-  });
-
-  describe('Éligibilité au prêt', () => {
-    it('devrait vérifier l\'ancienneté minimum', () => {
-      const ancienneteMinimum = 3;
-      const ancienneteMembre = 6;
-      expect(ancienneteMembre).toBeGreaterThanOrEqual(ancienneteMinimum);
-    });
-
-    it('devrait vérifier l\'absence de prêt en cours', () => {
-      const pretsEnCours: { id: string; soldeRestant: number }[] = [];
-      expect(pretsEnCours).toHaveLength(0);
-    });
-
-    it('devrait rejeter si prêt en cours existe', () => {
-      const pretsEnCours = [{ id: 'pret-1', soldeRestant: 50000 }];
-      expect(pretsEnCours.length).toBeGreaterThan(0);
-    });
-
-    it('devrait vérifier les cotisations à jour', () => {
-      const cotisationsDues = 0;
-      const isAJour = cotisationsDues === 0;
-      expect(isAJour).toBe(true);
-    });
-  });
-
-  describe('Statuts de prêt', () => {
-    const statuts = ['EN_ATTENTE', 'APPROUVE', 'REFUSE', 'EN_COURS', 'REMBOURSE', 'DEFAUT'];
-
-    it('devrait valider les statuts disponibles', () => {
-      expect(statuts).toHaveLength(6);
-    });
-
-    it('devrait permettre l\'approbation d\'un prêt en attente', () => {
-      const transitions: Record<string, string[]> = {
-        'EN_ATTENTE': ['APPROUVE', 'REFUSE'],
-        'APPROUVE': ['EN_COURS'],
-        'EN_COURS': ['REMBOURSE', 'DEFAUT'],
-        'REFUSE': [],
-        'REMBOURSE': [],
-        'DEFAUT': [],
+      const dto = {
+        exerciceMembreId: 'em-uuid-1',
+        reunionId: 'reunion-uuid-1',
+        montantCapital: 100000,
+        dureeMois: 12,
       };
-      expect(transitions['EN_ATTENTE']).toContain('APPROUVE');
+
+      const result = await service.create(dto);
+
+      expect(mockPretRepo.save).toHaveBeenCalled();
+      expect(result).toHaveProperty('id');
+    });
+
+    it('lève NotFoundError si ExerciceMembre inexistant', async () => {
+      mockExerciceMembreRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.create({ exerciceMembreId: 'em-unknown', reunionId: 'r-1', montantCapital: 50000, dureeMois: 6 })
+      ).rejects.toThrow('NotFoundError');
+    });
+
+    it('lève NotFoundError si Reunion inexistante', async () => {
+      mockExerciceMembreRepo.findOne.mockResolvedValue({ id: 'em-uuid-1', exerciceId: 'exo-1' });
+      mockReunionRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.create({ exerciceMembreId: 'em-uuid-1', reunionId: 'r-unknown', montantCapital: 50000, dureeMois: 6 })
+      ).rejects.toThrow('NotFoundError');
+    });
+
+    it('respecte PRET_DUREE_MAX — lève BadRequestError si durée trop longue', async () => {
+      mockExerciceMembreRepo.findOne.mockResolvedValue({ id: 'em-uuid-1', exerciceId: 'exo-1' });
+      mockReunionRepo.findOne.mockResolvedValue({ id: 'reunion-uuid-1' });
+      mockRegleExerciceService.getEffectiveValueByCle
+        .mockResolvedValueOnce(null) // PRET_TAUX_INTERET
+        .mockResolvedValueOnce('6')  // PRET_DUREE_MAX = 6 mois
+        .mockResolvedValueOnce(null); // PRET_PLAFOND_MONTANT
+
+      await expect(
+        service.create({ exerciceMembreId: 'em-uuid-1', reunionId: 'r-1', montantCapital: 50000, dureeMois: 12 })
+      ).rejects.toThrow('BadRequestError');
+    });
+
+    it('respecte PRET_PLAFOND_MONTANT — lève BadRequestError si montant trop élevé', async () => {
+      mockExerciceMembreRepo.findOne.mockResolvedValue({ id: 'em-uuid-1', exerciceId: 'exo-1' });
+      mockReunionRepo.findOne.mockResolvedValue({ id: 'reunion-uuid-1' });
+      mockRegleExerciceService.getEffectiveValueByCle
+        .mockResolvedValueOnce(null)      // PRET_TAUX_INTERET
+        .mockResolvedValueOnce(null)      // PRET_DUREE_MAX
+        .mockResolvedValueOnce('50000');  // PRET_PLAFOND_MONTANT = 50000
+
+      await expect(
+        service.create({ exerciceMembreId: 'em-uuid-1', reunionId: 'r-1', montantCapital: 100000, dureeMois: 6 })
+      ).rejects.toThrow('BadRequestError');
     });
   });
 
-  describe('Remboursements', () => {
-    it('devrait calculer le solde restant après remboursement', () => {
-      const montantTotal = 105000;
-      const remboursements = [17500, 17500, 17500];
-      const totalRembourse = remboursements.reduce((a, b) => a + b, 0);
-      const soldeRestant = montantTotal - totalRembourse;
-      expect(soldeRestant).toBe(52500);
+  // ─────────────────────────────────────────────────────────────────────────
+  // approuver()
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('approuver()', () => {
+    it('DEMANDE → APPROUVE', async () => {
+      const pret = makeMockPret({ statut: StatutPret.DEMANDE });
+      mockPretRepo.findOne
+        .mockResolvedValueOnce(pret)
+        .mockResolvedValueOnce({ ...pret, statut: StatutPret.APPROUVE });
+
+      await service.approuver('pret-uuid-1', { approuveParExerciceMembreId: 'em-admin-1' });
+
+      expect(mockPretRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ statut: StatutPret.APPROUVE })
+      );
     });
 
-    it('devrait marquer le prêt comme remboursé', () => {
-      const montantTotal = 105000;
-      const totalRembourse = 105000;
-      const estRembourse = totalRembourse >= montantTotal;
-      expect(estRembourse).toBe(true);
+    it('lève une erreur si pas en DEMANDE', async () => {
+      const pret = makeMockPret({ statut: StatutPret.REFUSE });
+      mockPretRepo.findOne.mockResolvedValue(pret);
+
+      await expect(
+        service.approuver('pret-uuid-1', { approuveParExerciceMembreId: 'em-admin-1' })
+      ).rejects.toThrow();
     });
 
-    it('devrait rejeter un remboursement supérieur au solde', () => {
-      const soldeRestant = 50000;
-      const montantRemboursement = 75000;
-      expect(montantRemboursement).toBeGreaterThan(soldeRestant);
-    });
-  });
+    it('lève NotFoundError si pret inexistant', async () => {
+      mockPretRepo.findOne.mockResolvedValue(null);
 
-  describe('Garanties', () => {
-    it('devrait calculer le ratio de garantie', () => {
-      const cotisationsCumulees = 60000;
-      const montantPret = 50000;
-      const ratioGarantie = cotisationsCumulees / montantPret;
-      expect(ratioGarantie).toBeGreaterThanOrEqual(1);
-    });
-
-    it('devrait identifier un prêt à risque', () => {
-      const cotisationsCumulees = 30000;
-      const montantPret = 100000;
-      const ratioGarantie = cotisationsCumulees / montantPret;
-      expect(ratioGarantie).toBeLessThan(0.5);
+      await expect(
+        service.approuver('unknown-id', { approuveParExerciceMembreId: 'em-admin-1' })
+      ).rejects.toThrow('NotFoundError');
     });
   });
 
-  describe('Erreurs métier', () => {
-    it('devrait lever NotFoundError pour prêt inexistant', () => {
-      expect(() => { throw new NotFoundError('Prêt non trouvé'); }).toThrow(NotFoundError);
+  // ─────────────────────────────────────────────────────────────────────────
+  // refuser()
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('refuser()', () => {
+    it('DEMANDE → REFUSE avec motif', async () => {
+      const pret = makeMockPret({ statut: StatutPret.DEMANDE });
+      mockPretRepo.findOne
+        .mockResolvedValueOnce(pret)
+        .mockResolvedValueOnce({ ...pret, statut: StatutPret.REFUSE });
+
+      await service.refuser('pret-uuid-1', { motifRefus: 'Insuffisance de garanties', rejeteParExerciceMembreId: 'em-admin-1' });
+
+      expect(mockPretRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ statut: StatutPret.REFUSE, motifRefus: 'Insuffisance de garanties' })
+      );
     });
 
-    it('devrait lever BadRequestError pour membre non éligible', () => {
-      expect(() => { throw new BadRequestError('Membre non éligible'); }).toThrow(BadRequestError);
+    it('lève NotFoundError si pret inexistant', async () => {
+      mockPretRepo.findOne.mockResolvedValue(null);
+
+      await expect(service.refuser('unknown-id', { motifRefus: 'Raison', rejeteParExerciceMembreId: 'em-admin-1' })).rejects.toThrow('NotFoundError');
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // decaisser()
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('decaisser()', () => {
+    it('APPROUVE → DECAISSE → EN_COURS (2 saves)', async () => {
+      const pret = makeMockPret({ statut: StatutPret.APPROUVE, dureeMois: 6 });
+      mockPretRepo.findOne
+        .mockResolvedValueOnce(pret)
+        .mockResolvedValueOnce({ ...pret, statut: StatutPret.EN_COURS });
+
+      await service.decaisser('pret-uuid-1', {});
+
+      expect(mockPretRepo.save).toHaveBeenCalledTimes(2);
     });
 
-    it('devrait lever ConflictError pour prêt déjà en cours', () => {
-      expect(() => { throw new ConflictError('Prêt déjà en cours'); }).toThrow(ConflictError);
+    it('lève une erreur si pas APPROUVE', async () => {
+      const pret = makeMockPret({ statut: StatutPret.DEMANDE });
+      mockPretRepo.findOne.mockResolvedValue(pret);
+
+      await expect(service.decaisser('pret-uuid-1', {})).rejects.toThrow();
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // findAll()
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('findAll()', () => {
+    it('retourne des résultats paginés', async () => {
+      const qb = mockPretRepo.createQueryBuilder();
+      qb.getCount.mockResolvedValue(0);
+      qb.getRawAndEntities.mockResolvedValue({ entities: [], raw: [] });
+
+      const result = await service.findAll({}, { page: 1, limit: 10 });
+
+      expect(result).toHaveProperty('data');
+      expect(result).toHaveProperty('meta');
+      expect(Array.isArray(result.data)).toBe(true);
     });
 
-    it('devrait lever BadRequestError pour montant dépassant le plafond', () => {
-      expect(() => { throw new BadRequestError('Montant dépasse le plafond'); }).toThrow(BadRequestError);
+    it('filtre par exerciceId', async () => {
+      const qb = mockPretRepo.createQueryBuilder();
+      qb.getCount.mockResolvedValue(0);
+      qb.getRawAndEntities.mockResolvedValue({ entities: [], raw: [] });
+
+      await service.findAll({ exerciceId: 'exo-uuid-1' });
+
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        expect.stringContaining('exerciceId'),
+        expect.any(Object)
+      );
+    });
+
+    it('filtre par statut', async () => {
+      const qb = mockPretRepo.createQueryBuilder();
+      qb.getCount.mockResolvedValue(0);
+      qb.getRawAndEntities.mockResolvedValue({ entities: [], raw: [] });
+
+      await service.findAll({ statut: StatutPret.EN_COURS });
+
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        expect.stringContaining('statut'),
+        expect.any(Object)
+      );
     });
   });
 });

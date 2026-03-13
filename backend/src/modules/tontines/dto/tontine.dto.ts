@@ -50,6 +50,13 @@ export interface TontineResponseDto {
   nombreExercices?: number;
 }
 
+export interface TontineFiltersDto {
+  statut?: StatutTontine;
+  search?: string;        // recherche dans nom OU nomCourt
+  tontineTypeId?: string;
+  organisationId?: string;
+}
+
 export interface TontineListItemDto {
   id: string;
   nom: string;

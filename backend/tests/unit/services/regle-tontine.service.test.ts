@@ -1,207 +1,140 @@
 /**
- * Tests unitaires pour les règles de tontine
+ * Tests unitaires pour RegleTontineService
  */
 
-import { 
-  TestNotFoundError as NotFoundError, 
-  TestBadRequestError as BadRequestError, 
-  TestConflictError as ConflictError 
-} from '../../helpers/test-errors';
+import { createMockRepo } from '../../helpers/mock-repo';
 
-describe('RegleTontine Service', () => {
-  describe('Types de règles', () => {
-    const typesRegles = [
-      'COTISATION_OBLIGATOIRE',
-      'PENALITE_ABSENCE',
-      'PENALITE_RETARD',
-      'DELAI_PAIEMENT',
-      'ORDRE_DISTRIBUTION',
-      'QUORUM_REUNION',
-      'ELIGIBILITE_PRET',
-      'ELIGIBILITE_SECOURS',
-    ];
+const mockRegleTontineRepo = createMockRepo();
+const mockRuleDefinitionRepo = createMockRepo();
+const mockTontineRepo = createMockRepo();
+const mockRegleOrgRepo = createMockRepo();
 
-    it('devrait valider les types de règles disponibles', () => {
-      expect(typesRegles).toContain('COTISATION_OBLIGATOIRE');
-      expect(typesRegles).toContain('PENALITE_ABSENCE');
-    });
+jest.mock('../../../src/config', () => ({
+  AppDataSource: {
+    getRepository: jest.fn((entity: any) => {
+      const name = typeof entity === 'string' ? entity : entity?.name ?? String(entity);
+      if (name === 'RegleTontine') return mockRegleTontineRepo;
+      if (name === 'RuleDefinition') return mockRuleDefinitionRepo;
+      if (name === 'Tontine') return mockTontineRepo;
+      if (name === 'RegleOrganisation') return mockRegleOrgRepo;
+      return createMockRepo();
+    }),
+    isInitialized: true,
+  },
+  env: { nodeEnv: 'test', db: {} },
+  isDevelopment: false,
+}));
 
-    it('devrait catégoriser les règles', () => {
-      const categories = {
-        financieres: ['COTISATION_OBLIGATOIRE', 'PENALITE_ABSENCE', 'PENALITE_RETARD', 'DELAI_PAIEMENT'],
-        fonctionnelles: ['ORDRE_DISTRIBUTION', 'QUORUM_REUNION'],
-        eligibilite: ['ELIGIBILITE_PRET', 'ELIGIBILITE_SECOURS'],
-      };
-      expect(categories.financieres).toHaveLength(4);
-      expect(categories.eligibilite).toHaveLength(2);
-    });
+jest.mock('../../../src/shared/errors/app-error', () => ({
+  NotFoundError: class NotFoundError extends Error {
+    statusCode = 404;
+    constructor(message: string) { super(`NotFoundError: ${message}`); this.name = 'NotFoundError'; }
+  },
+  BadRequestError: class BadRequestError extends Error {
+    statusCode = 400;
+    constructor(message: string) { super(`BadRequestError: ${message}`); this.name = 'BadRequestError'; }
+  },
+}));
+
+import { RegleTontineService } from '../../../src/modules/tontines/services/regle-tontine.service';
+
+function makeMockRegle(overrides: any = {}) {
+  return {
+    id: 'regle-uuid-1',
+    tontineId: 'tontine-uuid-1',
+    ruleDefinitionId: 'ruledef-uuid-1',
+    valeur: '10000',
+    estActive: true,
+    modifieLe: new Date(),
+    ruleDefinition: { id: 'ruledef-uuid-1', cle: 'COTISATION_MENSUELLE_MIN', libelle: 'Cotisation min', estModifiableParTontine: true },
+    ...overrides,
+  };
+}
+
+describe('RegleTontineService', () => {
+  let service: RegleTontineService;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    service = new RegleTontineService();
+    mockRegleTontineRepo.create.mockImplementation((data: any) => ({ ...data }));
+    mockRegleTontineRepo.save.mockImplementation((data: any) =>
+      Promise.resolve({ id: 'regle-uuid-1', ...data })
+    );
   });
 
-  describe('Validation des valeurs de règles', () => {
-    it('devrait valider un montant de pénalité', () => {
-      const regle = { type: 'PENALITE_ABSENCE', valeur: 2000, unite: 'XAF' };
-      expect(regle.valeur).toBeGreaterThan(0);
-    });
+  describe('upsert()', () => {
+    it('crée si inexistante', async () => {
+      mockTontineRepo.findOne.mockResolvedValue({ id: 'tontine-uuid-1' });
+      mockRuleDefinitionRepo.findOne.mockResolvedValue({ id: 'ruledef-uuid-1', estModifiableParTontine: true });
+      mockRegleTontineRepo.findOne
+        .mockResolvedValueOnce(null)         // pas d'existante
+        .mockResolvedValueOnce(makeMockRegle()); // reloaded after save
 
-    it('devrait valider un pourcentage', () => {
-      const regle = { type: 'PENALITE_RETARD', valeur: 5, unite: 'POURCENTAGE' };
-      expect(regle.valeur).toBeGreaterThanOrEqual(0);
-      expect(regle.valeur).toBeLessThanOrEqual(100);
-    });
-
-    it('devrait valider un délai en jours', () => {
-      const regle = { type: 'DELAI_PAIEMENT', valeur: 7, unite: 'JOURS' };
-      expect(regle.valeur).toBeGreaterThan(0);
-      expect(Number.isInteger(regle.valeur)).toBe(true);
-    });
-
-    it('devrait valider un quorum en pourcentage', () => {
-      const regle = { type: 'QUORUM_REUNION', valeur: 60, unite: 'POURCENTAGE' };
-      expect(regle.valeur).toBeGreaterThanOrEqual(50);
-      expect(regle.valeur).toBeLessThanOrEqual(100);
-    });
-  });
-
-  describe('Application des règles', () => {
-    it('devrait calculer la pénalité de retard', () => {
-      const montantCotisation = 10000;
-      const tauxPenalite = 5;
-      const joursRetard = 10;
-      const penalite = (montantCotisation * tauxPenalite / 100) * joursRetard;
-      expect(penalite).toBe(5000);
-    });
-
-    it('devrait vérifier le quorum', () => {
-      const totalMembres = 20;
-      const presentsRequis = 60;
-      const presentsActuels = 15;
-      const quorumAtteint = (presentsActuels / totalMembres) * 100 >= presentsRequis;
-      expect(quorumAtteint).toBe(true);
-    });
-
-    it('devrait vérifier l\'éligibilité au prêt', () => {
-      const reglesEligibilite = {
-        ancienneteMinimum: 3,
-        cotisationsAJour: true,
-        pasDePretsEnCours: true
-      };
-      const membre = {
-        anciennete: 6,
-        cotisationsPayees: 6,
-        cotisationsAttendues: 6,
-        pretsEnCours: 0
-      };
-      const eligible = 
-        membre.anciennete >= reglesEligibilite.ancienneteMinimum &&
-        membre.cotisationsPayees >= membre.cotisationsAttendues &&
-        membre.pretsEnCours === 0;
-      expect(eligible).toBe(true);
-    });
-  });
-
-  describe('Héritage des règles', () => {
-    it('devrait hériter des règles par défaut', () => {
-      const reglesParDefaut = [
-        { type: 'PENALITE_ABSENCE', valeur: 2000 },
-        { type: 'QUORUM_REUNION', valeur: 50 }
-      ];
-      const reglesPersonnalisees = [
-        { type: 'PENALITE_ABSENCE', valeur: 3000 }
-      ];
-      const reglesFinales = reglesParDefaut.map(rd => {
-        const custom = reglesPersonnalisees.find(rp => rp.type === rd.type);
-        return custom || rd;
+      const result = await service.upsert({
+        tontineId: 'tontine-uuid-1',
+        ruleDefinitionId: 'ruledef-uuid-1',
+        valeur: '10000',
       });
-      const penaliteAbsence = reglesFinales.find(r => r.type === 'PENALITE_ABSENCE');
-      expect(penaliteAbsence?.valeur).toBe(3000);
+
+      expect(mockRegleTontineRepo.create).toHaveBeenCalled();
+      expect(result).toHaveProperty('id');
+    });
+
+    it('met à jour si existante', async () => {
+      mockTontineRepo.findOne.mockResolvedValue({ id: 'tontine-uuid-1' });
+      mockRuleDefinitionRepo.findOne.mockResolvedValue({ id: 'ruledef-uuid-1', estModifiableParTontine: true });
+      const existante = makeMockRegle({ valeur: '5000' });
+      mockRegleTontineRepo.findOne
+        .mockResolvedValueOnce(existante)
+        .mockResolvedValueOnce({ ...existante, valeur: '10000' });
+
+      const result = await service.upsert({
+        tontineId: 'tontine-uuid-1',
+        ruleDefinitionId: 'ruledef-uuid-1',
+        valeur: '10000',
+      });
+
+      expect(mockRegleTontineRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ valeur: '10000' })
+      );
+    });
+
+    it('lève BadRequestError si règle non modifiable au niveau tontine', async () => {
+      mockTontineRepo.findOne.mockResolvedValue({ id: 'tontine-uuid-1' });
+      mockRuleDefinitionRepo.findOne.mockResolvedValue({ id: 'ruledef-uuid-1', estModifiableParTontine: false });
+
+      await expect(
+        service.upsert({ tontineId: 'tontine-uuid-1', ruleDefinitionId: 'ruledef-uuid-1', valeur: '10' })
+      ).rejects.toThrow('BadRequestError');
+    });
+
+    it('lève NotFoundError si RuleDefinition inexistante', async () => {
+      mockTontineRepo.findOne.mockResolvedValue({ id: 'tontine-uuid-1' });
+      mockRuleDefinitionRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.upsert({ tontineId: 'tontine-uuid-1', ruleDefinitionId: 'unknown', valeur: '10' })
+      ).rejects.toThrow('NotFoundError');
+    });
+
+    it('lève NotFoundError si Tontine inexistante', async () => {
+      mockTontineRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.upsert({ tontineId: 'unknown', ruleDefinitionId: 'ruledef-uuid-1', valeur: '10' })
+      ).rejects.toThrow('NotFoundError');
     });
   });
 
-  describe('Règles d\'exercice', () => {
-    it('devrait permettre des règles spécifiques par exercice', () => {
-      const regleExercice = {
-        exerciceId: 'exercice-1',
-        type: 'COTISATION_OBLIGATOIRE',
-        valeur: 15000,
-        priorite: 1
-      };
-      expect(regleExercice.priorite).toBe(1);
-    });
-  });
+  describe('findByTontine()', () => {
+    it('retourne toutes les règles d\'une tontine', async () => {
+      mockRegleTontineRepo.find.mockResolvedValue([makeMockRegle(), makeMockRegle({ id: 'regle-uuid-2' })]);
 
-  describe('Erreurs métier', () => {
-    it('devrait lever NotFoundError pour règle inexistante', () => {
-      expect(() => { throw new NotFoundError('Règle non trouvée'); }).toThrow(NotFoundError);
-    });
+      const result = await service.findByTontine('tontine-uuid-1');
 
-    it('devrait lever BadRequestError pour valeur invalide', () => {
-      expect(() => { throw new BadRequestError('Valeur invalide'); }).toThrow(BadRequestError);
-    });
-
-    it('devrait lever ConflictError pour règle en doublon', () => {
-      expect(() => { throw new ConflictError('Règle déjà existante'); }).toThrow(ConflictError);
-    });
-  });
-});
-
-describe('RuleDefinition Service', () => {
-  describe('Définitions de règles', () => {
-    const definitions = [
-      {
-        code: 'PENALITE_ABSENCE',
-        nom: 'Pénalité d\'absence',
-        description: 'Montant à payer en cas d\'absence',
-        typeValeur: 'MONTANT',
-        valeurDefaut: 2000,
-        obligatoire: false
-      },
-      {
-        code: 'COTISATION',
-        nom: 'Montant de cotisation',
-        description: 'Montant de la cotisation par réunion',
-        typeValeur: 'MONTANT',
-        valeurDefaut: 10000,
-        obligatoire: true
-      }
-    ];
-
-    it('devrait valider une définition de règle', () => {
-      const definition = definitions[0];
-      expect(definition.code).toBeDefined();
-      expect(definition.nom).toBeDefined();
-      expect(definition.typeValeur).toBeDefined();
-    });
-
-    it('devrait identifier les règles obligatoires', () => {
-      const obligatoires = definitions.filter(d => d.obligatoire);
-      expect(obligatoires).toHaveLength(1);
-      expect(obligatoires[0].code).toBe('COTISATION');
-    });
-
-    it('devrait fournir des valeurs par défaut', () => {
-      const definition = definitions.find(d => d.code === 'PENALITE_ABSENCE');
-      expect(definition?.valeurDefaut).toBe(2000);
-    });
-  });
-
-  describe('Types de valeurs', () => {
-    const typesValeurs = ['MONTANT', 'POURCENTAGE', 'JOURS', 'MOIS', 'NOMBRE', 'BOOLEEN'];
-
-    it('devrait valider les types de valeurs', () => {
-      expect(typesValeurs).toContain('MONTANT');
-      expect(typesValeurs).toContain('POURCENTAGE');
-    });
-
-    it('devrait valider selon le type', () => {
-      const validations: Record<string, (val: number) => boolean> = {
-        'POURCENTAGE': (val) => val >= 0 && val <= 100,
-        'MONTANT': (val) => val >= 0,
-        'JOURS': (val) => val > 0 && Number.isInteger(val),
-      };
-      expect(validations['POURCENTAGE'](50)).toBe(true);
-      expect(validations['POURCENTAGE'](150)).toBe(false);
-      expect(validations['MONTANT'](10000)).toBe(true);
-      expect(validations['JOURS'](7)).toBe(true);
+      expect(Array.isArray(result)).toBe(true);
+      expect(result).toHaveLength(2);
     });
   });
 });

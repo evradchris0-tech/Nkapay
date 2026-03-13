@@ -9,11 +9,7 @@ import { PotDuMensuel } from '../entities/pot-du-mensuel.entity';
 import { StatutDu } from '../entities/inscription-due-exercice.entity';
 import { Reunion } from '../../reunions/entities/reunion.entity';
 import { ExerciceMembre } from '../../exercices/entities/exercice-membre.entity';
-import {
-  PotDuMensuelResponseDto,
-  DueFiltersDto,
-  UpdateDuePaymentDto
-} from '../dto/dues.dto';
+import { PotDuMensuelResponseDto, DueFiltersDto, UpdateDuePaymentDto } from '../dto/dues.dto';
 
 export class PotDuService {
   private _potDuRepo?: Repository<PotDuMensuel>;
@@ -31,17 +27,21 @@ export class PotDuService {
   }
 
   private get exerciceMembreRepository(): Repository<ExerciceMembre> {
-    if (!this._exerciceMembreRepo) this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
+    if (!this._exerciceMembreRepo)
+      this._exerciceMembreRepo = AppDataSource.getRepository(ExerciceMembre);
     return this._exerciceMembreRepo;
   }
 
   /**
    * Générer les pots dus pour une réunion
    */
-  async genererPourReunion(reunionId: string, montantDu: number): Promise<PotDuMensuelResponseDto[]> {
+  async genererPourReunion(
+    reunionId: string,
+    montantDu: number
+  ): Promise<PotDuMensuelResponseDto[]> {
     const reunion = await this.reunionRepository.findOne({
       where: { id: reunionId },
-      relations: ['exercice', 'exercice.membres']
+      relations: ['exercice', 'exercice.membres'],
     });
 
     if (!reunion) {
@@ -54,8 +54,8 @@ export class PotDuService {
       const existing = await this.potDuRepository.findOne({
         where: {
           reunionId,
-          exerciceMembreId: exerciceMembre.id
-        }
+          exerciceMembreId: exerciceMembre.id,
+        },
       });
 
       if (!existing) {
@@ -65,7 +65,7 @@ export class PotDuService {
           montantDu,
           montantPaye: 0,
           soldeRestant: montantDu,
-          statut: StatutDu.EN_RETARD
+          statut: StatutDu.EN_RETARD,
         });
         await this.potDuRepository.save(potDu);
         potsDus.push(this.formatResponse(potDu));
@@ -82,7 +82,7 @@ export class PotDuService {
     const pots = await this.potDuRepository.find({
       where: { reunionId },
       relations: ['reunion', 'exerciceMembre', 'exerciceMembre.adhesionTontine'],
-      order: { creeLe: 'ASC' }
+      order: { creeLe: 'ASC' },
     });
     return pots.map((p: PotDuMensuel) => this.formatResponse(p));
   }
@@ -90,9 +90,12 @@ export class PotDuService {
   /**
    * Enregistrer un paiement de pot
    */
-  async enregistrerPaiement(id: string, data: UpdateDuePaymentDto): Promise<PotDuMensuelResponseDto> {
+  async enregistrerPaiement(
+    id: string,
+    data: UpdateDuePaymentDto
+  ): Promise<PotDuMensuelResponseDto> {
     const potDu = await this.potDuRepository.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (!potDu) {
@@ -128,7 +131,7 @@ export class PotDuService {
     enRetard: number;
   }> {
     const pots = await this.potDuRepository.find({
-      where: { reunionId }
+      where: { reunionId },
     });
 
     const stats = {
@@ -137,7 +140,7 @@ export class PotDuService {
       totalMontantPaye: 0,
       tauxRecouvrement: 0,
       aJour: 0,
-      enRetard: 0
+      enRetard: 0,
     };
 
     pots.forEach((p: PotDuMensuel) => {
@@ -151,7 +154,8 @@ export class PotDuService {
     });
 
     if (stats.totalMontantDu > 0) {
-      stats.tauxRecouvrement = Math.round((stats.totalMontantPaye / stats.totalMontantDu) * 10000) / 100;
+      stats.tauxRecouvrement =
+        Math.round((stats.totalMontantPaye / stats.totalMontantDu) * 10000) / 100;
     }
 
     return stats;
@@ -179,7 +183,7 @@ export class PotDuService {
       montantPaye: Number(potDu.montantPaye),
       soldeRestant: Number(potDu.soldeRestant),
       statut: potDu.statut,
-      creeLe: potDu.creeLe
+      creeLe: potDu.creeLe,
     };
   }
 }

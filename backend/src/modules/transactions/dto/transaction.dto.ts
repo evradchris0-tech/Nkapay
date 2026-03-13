@@ -2,7 +2,11 @@
  * DTOs pour le module Transaction
  */
 
-import { TypeTransaction, StatutTransaction, ModeCreationTransaction } from '../entities/transaction.entity';
+import {
+  TypeTransaction,
+  StatutTransaction,
+  ModeCreationTransaction,
+} from '../entities/transaction.entity';
 
 /**
  * DTO pour la création d'une transaction

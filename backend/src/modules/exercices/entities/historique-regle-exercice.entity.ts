@@ -3,14 +3,7 @@
  * Historique des modifications de regles d'exercice
  */
 
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-  JoinColumn,
-  Index,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { RegleExercice } from './regle-exercice.entity';
 import { ExerciceMembre } from './exercice-membre.entity';
 

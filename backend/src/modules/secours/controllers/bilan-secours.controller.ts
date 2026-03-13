@@ -121,7 +121,7 @@ export class BilanSecoursController {
   async updateSoldeInitial(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await bilanSecoursService.updateSoldeInitial(
-        req.params.exerciceId, 
+        req.params.exerciceId,
         req.body.soldeInitial
       );
       res.json(result);
@@ -189,7 +189,7 @@ export class BilanSecoursController {
   async cloturerBilan(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await bilanSecoursService.cloturer(
-        req.params.exerciceId, 
+        req.params.exerciceId,
         req.body.exerciceSuivantId
       );
       res.json(result);
@@ -232,7 +232,7 @@ export class BilanSecoursController {
   async genererSecoursDus(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await secoursDuAnnuelService.genererPourExercice(
-        req.params.exerciceId, 
+        req.params.exerciceId,
         req.body.montantSecours
       );
       res.json(result);

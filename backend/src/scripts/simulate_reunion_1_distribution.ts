@@ -1,9 +1,11 @@
-
 import { DataSource } from 'typeorm';
 import { Reunion } from '../modules/reunions/entities/reunion.entity';
 import { ExerciceMembre } from '../modules/exercices/entities/exercice-membre.entity';
 import { CotisationDueMensuelle } from '../modules/transactions/entities/cotisation-due-mensuelle.entity';
-import { Distribution, StatutDistribution } from '../modules/distributions/entities/distribution.entity';
+import {
+  Distribution,
+  StatutDistribution,
+} from '../modules/distributions/entities/distribution.entity';
 import { config } from 'dotenv';
 import { join } from 'path';
 
@@ -54,9 +56,9 @@ async function run() {
 
     if (totalCapital === 0) {
       console.log('No cotisations found/paid? Checking defaults...');
-      // If 0, maybe we rely on dues not being generated yet? 
+      // If 0, maybe we rely on dues not being generated yet?
       // But previous steps generated them. We'll proceed with 0 check or hardcode if needed for test.
-      if (cotisations.length === 0) console.log("WARNING: No cotisations found for this reunion.");
+      if (cotisations.length === 0) console.log('WARNING: No cotisations found for this reunion.');
     }
 
     // 3. Select Beneficiary (Member 1)
@@ -65,7 +67,7 @@ async function run() {
     const membres = await membreRepo.find({
       where: { exerciceId: reunion.exerciceId },
       order: { creeLe: 'ASC' },
-      relations: ['adhesionTontine', 'adhesionTontine.utilisateur']
+      relations: ['adhesionTontine', 'adhesionTontine.utilisateur'],
     });
 
     if (membres.length === 0) {
@@ -74,11 +76,13 @@ async function run() {
     }
 
     const beneficiary = membres[0]; // First member gets the first pot
-    console.log(`Beneficiary: ${beneficiary.adhesionTontine.utilisateur.nom} ${beneficiary.adhesionTontine.utilisateur.prenom}`);
+    console.log(
+      `Beneficiary: ${beneficiary.adhesionTontine.utilisateur.nom} ${beneficiary.adhesionTontine.utilisateur.prenom}`
+    );
 
     // Check if distribution already exists
     const existingdist = await distRepo.findOne({
-      where: { reunionId: reunion.id }
+      where: { reunionId: reunion.id },
     });
 
     if (existingdist) {
@@ -88,19 +92,18 @@ async function run() {
       const distribution = new Distribution();
       distribution.reunion = reunion;
       distribution.exerciceMembreBeneficiaire = beneficiary;
-      distribution.ordre = 1; // 1st distribution of the exercise? Or of the meeting? 
+      distribution.ordre = 1; // 1st distribution of the exercise? Or of the meeting?
       // If "ordre" is unique per reunion, then 1 is fine.
       distribution.montantBrut = totalCapital;
       distribution.montantRetenu = 0;
       distribution.montantNet = totalCapital;
       distribution.statut = StatutDistribution.DISTRIBUEE;
       distribution.distribueeLe = new Date();
-      distribution.commentaire = "Bouffe Reunion #1 (Capital Cotisations)";
+      distribution.commentaire = 'Bouffe Reunion #1 (Capital Cotisations)';
 
       await distRepo.save(distribution);
       console.log(`Distribution created: ${totalCapital} to Member ${beneficiary.id}`);
     }
-
   } catch (error) {
     console.error('Error:', error);
   } finally {

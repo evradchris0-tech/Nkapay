@@ -5,7 +5,11 @@
 import { Repository } from 'typeorm';
 import { AppDataSource } from '../../../config';
 import { NotFoundError } from '../../../shared';
-import { Transaction, TypeTransaction, StatutTransaction } from '../../transactions/entities/transaction.entity';
+import {
+  Transaction,
+  TypeTransaction,
+  StatutTransaction,
+} from '../../transactions/entities/transaction.entity';
 import { Exercice } from '../../exercices/entities/exercice.entity';
 import { Pret, StatutPret } from '../../prets/entities/pret.entity';
 import { Penalite, StatutPenalite } from '../../penalites/entities/penalite.entity';
@@ -61,7 +65,7 @@ export class FinanceExportService {
     }
 
     // Récupérer les transactions via les réunions
-    const reunionIds = exercice.reunions?.map(r => r.id) || [];
+    const reunionIds = exercice.reunions?.map((r) => r.id) || [];
     let transactions: Transaction[] = [];
 
     if (reunionIds.length > 0) {
@@ -95,14 +99,24 @@ export class FinanceExportService {
     pdf.addSpace();
 
     // Calculs financiers
-    const transactionsValidees = transactions.filter(t => t.statut === StatutTransaction.VALIDE);
+    const transactionsValidees = transactions.filter((t) => t.statut === StatutTransaction.VALIDE);
 
-    const cotisations = transactionsValidees.filter(t => t.typeTransaction === TypeTransaction.COTISATION);
-    const pots = transactionsValidees.filter(t => t.typeTransaction === TypeTransaction.POT);
-    const pretsDecaisses = transactionsValidees.filter(t => t.typeTransaction === TypeTransaction.DECAISSEMENT_PRET);
-    const remboursements = transactionsValidees.filter(t => t.typeTransaction === TypeTransaction.REMBOURSEMENT_PRET);
-    const penalites = transactionsValidees.filter(t => t.typeTransaction === TypeTransaction.PENALITE);
-    const inscriptions = transactionsValidees.filter(t => t.typeTransaction === TypeTransaction.INSCRIPTION);
+    const cotisations = transactionsValidees.filter(
+      (t) => t.typeTransaction === TypeTransaction.COTISATION
+    );
+    const pots = transactionsValidees.filter((t) => t.typeTransaction === TypeTransaction.POT);
+    const pretsDecaisses = transactionsValidees.filter(
+      (t) => t.typeTransaction === TypeTransaction.DECAISSEMENT_PRET
+    );
+    const remboursements = transactionsValidees.filter(
+      (t) => t.typeTransaction === TypeTransaction.REMBOURSEMENT_PRET
+    );
+    const penalites = transactionsValidees.filter(
+      (t) => t.typeTransaction === TypeTransaction.PENALITE
+    );
+    const inscriptions = transactionsValidees.filter(
+      (t) => t.typeTransaction === TypeTransaction.INSCRIPTION
+    );
 
     const totalCotisations = cotisations.reduce((sum, t) => sum + Number(t.montant), 0);
     const totalPots = pots.reduce((sum, t) => sum + Number(t.montant), 0);
@@ -111,7 +125,8 @@ export class FinanceExportService {
     const totalPenalites = penalites.reduce((sum, t) => sum + Number(t.montant), 0);
     const totalInscriptions = inscriptions.reduce((sum, t) => sum + Number(t.montant), 0);
 
-    const totalEntrees = totalCotisations + totalRemboursements + totalPenalites + totalInscriptions;
+    const totalEntrees =
+      totalCotisations + totalRemboursements + totalPenalites + totalInscriptions;
     const totalSorties = totalPots + totalPrets;
     const solde = totalEntrees - totalSorties;
 
@@ -124,7 +139,11 @@ export class FinanceExportService {
           { label: 'Inscriptions', value: `${totalInscriptions.toLocaleString('fr-FR')} FCFA` },
           { label: 'Remboursements', value: `${totalRemboursements.toLocaleString('fr-FR')} FCFA` },
           { label: 'Pénalités', value: `${totalPenalites.toLocaleString('fr-FR')} FCFA` },
-          { label: 'Total Entrées', value: `${totalEntrees.toLocaleString('fr-FR')} FCFA`, highlight: true },
+          {
+            label: 'Total Entrées',
+            value: `${totalEntrees.toLocaleString('fr-FR')} FCFA`,
+            highlight: true,
+          },
         ],
       },
       {
@@ -132,7 +151,11 @@ export class FinanceExportService {
         items: [
           { label: 'Pots distribués', value: `${totalPots.toLocaleString('fr-FR')} FCFA` },
           { label: 'Prêts décaissés', value: `${totalPrets.toLocaleString('fr-FR')} FCFA` },
-          { label: 'Total Sorties', value: `${totalSorties.toLocaleString('fr-FR')} FCFA`, highlight: true },
+          {
+            label: 'Total Sorties',
+            value: `${totalSorties.toLocaleString('fr-FR')} FCFA`,
+            highlight: true,
+          },
         ],
       },
       {
@@ -158,7 +181,7 @@ export class FinanceExportService {
         { header: 'Statut', field: 'statut', width: 80 },
       ];
 
-      const data = transactions.map(t => ({
+      const data = transactions.map((t) => ({
         date: formatDate(t.creeLe),
         reference: t.reference || '-',
         type: this.formatTypeTransaction(t.typeTransaction),
@@ -180,7 +203,12 @@ export class FinanceExportService {
   async exportReleveMembre(exerciceId: string, membreId: string): Promise<Buffer> {
     const exercice = await this.exerciceRepository.findOne({
       where: { id: exerciceId },
-      relations: ['tontine', 'membres', 'membres.adhesionTontine', 'membres.adhesionTontine.utilisateur'],
+      relations: [
+        'tontine',
+        'membres',
+        'membres.adhesionTontine',
+        'membres.adhesionTontine.utilisateur',
+      ],
     });
 
     if (!exercice) {
@@ -188,7 +216,7 @@ export class FinanceExportService {
     }
 
     const exerciceMembre = exercice.membres?.find(
-      em => em.adhesionTontine?.utilisateur?.id === membreId
+      (em) => em.adhesionTontine?.utilisateur?.id === membreId
     );
 
     if (!exerciceMembre) {
@@ -221,22 +249,34 @@ export class FinanceExportService {
 
     // Calculs
     const cotisationsPayees = transactions
-      .filter(t => t.typeTransaction === TypeTransaction.COTISATION && t.statut === StatutTransaction.VALIDE)
+      .filter(
+        (t) =>
+          t.typeTransaction === TypeTransaction.COTISATION && t.statut === StatutTransaction.VALIDE
+      )
       .reduce((sum, t) => sum + Number(t.montant), 0);
 
     const penalitesPayees = transactions
-      .filter(t => t.typeTransaction === TypeTransaction.PENALITE && t.statut === StatutTransaction.VALIDE)
+      .filter(
+        (t) =>
+          t.typeTransaction === TypeTransaction.PENALITE && t.statut === StatutTransaction.VALIDE
+      )
       .reduce((sum, t) => sum + Number(t.montant), 0);
 
     const potsRecus = transactions
-      .filter(t => t.typeTransaction === TypeTransaction.POT && t.statut === StatutTransaction.VALIDE)
+      .filter(
+        (t) => t.typeTransaction === TypeTransaction.POT && t.statut === StatutTransaction.VALIDE
+      )
       .reduce((sum, t) => sum + Number(t.montant), 0);
 
     pdf.addSummaryBoxes([
       {
         title: 'Cotisations',
         items: [
-          { label: 'Payées', value: `${cotisationsPayees.toLocaleString('fr-FR')} FCFA`, highlight: true },
+          {
+            label: 'Payées',
+            value: `${cotisationsPayees.toLocaleString('fr-FR')} FCFA`,
+            highlight: true,
+          },
         ],
       },
       {
@@ -262,7 +302,7 @@ export class FinanceExportService {
         { header: 'Statut', field: 'statut', width: 100 },
       ];
 
-      const data = transactions.map(t => ({
+      const data = transactions.map((t) => ({
         date: formatDate(t.creeLe),
         type: this.formatTypeTransaction(t.typeTransaction),
         reference: t.reference || '-',
@@ -290,7 +330,7 @@ export class FinanceExportService {
       throw new NotFoundError(`Exercice non trouvé: ${exerciceId}`);
     }
 
-    const reunionIds = exercice.reunions?.map(r => r.id) || [];
+    const reunionIds = exercice.reunions?.map((r) => r.id) || [];
     let prets: Pret[] = [];
 
     if (reunionIds.length > 0) {
@@ -315,14 +355,15 @@ export class FinanceExportService {
     pdf.addHeader();
 
     // Statistiques des prêts
-    const pretsApprouves = prets.filter(p =>
-      p.statut === StatutPret.APPROUVE ||
-      p.statut === StatutPret.DECAISSE ||
-      p.statut === StatutPret.EN_COURS ||
-      p.statut === StatutPret.SOLDE
+    const pretsApprouves = prets.filter(
+      (p) =>
+        p.statut === StatutPret.APPROUVE ||
+        p.statut === StatutPret.DECAISSE ||
+        p.statut === StatutPret.EN_COURS ||
+        p.statut === StatutPret.SOLDE
     );
-    const pretsEnCours = prets.filter(p => p.statut === StatutPret.EN_COURS);
-    const pretsSoldes = prets.filter(p => p.statut === StatutPret.SOLDE);
+    const pretsEnCours = prets.filter((p) => p.statut === StatutPret.EN_COURS);
+    const pretsSoldes = prets.filter((p) => p.statut === StatutPret.SOLDE);
 
     const totalAccorde = pretsApprouves.reduce((sum, p) => sum + Number(p.montantCapital), 0);
     const totalEnCours = pretsEnCours.reduce((sum, p) => sum + Number(p.capitalRestant || 0), 0);
@@ -342,7 +383,11 @@ export class FinanceExportService {
         title: 'Montants',
         items: [
           { label: 'Total accordé', value: `${totalAccorde.toLocaleString('fr-FR')} FCFA` },
-          { label: 'Reste à rembourser', value: `${totalEnCours.toLocaleString('fr-FR')} FCFA`, highlight: true },
+          {
+            label: 'Reste à rembourser',
+            value: `${totalEnCours.toLocaleString('fr-FR')} FCFA`,
+            highlight: true,
+          },
           { label: 'Intérêts générés', value: `${totalInterets.toLocaleString('fr-FR')} FCFA` },
         ],
       },
@@ -364,7 +409,7 @@ export class FinanceExportService {
         { header: 'Statut', field: 'statut', width: 80 },
       ];
 
-      const data = prets.map(p => ({
+      const data = prets.map((p) => ({
         dateDemande: formatDate(p.dateDemande),
         membre: p.exerciceMembre?.adhesionTontine?.utilisateur?.nom || '-',
         capital: `${Number(p.montantCapital).toLocaleString('fr-FR')} FCFA`,
@@ -395,7 +440,7 @@ export class FinanceExportService {
       throw new NotFoundError(`Exercice non trouvé: ${exerciceId}`);
     }
 
-    const exerciceMembreIds = exercice.membres?.map(m => m.id) || [];
+    const exerciceMembreIds = exercice.membres?.map((m) => m.id) || [];
     let penalites: Penalite[] = [];
 
     if (exerciceMembreIds.length > 0) {
@@ -420,9 +465,9 @@ export class FinanceExportService {
     pdf.addHeader();
 
     // Statistiques
-    const penalitesPayees = penalites.filter(p => p.statut === StatutPenalite.PAYEE);
-    const penalitesEnAttente = penalites.filter(p => p.statut === StatutPenalite.EN_ATTENTE);
-    const penalitesPardonnees = penalites.filter(p => p.statut === StatutPenalite.PARDONNEE);
+    const penalitesPayees = penalites.filter((p) => p.statut === StatutPenalite.PAYEE);
+    const penalitesEnAttente = penalites.filter((p) => p.statut === StatutPenalite.EN_ATTENTE);
+    const penalitesPardonnees = penalites.filter((p) => p.statut === StatutPenalite.PARDONNEE);
 
     const totalDu = penalites.reduce((sum, p) => sum + Number(p.montant), 0);
     const totalPaye = penalitesPayees.reduce((sum, p) => sum + Number(p.montant), 0);
@@ -461,7 +506,7 @@ export class FinanceExportService {
         { header: 'Statut', field: 'statut', width: 90 },
       ];
 
-      const data = penalites.map(p => ({
+      const data = penalites.map((p) => ({
         date: formatDate(p.dateApplication),
         membre: p.exerciceMembre?.adhesionTontine?.utilisateur?.nom || '-',
         type: p.typePenalite?.libelle || '-',

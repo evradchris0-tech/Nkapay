@@ -69,6 +69,9 @@ export class RuleDefinition {
   @Column({ name: 'est_modifiable_par_exercice', type: 'boolean', default: true })
   estModifiableParExercice: boolean;
 
+  @Column({ name: 'est_modifiable_par_organisation', type: 'boolean', default: true })
+  estModifiableParOrganisation: boolean;
+
   @Index()
   @Column({ type: 'enum', enum: CategorieRegle })
   categorie: CategorieRegle;
