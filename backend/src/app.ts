@@ -25,6 +25,8 @@ import { distributionModuleRoutes } from './modules/distributions/routes';
 import { adhesionModuleRoutes } from './modules/adhesions/routes';
 import { exportRoutes } from './modules/exports/routes';
 import { dashboardRoutes } from './modules/dashboard/routes';
+import { organisationRouter } from './modules/organisations';
+import { adminRouter } from './modules/admin';
 
 class App {
   public app: Application;
@@ -92,6 +94,8 @@ class App {
     this.app.use(env.apiPrefix, adhesionModuleRoutes);
     this.app.use(`${env.apiPrefix}/dashboard`, dashboardRoutes);
     this.app.use(`${env.apiPrefix}/exports`, exportRoutes);
+    this.app.use(`${env.apiPrefix}/org`, organisationRouter);
+    this.app.use(`${env.apiPrefix}/admin`, adminRouter);
 
     // Route par defaut pour les chemins non trouves
     this.app.use('*', (_req: Request, res: Response) => {
