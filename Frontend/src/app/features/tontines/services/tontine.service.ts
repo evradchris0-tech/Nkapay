@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
 import { ApiResponse, PaginatedResponse } from '../../../core/models/api-response.model';
-import { Tontine, CreateTontineDto, TontineStats, TontineType as TontineTypeModel, RegleTontine } from '../../../core/models/tontine.model';
+import { Tontine, CreateTontineDto, TontineStats, TontineType as TontineTypeModel, RegleTontine, RuleDefinition } from '../../../core/models/tontine.model';
 
 export interface TontineTypeBackend {
   id: string;
@@ -53,6 +53,10 @@ export class TontineService {
 
   getMembres(id: string): Observable<ApiResponse<any[]>> {
     return this.api.get<ApiResponse<any[]>>(`${this.basePath}/${id}/membres`);
+  }
+
+  getRuleDefinitions(): Observable<ApiResponse<RuleDefinition[]>> {
+    return this.api.get<ApiResponse<RuleDefinition[]>>(`${this.basePath}/rule-definitions`);
   }
 
   getRegles(tontineId: string): Observable<ApiResponse<RegleTontine[]>> {

@@ -176,22 +176,51 @@
         </ng-template>
       </ng-container>
       <ng-container *ngSwitchCase="'regles'">
-        <ng-container *ngIf="isReglesLoading(); else reglesContent">
+        <ng-container *ngIf="isReglesLoading() || isRuleDefsLoading(); else reglesContent">
           <div class="loading-small"><div class="spinner"></div></div>
         </ng-container>
         <ng-template #reglesContent>
-          <div *ngIf="regles().length === 0" class="empty-state">
+          <div *ngIf="ruleDefinitions().length === 0" class="empty-state">
             <span class="material-icons">rule</span>
-            <p>Aucune règle configurée</p>
+            <p>Aucune règle disponible</p>
           </div>
-          <div *ngIf="regles().length > 0" class="regles-list">
-            <div *ngFor="let r of regles()" class="regle-card">
-              <div class="regle-info">
-                <span class="regle-libelle">{{ r.ruleDefinition?.libelle || 'Règle' }}</span>
-                <span class="regle-categorie">{{ r.ruleDefinition?.categorie }}</span>
+          <div *ngIf="ruleDefinitions().length > 0" class="regles-list">
+            <div *ngFor="let rd of ruleDefinitions()" class="regle-card" [class.editing]="editingRuleDefId() === rd.id">
+              <div class="regle-main">
+                <div class="regle-info">
+                  <span class="regle-libelle">{{ rd.libelle }}</span>
+                  <span class="regle-categorie">{{ getCategoryLabel(rd.categorie) }}</span>
+                </div>
+                <div class="regle-value-area" *ngIf="editingRuleDefId() !== rd.id">
+                  <ng-container *ngIf="getRegleForDef(rd.id) as existing">
+                    <span class="regle-valeur custom">{{ existing.valeur }}<em *ngIf="rd.unite"> {{ rd.unite }}</em></span>
+                    <span class="badge-custom">Perso.</span>
+                  </ng-container>
+                  <ng-container *ngIf="!getRegleForDef(rd.id)">
+                    <span class="regle-valeur muted">{{ rd.valeurDefaut }}<em *ngIf="rd.unite"> {{ rd.unite }}</em></span>
+                    <span class="badge-default">Défaut</span>
+                  </ng-container>
+                </div>
+                <div class="regle-edit-area" *ngIf="editingRuleDefId() === rd.id">
+                  <input type="text" [ngModel]="editingValue()" (ngModelChange)="editingValue.set($event)" class="regle-input" [placeholder]="rd.valeurDefaut || ''" />
+                  <span class="regle-unite" *ngIf="rd.unite">{{ rd.unite }}</span>
+                </div>
               </div>
-              <div class="regle-valeur">
-                <span>{{ r.valeur }}</span>
+              <div class="regle-actions" *ngIf="editingRuleDefId() !== rd.id">
+                <button class="btn-icon" (click)="startEditRegle(rd)" aria-label="Modifier règle">
+                  <span class="material-icons">edit</span>
+                </button>
+                <button class="btn-icon danger" *ngIf="getRegleForDef(rd.id)" (click)="removeRegle(getRegleForDef(rd.id)!.id)" aria-label="Réinitialiser au défaut">
+                  <span class="material-icons">restart_alt</span>
+                </button>
+              </div>
+              <div class="regle-actions" *ngIf="editingRuleDefId() === rd.id">
+                <button class="btn-icon success" (click)="saveRegle(rd)" [disabled]="isSavingRegle()" aria-label="Enregistrer">
+                  <span class="material-icons">{{ isSavingRegle() ? 'sync' : 'check' }}</span>
+                </button>
+                <button class="btn-icon" (click)="cancelEditRegle()" aria-label="Annuler">
+                  <span class="material-icons">close</span>
+                </button>
               </div>
             </div>
           </div>

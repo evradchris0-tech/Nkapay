@@ -3,7 +3,7 @@ import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TontineService } from '../../services/tontine.service';
-import { Tontine, RegleTontine } from '../../../../core/models/tontine.model';
+import { Tontine, RegleTontine, RuleDefinition } from '../../../../core/models/tontine.model';
 import { MembreService, AdhesionTontine, RoleMembre } from '../../../membres/services/membre.service';
 import { ExerciceService, Exercice } from '../../../exercices/services/exercice.service';
 import { UtilisateurService } from '../../../admin/services/utilisateur.service';
@@ -30,11 +30,18 @@ export class TontineDetailComponent implements OnInit {
   membres = signal<AdhesionTontine[]>([]);
   exercices = signal<Exercice[]>([]);
   regles = signal<RegleTontine[]>([]);
+  ruleDefinitions = signal<RuleDefinition[]>([]);
   isLoading = signal(true);
   isMembresLoading = signal(false);
   isExercicesLoading = signal(false);
   isReglesLoading = signal(false);
+  isRuleDefsLoading = signal(false);
   activeTab = signal<'overview' | 'membres' | 'exercices' | 'regles'>('overview');
+
+  // Règles inline edit
+  editingRuleDefId = signal<string | null>(null);
+  editingValue = signal('');
+  isSavingRegle = signal(false);
 
   // Modal ajout membre
   showAddMembreModal = signal(false);
@@ -80,8 +87,9 @@ export class TontineDetailComponent implements OnInit {
       this.loadMembres(tontineId);
     } else if (tab === 'exercices' && this.exercices().length === 0) {
       this.loadExercices(tontineId);
-    } else if (tab === 'regles' && this.regles().length === 0) {
-      this.loadRegles(tontineId);
+    } else if (tab === 'regles') {
+      if (this.regles().length === 0) this.loadRegles(tontineId);
+      if (this.ruleDefinitions().length === 0) this.loadRuleDefinitions();
     }
   }
 
@@ -125,6 +133,98 @@ export class TontineDetailComponent implements OnInit {
         this.isReglesLoading.set(false);
       }
     });
+  }
+
+  loadRuleDefinitions() {
+    this.isRuleDefsLoading.set(true);
+    this.tontineService.getRuleDefinitions().subscribe({
+      next: (res) => {
+        if (res.success && res.data) {
+          this.ruleDefinitions.set(res.data.filter(r => r.estModifiableParTontine));
+        }
+        this.isRuleDefsLoading.set(false);
+      },
+      error: () => {
+        this.notification.error('Erreur', 'Impossible de charger les définitions de règles');
+        this.isRuleDefsLoading.set(false);
+      }
+    });
+  }
+
+  getRegleForDef(ruleDefId: string): RegleTontine | undefined {
+    return this.regles().find(r => r.ruleDefinitionId === ruleDefId);
+  }
+
+  startEditRegle(ruleDef: RuleDefinition) {
+    const existing = this.getRegleForDef(ruleDef.id);
+    this.editingRuleDefId.set(ruleDef.id);
+    this.editingValue.set(existing?.valeur ?? ruleDef.valeurDefaut ?? '');
+  }
+
+  cancelEditRegle() {
+    this.editingRuleDefId.set(null);
+    this.editingValue.set('');
+  }
+
+  saveRegle(ruleDef: RuleDefinition) {
+    const tontineId = this.tontine()?.id;
+    if (!tontineId) return;
+
+    const existing = this.getRegleForDef(ruleDef.id);
+    this.isSavingRegle.set(true);
+
+    const request = existing
+      ? this.tontineService.updateRegle(existing.id, { valeur: this.editingValue() })
+      : this.tontineService.addRegle({ tontineId, ruleDefinitionId: ruleDef.id, valeur: this.editingValue() });
+
+    request.subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.notification.success('Succès', 'Règle mise à jour');
+          this.loadRegles(tontineId);
+          this.cancelEditRegle();
+        } else {
+          this.notification.error('Erreur', res.message || 'Échec');
+        }
+        this.isSavingRegle.set(false);
+      },
+      error: (err) => {
+        this.notification.error('Erreur', err.error?.message || 'Erreur serveur');
+        this.isSavingRegle.set(false);
+      }
+    });
+  }
+
+  removeRegle(regleId: string) {
+    const tontineId = this.tontine()?.id;
+    if (!tontineId) return;
+
+    this.tontineService.deleteRegle(regleId).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.notification.success('Succès', 'Règle réinitialisée');
+          this.loadRegles(tontineId);
+        }
+      },
+      error: (err) => {
+        this.notification.error('Erreur', err.error?.message || 'Erreur serveur');
+      }
+    });
+  }
+
+  getCategoryLabel(categorie: string): string {
+    const labels: Record<string, string> = {
+      'COTISATION': 'Cotisation',
+      'EPARGNE': 'Épargne',
+      'PRET': 'Prêt',
+      'PENALITE': 'Pénalité',
+      'DISTRIBUTION': 'Distribution',
+      'SECOURS': 'Secours',
+      'REUNION': 'Réunion',
+      'SECURITE': 'Sécurité',
+      'AUTRE': 'Autre',
+    };
+    return labels[categorie] || categorie;
   }
 
   getRoleLabel(role: string): string {
