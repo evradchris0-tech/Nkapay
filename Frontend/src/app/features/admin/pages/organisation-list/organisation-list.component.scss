@@ -1,7 +1,7 @@
 // ─── Layout ──────────────────────────────────────────────────────────────────
 
 .page {
-  padding: var(--spacing-lg);
+  padding: 1.5rem;
   max-width: 1400px;
   margin: 0 auto;
 }
@@ -12,25 +12,25 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: var(--spacing-lg);
-  margin-bottom: var(--spacing-xl);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
   flex-wrap: wrap;
 
   .header-left {
     h1 {
       display: flex;
       align-items: center;
-      gap: var(--spacing-sm);
+      gap: 0.5rem;
       font-size: 1.75rem;
       font-weight: 700;
-      color: var(--color-text-primary);
+      color: var(--text);
       margin: 0;
 
-      .material-icons { color: var(--color-primary); font-size: 2rem; }
+      .material-icons { color: var(--primary); font-size: 2rem; }
     }
 
     .subtitle {
-      color: var(--color-text-secondary);
+      color: var(--text-2);
       margin: 0.25rem 0 0 2.5rem;
       font-size: 0.9375rem;
     }
@@ -40,12 +40,12 @@
 .btn-primary {
   display: inline-flex;
   align-items: center;
-  gap: var(--spacing-xs);
+  gap: 0.25rem;
   padding: 0.625rem 1.25rem;
-  background: var(--color-primary);
-  color: var(--color-white);
+  background: var(--primary);
+  color: #fff;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--r-md);
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
@@ -64,40 +64,40 @@
 
 .stats-row {
   display: flex;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-lg);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
   flex-wrap: wrap;
 }
 
 .stat-chip {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
+  gap: 0.25rem;
   padding: 0.5rem 1rem;
-  background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-full);
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-full);
   cursor: pointer;
   transition: all 0.2s;
   font-size: 0.875rem;
   user-select: none;
 
-  .material-icons { font-size: 1rem; color: var(--color-text-secondary); }
-  .stat-value     { font-weight: 700; color: var(--color-text-primary); }
-  .stat-label     { color: var(--color-text-secondary); }
+  .material-icons { font-size: 1rem; color: var(--text-2); }
+  .stat-value     { font-weight: 700; color: var(--text); }
+  .stat-label     { color: var(--text-2); }
 
-  &:hover { border-color: var(--color-primary); }
-  &.active { border-color: var(--color-primary); background: var(--color-primary-light, rgba(99,102,241,0.06)); }
+  &:hover { border-color: var(--primary); }
+  &.active { border-color: var(--primary); background: var(--primary-bg); }
 
-  &.green  .material-icons { color: var(--color-success); }
-  &.orange .material-icons { color: var(--color-warning); }
-  &.red    .material-icons { color: var(--color-danger);  }
+  &.green  .material-icons { color: var(--success); }
+  &.orange .material-icons { color: var(--warning); }
+  &.red    .material-icons { color: var(--error); }
 }
 
 // ─── Filters ──────────────────────────────────────────────────────────────────
 
 .filters-bar {
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: 1.5rem;
 }
 
 .search-box {
@@ -109,7 +109,7 @@
   > .material-icons {
     position: absolute;
     left: 0.875rem;
-    color: var(--color-text-secondary);
+    color: var(--text-2);
     font-size: 1.25rem;
     pointer-events: none;
   }
@@ -117,19 +117,20 @@
   input {
     width: 100%;
     padding: 0.625rem 2.5rem 0.625rem 2.75rem;
-    border: 1.5px solid var(--color-border);
-    border-radius: var(--radius-md);
+    border: 1.5px solid var(--border);
+    border-radius: var(--r-md);
     font-size: 0.9375rem;
-    background: var(--color-surface);
-    color: var(--color-text-primary);
+    background: var(--card);
+    color: var(--text);
     transition: border-color 0.2s;
 
     &:focus {
       outline: none;
-      border-color: var(--color-primary);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-bg);
     }
 
-    &::placeholder { color: var(--color-text-secondary); }
+    &::placeholder { color: var(--text-2); }
   }
 
   .clear-btn {
@@ -138,14 +139,14 @@
     background: none;
     border: none;
     cursor: pointer;
-    color: var(--color-text-secondary);
+    color: var(--text-2);
     display: flex;
     align-items: center;
     padding: 0.25rem;
-    border-radius: var(--radius-sm);
+    border-radius: var(--r-sm);
     transition: color 0.2s;
 
-    &:hover { color: var(--color-text-primary); }
+    &:hover { color: var(--text); }
     .material-icons { font-size: 1.125rem; }
   }
 }
@@ -157,9 +158,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-3xl);
-  gap: var(--spacing-md);
-  color: var(--color-text-secondary);
+  padding: 4rem;
+  gap: 1rem;
+  color: var(--text-2);
 }
 
 .error-state,
@@ -168,13 +169,13 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-3xl);
-  gap: var(--spacing-md);
-  color: var(--color-text-secondary);
+  padding: 4rem;
+  gap: 1rem;
+  color: var(--text-2);
   text-align: center;
 
   .material-icons { font-size: 3rem; opacity: 0.4; }
-  h3 { margin: 0; color: var(--color-text-primary); }
+  h3 { margin: 0; color: var(--text); }
   p  { margin: 0; }
 }
 
@@ -182,16 +183,16 @@
   display: inline-flex;
   align-items: center;
   padding: 0.5rem 1.25rem;
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  color: var(--color-text-primary);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--card);
+  color: var(--text);
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
 
-  &:hover { background: var(--color-surface-alt); }
+  &:hover { background: var(--bg); }
 }
 
 // ─── Spinners ─────────────────────────────────────────────────────────────────
@@ -199,8 +200,8 @@
 .spinner {
   width: 2.5rem;
   height: 2.5rem;
-  border: 3px solid var(--color-border);
-  border-top-color: var(--color-primary);
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -209,8 +210,8 @@
   display: inline-block;
   width: 1rem;
   height: 1rem;
-  border: 2px solid var(--color-border);
-  border-top-color: var(--color-primary);
+  border: 2px solid var(--border);
+  border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -220,15 +221,14 @@
 // ─── Table ────────────────────────────────────────────────────────────────────
 
 .table-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
   overflow: hidden;
 }
 
 .table-wrapper {
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 .data-table {
@@ -237,29 +237,29 @@
   font-size: 0.875rem;
 
   th {
-    padding: var(--spacing-sm) var(--spacing-md);
+    padding: 0.5rem 1rem;
     text-align: left;
     font-size: 0.75rem;
     font-weight: 700;
-    color: var(--color-text-secondary);
+    color: var(--text-2);
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    background: var(--color-surface-alt);
-    border-bottom: 1px solid var(--color-border);
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
     white-space: nowrap;
   }
 
   td {
-    padding: var(--spacing-sm) var(--spacing-md);
-    border-bottom: 1px solid var(--color-border);
-    color: var(--color-text-primary);
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
     vertical-align: middle;
   }
 
   tbody tr {
     transition: background 0.15s;
 
-    &:hover { background: var(--color-surface-alt); }
+    &:hover { background: var(--bg); }
     &:last-child td { border-bottom: none; }
   }
 }
@@ -267,15 +267,15 @@
 .org-cell {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: 0.5rem;
 }
 
 .org-avatar {
   width: 2.5rem;
   height: 2.5rem;
-  border-radius: var(--radius-md);
-  background: var(--color-primary);
-  color: var(--color-white);
+  border-radius: var(--r-md);
+  background: var(--primary);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -292,7 +292,7 @@
 
 .org-name {
   font-weight: 600;
-  color: var(--color-primary);
+  color: var(--primary);
   text-decoration: none;
 
   &:hover { text-decoration: underline; }
@@ -300,19 +300,17 @@
 
 .org-slug {
   font-size: 0.75rem;
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   font-family: monospace;
 }
 
 .date-cell {
   white-space: nowrap;
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   font-size: 0.8125rem;
 }
 
-.text-muted {
-  color: var(--color-text-secondary);
-}
+.text-muted { color: var(--text-2); }
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 
@@ -320,25 +318,25 @@
   display: inline-flex;
   align-items: center;
   padding: 0.25rem 0.625rem;
-  border-radius: var(--radius-full);
+  border-radius: var(--r-full);
   font-size: 0.75rem;
   font-weight: 600;
 
-  &.green  { background: var(--color-success-light); color: var(--color-success); }
-  &.orange { background: var(--color-warning-light); color: var(--color-warning); }
-  &.red    { background: var(--color-danger-light);  color: var(--color-danger);  }
-  &.gray   { background: var(--color-surface-alt);   color: var(--color-text-secondary); }
+  &.green  { background: var(--success-bg); color: var(--success); }
+  &.orange { background: var(--warning-bg); color: var(--warning); }
+  &.red    { background: var(--error-bg);   color: var(--error); }
+  &.gray   { background: var(--bg);         color: var(--text-2); }
 }
 
 .plan-badge {
   display: inline-flex;
   align-items: center;
   padding: 0.125rem 0.5rem;
-  border-radius: var(--radius-full);
+  border-radius: var(--r-full);
   font-size: 0.75rem;
   font-weight: 700;
-  background: var(--color-surface-alt);
-  color: var(--color-text-secondary);
+  background: var(--bg);
+  color: var(--text-2);
   letter-spacing: 0.04em;
 }
 
@@ -347,7 +345,7 @@
 .row-actions {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
+  gap: 0.25rem;
 }
 
 .btn-icon {
@@ -357,9 +355,9 @@
   width: 2rem;
   height: 2rem;
   border: none;
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-alt);
-  color: var(--color-text-secondary);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  color: var(--text-2);
   cursor: pointer;
   transition: all 0.15s;
   text-decoration: none;
@@ -367,14 +365,14 @@
   .material-icons { font-size: 1.125rem; }
 
   &:hover:not(:disabled) {
-    background: var(--color-border);
-    color: var(--color-text-primary);
+    background: var(--border);
+    color: var(--text);
   }
 
   &:disabled { opacity: 0.45; cursor: not-allowed; }
 
-  &.green:hover:not(:disabled) { background: var(--color-success-light); color: var(--color-success); }
-  &.orange:hover:not(:disabled) { background: var(--color-warning-light); color: var(--color-warning); }
+  &.green:hover:not(:disabled)  { background: var(--success-bg); color: var(--success); }
+  &.orange:hover:not(:disabled) { background: var(--warning-bg); color: var(--warning); }
 }
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
@@ -387,12 +385,12 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: var(--spacing-md);
+  padding: 1rem;
 }
 
 .modal-content {
-  background: var(--color-surface);
-  border-radius: var(--radius-xl);
+  background: var(--card);
+  border-radius: var(--r-xl);
   width: 100%;
   max-width: 640px;
   box-shadow: var(--shadow-xl);
@@ -406,19 +404,19 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-lg) var(--spacing-xl);
-  border-bottom: 1px solid var(--color-border);
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid var(--border);
 
   h2 {
     display: flex;
     align-items: center;
-    gap: var(--spacing-sm);
+    gap: 0.5rem;
     font-size: 1.125rem;
     font-weight: 700;
-    color: var(--color-text-primary);
+    color: var(--text);
     margin: 0;
 
-    .material-icons { color: var(--color-primary); }
+    .material-icons { color: var(--primary); }
   }
 }
 
@@ -426,27 +424,27 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   display: flex;
   align-items: center;
-  padding: var(--spacing-xs);
-  border-radius: var(--radius-sm);
+  padding: 0.25rem;
+  border-radius: var(--r-sm);
   transition: color 0.2s, background 0.2s;
 
-  &:hover { background: var(--color-surface-alt); color: var(--color-text-primary); }
+  &:hover { background: var(--bg); color: var(--text); }
 }
 
 .modal-body {
-  padding: var(--spacing-xl);
+  padding: 2rem;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: 1rem;
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr;
-  gap: var(--spacing-md);
+  gap: 1rem;
 
   @media (min-width: 640px) {
     grid-template-columns: 1fr 1fr;
@@ -456,72 +454,71 @@
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
+  gap: 0.25rem;
 
   label {
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--color-text-primary);
+    color: var(--text);
   }
 
-  input,
-  select {
-    padding: 0.625rem var(--spacing-md);
-    border: 1.5px solid var(--color-border);
-    border-radius: var(--radius-md);
+  input, select {
+    padding: 0.625rem 1rem;
+    border: 1.5px solid var(--border);
+    border-radius: var(--r-md);
     font-size: 0.9375rem;
-    color: var(--color-text-primary);
-    background: var(--color-surface);
+    color: var(--text);
+    background: var(--card);
     transition: border-color 0.2s;
 
     &:focus {
       outline: none;
-      border-color: var(--color-primary);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-bg);
     }
 
-    &.invalid { border-color: var(--color-danger); }
-
-    &::placeholder { color: var(--color-text-secondary); }
+    &.invalid { border-color: var(--error); }
+    &::placeholder { color: var(--text-2); }
   }
 }
 
 .field-error {
   font-size: 0.75rem;
-  color: var(--color-danger);
+  color: var(--error);
 }
 
 .modal-footer {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-lg) var(--spacing-xl);
-  border-top: 1px solid var(--color-border);
+  gap: 0.5rem;
+  padding: 1.5rem 2rem;
+  border-top: 1px solid var(--border);
 }
 
 .btn-cancel {
   padding: 0.5rem 1.25rem;
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
   background: transparent;
-  color: var(--color-text-primary);
+  color: var(--text);
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
 
-  &:hover { background: var(--color-surface-alt); }
+  &:hover { background: var(--bg); }
 }
 
 .btn-submit {
   display: inline-flex;
   align-items: center;
-  gap: var(--spacing-xs);
+  gap: 0.25rem;
   padding: 0.5rem 1.25rem;
   border: none;
-  border-radius: var(--radius-md);
-  background: var(--color-primary);
-  color: var(--color-white);
+  border-radius: var(--r-md);
+  background: var(--primary);
+  color: #fff;
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
@@ -540,10 +537,10 @@
 }
 
 @media (min-width: 1024px) {
-  .table-card { border-radius: var(--radius-xl); }
+  .table-card { border-radius: var(--r-xl); }
   .search-box { max-width: 600px; }
 }
 
 @media (min-width: 1280px) {
-  .page { padding: var(--spacing-xl); }
+  .page { padding: 2rem; }
 }
