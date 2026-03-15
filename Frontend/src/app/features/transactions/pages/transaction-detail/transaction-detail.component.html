@@ -1,0 +1,296 @@
+<div class="page">
+  <a routerLink="/dashboard/transactions" class="back-link">
+    <span class="material-icons">arrow_back</span>
+    Retour aux transactions
+  </a>
+
+  <!-- Loading -->
+  <ng-container *ngIf="isLoading()">
+    <div class="loading-container">
+      <div class="spinner"></div>
+      <p>Chargement...</p>
+    </div>
+  </ng-container>
+
+  <!-- Erreur -->
+  <div class="error-state" *ngIf="!isLoading() && hasError()">
+    <span class="material-icons">error_outline</span>
+    <p>Impossible de charger la transaction.</p>
+    <a routerLink="/dashboard/transactions" class="btn-secondary">Retour à la liste</a>
+  </div>
+
+  <!-- Contenu principal -->
+  <ng-container *ngIf="!isLoading() && !hasError() && transaction() as tx">
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="header-left">
+        <h1>{{ tx.reference }}</h1>
+        <div class="header-meta">
+          <span class="type-badge">{{ getTypeLabel(tx.typeTransaction) }}</span>
+          <span class="status-badge" [class]="getStatutColor(tx.statut)">
+            {{ getStatutLabel(tx.statut) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Actions state machine -->
+      <div class="header-actions" *ngIf="!actionInProgress()">
+        <button
+          *ngIf="canSoumettre()"
+          class="btn-action blue"
+          (click)="soumettre()"
+          aria-label="Soumettre la transaction">
+          <span class="material-icons">send</span>
+          Soumettre
+        </button>
+        <button
+          *ngIf="canValider()"
+          class="btn-action green"
+          (click)="openValiderModal()"
+          aria-label="Valider la transaction">
+          <span class="material-icons">check_circle</span>
+          Valider
+        </button>
+        <button
+          *ngIf="canRejeter()"
+          class="btn-action red-outline"
+          (click)="openRejeterModal()"
+          aria-label="Rejeter la transaction">
+          <span class="material-icons">cancel</span>
+          Rejeter
+        </button>
+        <button
+          *ngIf="canAnnuler()"
+          class="btn-action gray-outline"
+          (click)="annuler()"
+          aria-label="Annuler la transaction">
+          <span class="material-icons">block</span>
+          Annuler
+        </button>
+      </div>
+
+      <div class="action-loading" *ngIf="actionInProgress()">
+        <div class="spinner-sm"></div>
+        <span>Action en cours...</span>
+      </div>
+    </div>
+
+    <!-- Corps -->
+    <div class="detail-grid">
+
+      <!-- Informations principales -->
+      <div class="info-card">
+        <h3>Informations de la transaction</h3>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="label">Référence</span>
+            <span class="value mono">{{ tx.reference }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Type</span>
+            <span class="value">{{ getTypeLabel(tx.typeTransaction) }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Montant</span>
+            <span class="value amount">{{ tx.montant | currency:'XAF':'symbol':'1.0-0':'fr' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Statut</span>
+            <span class="status-badge" [class]="getStatutColor(tx.statut)">{{ getStatutLabel(tx.statut) }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Membre</span>
+            <span class="value">{{ getMembreNom(tx) }}</span>
+          </div>
+          <div class="info-item" *ngIf="tx.reunion">
+            <span class="label">Réunion</span>
+            <span class="value">Réunion n°{{ tx.reunion.numeroReunion }}
+              — {{ tx.reunion.dateReunion | date:'dd/MM/yyyy' }}
+            </span>
+          </div>
+          <div class="info-item" *ngIf="tx.description">
+            <span class="label">Description</span>
+            <span class="value">{{ tx.description }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Mode de création</span>
+            <span class="value">{{ tx.modeCreation ?? 'MANUEL' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Historique de statut -->
+      <div class="info-card">
+        <h3>Historique du statut</h3>
+        <div class="timeline">
+          <!-- Création -->
+          <div class="timeline-item done">
+            <div class="timeline-icon">
+              <span class="material-icons">add_circle</span>
+            </div>
+            <div class="timeline-content">
+              <span class="timeline-label">Créée</span>
+              <span class="timeline-date">{{ tx.creeLe | date:'dd MMM yyyy HH:mm':'':'fr' }}</span>
+            </div>
+          </div>
+
+          <!-- Soumission -->
+          <div class="timeline-item" [class.done]="tx.soumisLe" [class.pending]="!tx.soumisLe">
+            <div class="timeline-icon">
+              <span class="material-icons">send</span>
+            </div>
+            <div class="timeline-content">
+              <span class="timeline-label">Soumise</span>
+              <span class="timeline-date" *ngIf="tx.soumisLe">
+                {{ tx.soumisLe | date:'dd MMM yyyy HH:mm':'':'fr' }}
+              </span>
+              <span class="timeline-pending" *ngIf="!tx.soumisLe">En attente</span>
+            </div>
+          </div>
+
+          <!-- Validation / Rejet -->
+          <ng-container *ngIf="tx.statut === 'VALIDE' || tx.statut === 'REJETE'">
+            <div class="timeline-item done" [class.rejected]="tx.statut === 'REJETE'">
+              <div class="timeline-icon">
+                <span class="material-icons">{{ tx.statut === 'VALIDE' ? 'check_circle' : 'cancel' }}</span>
+              </div>
+              <div class="timeline-content">
+                <span class="timeline-label">{{ tx.statut === 'VALIDE' ? 'Validée' : 'Rejetée' }}</span>
+                <span class="timeline-date" *ngIf="tx.valideLe || tx.rejeteLe">
+                  {{ (tx.valideLe || tx.rejeteLe) | date:'dd MMM yyyy HH:mm':'':'fr' }}
+                </span>
+                <span class="motif-rejet" *ngIf="tx.statut === 'REJETE' && tx.motifRejet">
+                  Motif : {{ tx.motifRejet }}
+                </span>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- Annulation -->
+          <div class="timeline-item done rejected" *ngIf="tx.statut === 'ANNULE'">
+            <div class="timeline-icon">
+              <span class="material-icons">block</span>
+            </div>
+            <div class="timeline-content">
+              <span class="timeline-label">Annulée</span>
+            </div>
+          </div>
+
+          <!-- Prochain statut attendu (si en cours) -->
+          <div class="timeline-item pending" *ngIf="tx.statut === 'BROUILLON'">
+            <div class="timeline-icon">
+              <span class="material-icons">hourglass_empty</span>
+            </div>
+            <div class="timeline-content">
+              <span class="timeline-label">Validation en attente</span>
+              <span class="timeline-pending">À soumettre</span>
+            </div>
+          </div>
+          <div class="timeline-item pending" *ngIf="tx.statut === 'SOUMIS'">
+            <div class="timeline-icon">
+              <span class="material-icons">hourglass_empty</span>
+            </div>
+            <div class="timeline-content">
+              <span class="timeline-label">Décision en attente</span>
+              <span class="timeline-pending">À valider ou rejeter</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>
+
+<!-- ─── Modal Valider ──────────────────────────────────────────────────────── -->
+<div class="modal-overlay" *ngIf="showValiderModal()" (click)="closeValiderModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <span class="material-icons">check_circle</span>
+        Valider la transaction
+      </h2>
+      <button class="close-btn" (click)="closeValiderModal()" aria-label="Fermer">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-info">
+        Confirmez la validation en indiquant l'identifiant du membre validateur (exerciceMembreId).
+      </p>
+      <div class="form-group">
+        <label for="valide-par">ID membre validateur *</label>
+        <input
+          id="valide-par"
+          type="text"
+          [(ngModel)]="valideParExerciceMembreId"
+          placeholder="UUID de l'exercice membre validateur"
+        />
+        <span class="field-error" *ngIf="!valideParExerciceMembreId.trim()">
+          Ce champ est requis pour valider la transaction
+        </span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closeValiderModal()">Annuler</button>
+      <button
+        class="btn-submit green"
+        [disabled]="!valideParExerciceMembreId.trim()"
+        (click)="confirmerValider()">
+        <span class="material-icons">check_circle</span>
+        Valider
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Modal Rejeter ──────────────────────────────────────────────────────── -->
+<div class="modal-overlay" *ngIf="showRejeterModal()" (click)="closeRejeterModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <span class="material-icons">cancel</span>
+        Rejeter la transaction
+      </h2>
+      <button class="close-btn" (click)="closeRejeterModal()" aria-label="Fermer">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="rejete-par">ID membre rejetant *</label>
+        <input
+          id="rejete-par"
+          type="text"
+          [(ngModel)]="rejeteParExerciceMembreId"
+          placeholder="UUID de l'exercice membre rejetant"
+        />
+        <span class="field-error" *ngIf="!rejeteParExerciceMembreId.trim()">
+          Ce champ est requis
+        </span>
+      </div>
+      <div class="form-group">
+        <label for="motif">Motif du rejet *</label>
+        <textarea
+          id="motif"
+          rows="3"
+          [(ngModel)]="motifRejet"
+          placeholder="Expliquez la raison du rejet..."
+        ></textarea>
+        <span class="field-error" *ngIf="!motifRejet.trim()">
+          Le motif de rejet est obligatoire
+        </span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closeRejeterModal()">Annuler</button>
+      <button
+        class="btn-submit red"
+        [disabled]="!rejeteParExerciceMembreId.trim() || !motifRejet.trim()"
+        (click)="confirmerRejeter()">
+        <span class="material-icons">cancel</span>
+        Rejeter
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,398 @@
+<div class="page">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-left">
+      <a routerLink="/dashboard/secours" class="back-link">
+        <span class="material-icons">arrow_back</span>
+        Secours
+      </a>
+      <h1>Événements secours</h1>
+      <p>Gérez les déclarations et paiements d'aide aux membres</p>
+    </div>
+    <button class="btn-primary" (click)="openDeclarerModal()">
+      <span class="material-icons">add_circle</span>
+      Déclarer un événement
+    </button>
+  </div>
+
+  <!-- Filtres statut -->
+  <div class="filter-tabs">
+    <button
+      *ngFor="let filtre of filtres"
+      [class.active]="filtreStatut() === filtre.key"
+      (click)="setFiltre(filtre.key)">
+      {{ filtre.label }}
+      <span class="count" *ngIf="compteurs()[filtre.key] > 0">
+        {{ compteurs()[filtre.key] }}
+      </span>
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-container" *ngIf="isLoading()">
+    <div class="spinner"></div>
+    <p>Chargement...</p>
+  </div>
+
+  <!-- Erreur -->
+  <div class="error-state" *ngIf="!isLoading() && hasError()">
+    <span class="material-icons">error_outline</span>
+    <p>Impossible de charger les événements.</p>
+    <button class="btn-secondary" (click)="load()">
+      <span class="material-icons">refresh</span>
+      Réessayer
+    </button>
+  </div>
+
+  <!-- Empty state -->
+  <div class="empty-state" *ngIf="isEmpty()">
+    <span class="material-icons">volunteer_activism</span>
+    <p *ngIf="filtreStatut() === 'TOUS'">Aucun événement secours déclaré</p>
+    <p *ngIf="filtreStatut() !== 'TOUS'">Aucun événement avec ce statut</p>
+    <button class="btn-primary-small" (click)="openDeclarerModal()" *ngIf="filtreStatut() === 'TOUS'">
+      <span class="material-icons">add_circle</span>
+      Déclarer le premier événement
+    </button>
+  </div>
+
+  <!-- Liste -->
+  <div class="table-container" *ngIf="!isLoading() && !hasError() && !isEmpty()">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Type</th>
+          <th>Membre</th>
+          <th>Demandé</th>
+          <th>Approuvé</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let ev of evenementsFiltres()">
+          <td class="date-cell">{{ ev.dateEvenement | date:'dd/MM/yyyy' }}</td>
+          <td>
+            <span class="type-badge">{{ ev.typeEvenementSecours?.libelle ?? '—' }}</span>
+          </td>
+          <td class="membre-cell">{{ getMembreNom(ev) }}</td>
+          <td>
+            <span *ngIf="ev.montantDemande">
+              {{ ev.montantDemande | currency:'XAF':'symbol':'1.0-0':'fr' }}
+            </span>
+            <span *ngIf="!ev.montantDemande" class="muted">—</span>
+          </td>
+          <td>
+            <span *ngIf="ev.montantApprouve" class="amount-approved">
+              {{ ev.montantApprouve | currency:'XAF':'symbol':'1.0-0':'fr' }}
+            </span>
+            <span *ngIf="!ev.montantApprouve" class="muted">—</span>
+          </td>
+          <td>
+            <span class="status-badge" [class]="getStatutColor(ev.statut)">
+              {{ getStatutLabel(ev.statut) }}
+            </span>
+          </td>
+          <td class="actions-cell">
+            <!-- DECLARE → soumettre -->
+            <button
+              *ngIf="ev.statut === 'DECLARE'"
+              class="btn-row blue"
+              [disabled]="actionInProgress()"
+              (click)="soumettre(ev)"
+              aria-label="Soumettre pour validation">
+              <span class="material-icons">send</span>
+              Soumettre
+            </button>
+
+            <!-- EN_COURS_VALIDATION → valider / refuser -->
+            <ng-container *ngIf="ev.statut === 'EN_COURS_VALIDATION'">
+              <button
+                class="btn-row green"
+                [disabled]="actionInProgress()"
+                (click)="openValiderModal(ev)"
+                aria-label="Valider l'événement">
+                <span class="material-icons">check_circle</span>
+                Valider
+              </button>
+              <button
+                class="btn-row red-outline"
+                [disabled]="actionInProgress()"
+                (click)="openRefuserModal(ev)"
+                aria-label="Refuser l'événement">
+                <span class="material-icons">cancel</span>
+                Refuser
+              </button>
+            </ng-container>
+
+            <!-- VALIDE → payer -->
+            <button
+              *ngIf="ev.statut === 'VALIDE'"
+              class="btn-row green"
+              [disabled]="actionInProgress()"
+              (click)="openPayerModal(ev)"
+              aria-label="Enregistrer le paiement">
+              <span class="material-icons">payments</span>
+              Payer
+            </button>
+
+            <!-- Terminal : motif de refus -->
+            <span class="motif-cell" *ngIf="ev.statut === 'REFUSE' && ev.motifRefus" [title]="ev.motifRefus">
+              <span class="material-icons">info</span>
+              {{ ev.motifRefus | slice:0:40 }}{{ ev.motifRefus.length > 40 ? '…' : '' }}
+            </span>
+
+            <!-- Spinner inline action en cours -->
+            <span class="action-spinner" *ngIf="actionInProgress() && selectedEvenement()?.id === ev.id">
+              <div class="spinner-sm"></div>
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ─── Modal Déclarer ─────────────────────────────────────────────────────── -->
+<div class="modal-overlay" *ngIf="showDeclarerModal()" (click)="closeDeclarerModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <span class="material-icons">add_circle</span>
+        Déclarer un événement
+      </h2>
+      <button class="close-btn" (click)="closeDeclarerModal()" aria-label="Fermer">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="exercice-membre">ID membre (exerciceMembreId) *</label>
+        <input
+          id="exercice-membre"
+          type="text"
+          [(ngModel)]="nouveauExerciceMembreId"
+          placeholder="UUID de l'exercice membre"
+        />
+        <span class="field-error" *ngIf="!nouveauExerciceMembreId.trim()">
+          Ce champ est requis
+        </span>
+      </div>
+      <div class="form-group">
+        <label for="type-evenement">Type d'événement *</label>
+        <select id="type-evenement" [(ngModel)]="nouveauTypeId">
+          <option value="">— Sélectionner —</option>
+          <option *ngFor="let t of typesEvenement()" [value]="t.id">
+            {{ t.libelle }}
+            <ng-container *ngIf="t.montantParDefaut"> ({{ t.montantParDefaut | currency:'XAF':'symbol':'1.0-0':'fr' }})</ng-container>
+          </option>
+        </select>
+        <span class="field-error" *ngIf="!nouveauTypeId">
+          Sélectionnez un type d'événement
+        </span>
+      </div>
+      <div class="form-group">
+        <label for="date-evenement">Date de l'événement *</label>
+        <input
+          id="date-evenement"
+          type="date"
+          [(ngModel)]="nouvelleDateEvenement"
+        />
+        <span class="field-error" *ngIf="!nouvelleDateEvenement">
+          La date est requise
+        </span>
+      </div>
+      <div class="form-group">
+        <label for="montant-demande">Montant demandé</label>
+        <input
+          id="montant-demande"
+          type="number"
+          [(ngModel)]="nouveauMontantDemande"
+          placeholder="Ex : 50000"
+          min="0"
+        />
+      </div>
+      <div class="form-group">
+        <label for="description">Description</label>
+        <textarea
+          id="description"
+          rows="2"
+          [(ngModel)]="nouvelleDescription"
+          placeholder="Contexte ou détails de l'événement..."
+        ></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closeDeclarerModal()">Annuler</button>
+      <button
+        class="btn-submit blue"
+        [disabled]="!nouveauExerciceMembreId.trim() || !nouveauTypeId || !nouvelleDateEvenement || actionInProgress()"
+        (click)="declarer()">
+        <div class="spinner-sm" *ngIf="actionInProgress()"></div>
+        <span class="material-icons" *ngIf="!actionInProgress()">add_circle</span>
+        {{ actionInProgress() ? 'Enregistrement...' : 'Déclarer' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Modal Valider ──────────────────────────────────────────────────────── -->
+<div class="modal-overlay" *ngIf="showValiderModal()" (click)="closeValiderModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <span class="material-icons">check_circle</span>
+        Valider l'événement
+      </h2>
+      <button class="close-btn" (click)="closeValiderModal()" aria-label="Fermer">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="event-summary" *ngIf="selectedEvenement() as ev">
+        <span class="type-badge">{{ ev.typeEvenementSecours?.libelle }}</span>
+        <span class="muted">— {{ getMembreNom(ev) }}</span>
+      </div>
+      <div class="form-group">
+        <label for="valide-par">ID membre validateur *</label>
+        <input
+          id="valide-par"
+          type="text"
+          [(ngModel)]="valideParExerciceMembreId"
+          placeholder="UUID de l'exercice membre"
+        />
+        <span class="field-error" *ngIf="!valideParExerciceMembreId.trim()">
+          Ce champ est requis pour valider
+        </span>
+      </div>
+      <div class="form-group">
+        <label for="montant-approuve">Montant approuvé *</label>
+        <input
+          id="montant-approuve"
+          type="number"
+          [(ngModel)]="montantApprouve"
+          placeholder="Montant en XAF"
+          min="1"
+        />
+        <span class="field-error" *ngIf="!montantApprouve">
+          Le montant approuvé est requis
+        </span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closeValiderModal()">Annuler</button>
+      <button
+        class="btn-submit green"
+        [disabled]="!valideParExerciceMembreId.trim() || !montantApprouve"
+        (click)="confirmerValider()">
+        <span class="material-icons">check_circle</span>
+        Valider
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Modal Refuser ──────────────────────────────────────────────────────── -->
+<div class="modal-overlay" *ngIf="showRefuserModal()" (click)="closeRefuserModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <span class="material-icons">cancel</span>
+        Refuser l'événement
+      </h2>
+      <button class="close-btn" (click)="closeRefuserModal()" aria-label="Fermer">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="event-summary" *ngIf="selectedEvenement() as ev">
+        <span class="type-badge">{{ ev.typeEvenementSecours?.libelle }}</span>
+        <span class="muted">— {{ getMembreNom(ev) }}</span>
+      </div>
+      <div class="form-group">
+        <label for="refuse-par">ID membre rejetant *</label>
+        <input
+          id="refuse-par"
+          type="text"
+          [(ngModel)]="refuseParExerciceMembreId"
+          placeholder="UUID de l'exercice membre"
+        />
+        <span class="field-error" *ngIf="!refuseParExerciceMembreId.trim()">
+          Ce champ est requis
+        </span>
+      </div>
+      <div class="form-group">
+        <label for="motif-refus">Motif du refus *</label>
+        <textarea
+          id="motif-refus"
+          rows="3"
+          [(ngModel)]="motifRefus"
+          placeholder="Expliquez la raison du refus..."
+        ></textarea>
+        <span class="field-error" *ngIf="!motifRefus.trim()">
+          Le motif de refus est obligatoire
+        </span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closeRefuserModal()">Annuler</button>
+      <button
+        class="btn-submit red"
+        [disabled]="!refuseParExerciceMembreId.trim() || !motifRefus.trim()"
+        (click)="confirmerRefuser()">
+        <span class="material-icons">cancel</span>
+        Refuser
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Modal Payer ────────────────────────────────────────────────────────── -->
+<div class="modal-overlay" *ngIf="showPayerModal()" (click)="closePayerModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <span class="material-icons">payments</span>
+        Enregistrer le paiement
+      </h2>
+      <button class="close-btn" (click)="closePayerModal()" aria-label="Fermer">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="event-summary" *ngIf="selectedEvenement() as ev">
+        <span class="type-badge">{{ ev.typeEvenementSecours?.libelle }}</span>
+        <span class="muted">— {{ getMembreNom(ev) }}</span>
+        <span class="amount-approved" *ngIf="ev.montantApprouve">
+          — {{ ev.montantApprouve | currency:'XAF':'symbol':'1.0-0':'fr' }}
+        </span>
+      </div>
+      <p class="modal-info">
+        Liez cet événement à une transaction existante pour enregistrer le paiement.
+      </p>
+      <div class="form-group">
+        <label for="transaction-id">ID de la transaction *</label>
+        <input
+          id="transaction-id"
+          type="text"
+          [(ngModel)]="transactionId"
+          placeholder="UUID de la transaction de paiement"
+        />
+        <span class="field-error" *ngIf="!transactionId.trim()">
+          L'ID de transaction est requis
+        </span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closePayerModal()">Annuler</button>
+      <button
+        class="btn-submit green"
+        [disabled]="!transactionId.trim()"
+        (click)="confirmerPayer()">
+        <span class="material-icons">payments</span>
+        Confirmer le paiement
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,306 @@
+<div class="page">
+  <a routerLink="/dashboard/distributions" class="back-link">
+    <span class="material-icons">arrow_back</span>
+    Retour aux distributions
+  </a>
+
+  <!-- Loading -->
+  <div class="loading-container" *ngIf="isLoading()">
+    <div class="spinner"></div>
+    <p>Chargement...</p>
+  </div>
+
+  <!-- Erreur -->
+  <div class="error-state" *ngIf="!isLoading() && hasError()">
+    <span class="material-icons">error_outline</span>
+    <p>Impossible de charger cette distribution.</p>
+    <a routerLink="/dashboard/distributions" class="btn-secondary">Retour à la liste</a>
+  </div>
+
+  <!-- Contenu -->
+  <ng-container *ngIf="!isLoading() && !hasError() && distribution() as d">
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="header-left">
+        <h1>Distribution n°{{ d.ordre }}</h1>
+        <div class="header-meta">
+          <span class="meta-label">{{ getBeneficiaireNom(d) }}</span>
+          <span class="amount-badge">
+            {{ d.montantNet | currency:'XAF':'symbol':'1.0-0':'fr' }}
+          </span>
+          <span class="status-badge" [class]="getStatutColor(d.statut)">
+            {{ getStatutLabel(d.statut) }}
+          </span>
+        </div>
+        <div class="header-reunion" *ngIf="d.reunion">
+          <span class="material-icons">event</span>
+          Réunion n°{{ d.reunion.numeroReunion }}
+          — {{ d.reunion.dateReunion | date:'dd/MM/yyyy' }}
+        </div>
+      </div>
+
+      <!-- Actions state machine -->
+      <div class="header-actions" *ngIf="!actionInProgress()">
+        <button
+          *ngIf="canDistribuer()"
+          class="btn-action green"
+          (click)="openDistribuerModal()"
+          aria-label="Effectuer la distribution">
+          <span class="material-icons">payments</span>
+          Distribuer
+        </button>
+        <button
+          *ngIf="canAnnuler()"
+          class="btn-action red-outline"
+          (click)="annuler()"
+          aria-label="Annuler la distribution">
+          <span class="material-icons">cancel</span>
+          Annuler
+        </button>
+      </div>
+
+      <div class="action-loading" *ngIf="actionInProgress()">
+        <div class="spinner-sm"></div>
+        <span>Action en cours...</span>
+      </div>
+    </div>
+
+    <!-- Corps -->
+    <div class="detail-grid">
+
+      <!-- Informations de la distribution -->
+      <div class="info-card">
+        <h3>Détail de la distribution</h3>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="label">Bénéficiaire</span>
+            <span class="value">{{ getBeneficiaireNom(d) }}</span>
+          </div>
+          <div class="info-item" *ngIf="d.exerciceMembreBeneficiaire?.matricule">
+            <span class="label">Matricule</span>
+            <span class="value">{{ d.exerciceMembreBeneficiaire!.matricule }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Ordre de distribution</span>
+            <span class="value">{{ d.ordre }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Montant brut</span>
+            <span class="value amount">{{ d.montantBrut | currency:'XAF':'symbol':'1.0-0':'fr' }}</span>
+          </div>
+          <div class="info-item" *ngIf="d.montantRetenu > 0">
+            <span class="label">Retenue</span>
+            <span class="value amount deduction">− {{ d.montantRetenu | currency:'XAF':'symbol':'1.0-0':'fr' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Montant net</span>
+            <span class="value amount highlight">{{ d.montantNet | currency:'XAF':'symbol':'1.0-0':'fr' }}</span>
+          </div>
+          <div class="info-item" *ngIf="d.commentaire">
+            <span class="label">Commentaire</span>
+            <span class="value">{{ d.commentaire }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Créée le</span>
+            <span class="value">{{ d.creeLe | date:'dd MMMM yyyy':'':'fr' }}</span>
+          </div>
+        </div>
+
+        <!-- Distribution effectuée -->
+        <div class="success-info" *ngIf="d.statut === 'DISTRIBUEE'">
+          <div class="success-badge">
+            <span class="material-icons">check_circle</span>
+            Distribution effectuée
+          </div>
+          <div class="info-grid">
+            <div class="info-item" *ngIf="d.distribueeLe">
+              <span class="label">Date d'exécution</span>
+              <span class="value">{{ d.distribueeLe | date:'dd MMMM yyyy':'':'fr' }}</span>
+            </div>
+            <div class="info-item" *ngIf="d.transactionId">
+              <span class="label">Référence transaction</span>
+              <span class="value mono">{{ d.transactionId }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Annulée -->
+        <div class="cancel-info" *ngIf="d.statut === 'ANNULEE'">
+          <div class="cancel-badge">
+            <span class="material-icons">cancel</span>
+            Distribution annulée
+          </div>
+        </div>
+      </div>
+
+      <!-- Timeline statut -->
+      <div class="info-card">
+        <h3>Historique du statut</h3>
+        <div class="timeline">
+
+          <!-- Planifiée -->
+          <div class="timeline-item done">
+            <div class="timeline-icon">
+              <span class="material-icons">event_available</span>
+            </div>
+            <div class="timeline-content">
+              <span class="timeline-label">Planifiée</span>
+              <span class="timeline-date">
+                {{ d.creeLe | date:'dd MMM yyyy':'':'fr' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- En attente -->
+          <ng-container *ngIf="d.statut === 'PLANIFIEE'">
+            <div class="timeline-item pending">
+              <div class="timeline-icon">
+                <span class="material-icons">hourglass_empty</span>
+              </div>
+              <div class="timeline-content">
+                <span class="timeline-label">En attente de distribution</span>
+                <span class="timeline-pending">À distribuer ou annuler</span>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- Distribuée -->
+          <div class="timeline-item done" *ngIf="d.statut === 'DISTRIBUEE'">
+            <div class="timeline-icon">
+              <span class="material-icons">payments</span>
+            </div>
+            <div class="timeline-content">
+              <span class="timeline-label">Distribuée</span>
+              <span class="timeline-date" *ngIf="d.distribueeLe">
+                {{ d.distribueeLe | date:'dd MMM yyyy':'':'fr' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Annulée -->
+          <div class="timeline-item done-red" *ngIf="d.statut === 'ANNULEE'">
+            <div class="timeline-icon">
+              <span class="material-icons">cancel</span>
+            </div>
+            <div class="timeline-content">
+              <span class="timeline-label">Annulée</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section : toutes les distributions de la réunion -->
+    <div class="section-card" *ngIf="autresDistributions().length > 0">
+      <div class="section-header">
+        <h3>
+          <span class="material-icons">group</span>
+          Distributions de la réunion
+        </h3>
+        <div class="reunion-summary">
+          <span class="summary-chip green">
+            <span class="material-icons">check_circle</span>
+            {{ nbDistribuees() }} distribuée(s)
+          </span>
+          <span class="summary-chip yellow" *ngIf="nbPlanifiees() > 0">
+            <span class="material-icons">hourglass_empty</span>
+            {{ nbPlanifiees() }} planifiée(s)
+          </span>
+          <span class="summary-chip red" *ngIf="nbAnnulees() > 0">
+            <span class="material-icons">cancel</span>
+            {{ nbAnnulees() }} annulée(s)
+          </span>
+        </div>
+      </div>
+
+      <div class="loading-inline" *ngIf="isLoadingAutres()">
+        <div class="spinner-sm"></div>
+        <span>Chargement des bénéficiaires...</span>
+      </div>
+
+      <div class="table-wrapper" *ngIf="!isLoadingAutres()">
+        <table class="beneficiaires-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Bénéficiaire</th>
+              <th>Montant brut</th>
+              <th>Retenue</th>
+              <th>Montant net</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let dist of autresDistributions()"
+              [class.current-row]="isCurrentDistribution(dist)">
+              <td>{{ dist.ordre }}</td>
+              <td>
+                <span class="membre-name">{{ getBeneficiaireNom(dist) }}</span>
+                <span class="current-tag" *ngIf="isCurrentDistribution(dist)">← actuelle</span>
+              </td>
+              <td>{{ dist.montantBrut | currency:'XAF':'symbol':'1.0-0':'fr' }}</td>
+              <td class="deduction" *ngIf="dist.montantRetenu > 0">
+                − {{ dist.montantRetenu | currency:'XAF':'symbol':'1.0-0':'fr' }}
+              </td>
+              <td *ngIf="dist.montantRetenu === 0">—</td>
+              <td class="amount-highlight">{{ dist.montantNet | currency:'XAF':'symbol':'1.0-0':'fr' }}</td>
+              <td>
+                <span class="status-badge" [class]="getStatutColor(dist.statut)">
+                  {{ getStatutLabel(dist.statut) }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td colspan="2">Total</td>
+              <td>{{ totalBrut() | currency:'XAF':'symbol':'1.0-0':'fr' }}</td>
+              <td>{{ totalRetenu() > 0 ? ('− ' + (totalRetenu() | currency:'XAF':'symbol':'1.0-0':'fr')) : '—' }}</td>
+              <td class="amount-highlight">{{ totalNet() | currency:'XAF':'symbol':'1.0-0':'fr' }}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+  </ng-container>
+</div>
+
+<!-- ─── Modal Distribuer ──────────────────────────────────────────────────── -->
+<div class="modal-overlay" *ngIf="showDistribuerModal()" (click)="closeDistribuerModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <span class="material-icons">payments</span>
+        Effectuer la distribution
+      </h2>
+      <button class="close-btn" (click)="closeDistribuerModal()" aria-label="Fermer">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-info">
+        Liez optionnellement cette distribution à une transaction existante.
+      </p>
+      <div class="form-group">
+        <label for="transaction-id">ID transaction (optionnel)</label>
+        <input
+          id="transaction-id"
+          type="text"
+          [(ngModel)]="transactionId"
+          placeholder="UUID de la transaction"
+        />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closeDistribuerModal()">Annuler</button>
+      <button class="btn-submit green" (click)="confirmerDistribuer()">
+        <span class="material-icons">payments</span>
+        Confirmer la distribution
+      </button>
+    </div>
+  </div>
+</div>

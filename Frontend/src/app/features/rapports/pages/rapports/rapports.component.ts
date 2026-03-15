@@ -1,188 +1,230 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TontineService } from '../../../tontines/services/tontine.service';
+import { ApiService } from '../../../../core/services/api.service';
+import { ApiResponse, PaginatedResponse } from '../../../../core/models/api-response.model';
 import { NotificationService } from '../../../../core/services/notification.service';
 
-interface ExportOption {
+interface ExerciceItem {
   id: string;
-  label: string;
-  description: string;
-  icon: string;
-  type: 'fiche' | 'membres' | 'cotisations' | 'prets';
+  libelle: string;
+  statut: string;
+  tontine?: { nom: string };
 }
+
+interface ExerciceMembreItem {
+  id: string;
+  matricule: string;
+  utilisateur?: { prenom: string; nom: string };
+}
+
+interface ReunionItem {
+  id: string;
+  numeroReunion: number;
+  dateReunion: string;
+  statut: string;
+}
+
+type ExportFormat = 'pdf' | 'excel';
 
 @Component({
   selector: 'app-rapports',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  template: `
-    <div class="page-header">
-      <div class="header-left">
-        <h1>Rapports & Exports</h1>
-        <p>Générez des rapports PDF pour vos tontines</p>
-      </div>
-    </div>
-
-    <div class="content-grid">
-      <!-- Tontine Selection -->
-      <div class="card">
-        <h3>1. Sélectionner une tontine</h3>
-        <select [(ngModel)]="selectedTontineId" class="select-full">
-          <option [ngValue]="null">-- Choisir une tontine --</option>
-          <ng-container *ngFor="let t of tontines(); trackBy: trackById">
-            <option [value]="t.id">{{ t.nom }}</option>
-          </ng-container>
-        </select>
-      </div>
-
-      <!-- Export Options -->
-      <div class="card">
-        <h3>2. Choisir le type de rapport</h3>
-        <div class="export-options">
-          <ng-container *ngFor="let option of exportOptions">
-            <button 
-              class="export-btn"
-              [class.selected]="selectedExport === option.id"
-              (click)="selectedExport = option.id"
-              [disabled]="!selectedTontineId"
-            >
-              <span class="material-icons">{{ option.icon }}</span>
-              <div class="export-info">
-                <span class="export-label">{{ option.label }}</span>
-                <span class="export-desc">{{ option.description }}</span>
-              </div>
-            </button>
-          </ng-container>
-        </div>
-      </div>
-
-      <!-- Generate Button -->
-      <div class="card actions-card">
-        <button 
-          class="btn-primary"
-          [disabled]="!selectedTontineId || !selectedExport || isLoading()"
-          (click)="generateReport()"
-        >
-          <ng-container *ngIf="isLoading(); else notLoading">
-            <span class="spinner"></span>
-            Génération en cours...
-          </ng-container>
-          <ng-template #notLoading>
-            <span class="material-icons">download</span>
-            Télécharger le PDF
-          </ng-template>
-        </button>
-      </div>
-    </div>
-  `,
-  styles: `
-    .page-header { margin-bottom: 1.5rem; }
-    .page-header h1 { font-size: 1.75rem; font-weight: 700; color: #1f2937; margin: 0; }
-    .page-header p { color: #6b7280; margin-top: 0.25rem; }
-
-    .content-grid { display: flex; flex-direction: column; gap: 1.5rem; max-width: 600px; }
-
-    .card { background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    .card h3 { font-size: 1rem; font-weight: 600; color: #1f2937; margin: 0 0 1rem; }
-
-    .select-full { width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 1rem; }
-    .select-full:focus { outline: none; border-color: #667eea; }
-
-    .export-options { display: flex; flex-direction: column; gap: 0.75rem; }
-
-    .export-btn {
-      display: flex; align-items: center; gap: 1rem;
-      padding: 1rem; border: 2px solid #e5e7eb; border-radius: 8px;
-      background: white; cursor: pointer; transition: all 0.2s; text-align: left;
-
-      &:hover:not(:disabled) { border-color: #667eea; background: #f9fafb; }
-      &.selected { border-color: #667eea; background: rgba(102, 126, 234, 0.1); }
-      &:disabled { opacity: 0.5; cursor: not-allowed; }
-
-      .material-icons { font-size: 1.5rem; color: #667eea; }
-      .export-info { display: flex; flex-direction: column; }
-      .export-label { font-weight: 500; color: #1f2937; }
-      .export-desc { font-size: 0.75rem; color: #6b7280; }
-    }
-
-    .actions-card { text-align: center; }
-
-    .btn-primary {
-      display: inline-flex; align-items: center; gap: 0.5rem;
-      padding: 1rem 2rem; background: linear-gradient(135deg, #667eea, #764ba2);
-      color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 500;
-      cursor: pointer; transition: all 0.2s;
-
-      &:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); }
-      &:disabled { opacity: 0.7; cursor: not-allowed; }
-    }
-
-    .spinner { width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-  `
+  templateUrl: './rapports.component.html',
+  styleUrl: './rapports.component.scss'
 })
-export class RapportsComponent {
-  private tontineService = inject(TontineService);
-  private notification = inject(NotificationService);
+export class RapportsComponent implements OnInit {
+  private api   = inject(ApiService);
+  private notif = inject(NotificationService);
 
-  tontines = signal<{ id: string; nom: string }[]>([]);
-  isLoading = signal(false);
-  selectedTontineId: string | null = null;
-  selectedExport: string | null = null;
+  // ─── Données partagées ────────────────────────────────────────────────────
+  exercices      = signal<ExerciceItem[]>([]);
+  isLoadingExos  = signal(true);
+  hasError       = signal(false);
 
-  exportOptions: ExportOption[] = [
-    { id: 'fiche', label: 'Fiche complète', description: 'Informations détaillées de la tontine', icon: 'description', type: 'fiche' },
-    { id: 'membres', label: 'Liste des membres', description: 'Tous les membres avec leurs rôles', icon: 'people', type: 'membres' },
-    { id: 'cotisations', label: 'État des cotisations', description: 'Résumé des cotisations par membre', icon: 'payments', type: 'cotisations' },
-    { id: 'prets', label: 'Liste des prêts', description: 'Prêts en cours et remboursements', icon: 'credit_score', type: 'prets' }
-  ];
+  // ─── Relevé individuel ────────────────────────────────────────────────────
+  exoIdReleve       = signal('');
+  membresReleve     = signal<ExerciceMembreItem[]>([]);
+  membreId          = signal('');
+  isLoadingMembres  = signal(false);
+  formatReleve      = signal<ExportFormat>('pdf');
+  dlReleve          = signal(false);
 
-  constructor() {
-    this.loadTontines();
+  canDownloadReleve = computed(() =>
+    !!this.exoIdReleve() && !!this.membreId() && !this.dlReleve()
+  );
+
+  // ─── Rapport exercice ─────────────────────────────────────────────────────
+  exoIdExercice    = signal('');
+  formatExercice   = signal<ExportFormat>('pdf');
+  dlExercice       = signal(false);
+
+  canDownloadExercice = computed(() =>
+    !!this.exoIdExercice() && !this.dlExercice()
+  );
+
+  // ─── Rapport mensuel ──────────────────────────────────────────────────────
+  exoIdMensuel      = signal('');
+  reunions          = signal<ReunionItem[]>([]);
+  reunionId         = signal('');
+  isLoadingReunions = signal(false);
+  formatMensuel     = signal<ExportFormat>('pdf');
+  dlMensuel         = signal(false);
+
+  canDownloadMensuel = computed(() =>
+    !!this.exoIdMensuel() && !!this.reunionId() && !this.dlMensuel()
+  );
+
+  ngOnInit(): void {
+    this.loadExercices();
   }
 
-  loadTontines() {
-    this.tontineService.getAll().subscribe({
-      next: (response) => {
-        if (response.success && response.data) {
-          this.tontines.set(response.data.map(t => ({ id: String(t.id!), nom: t.nom })));
+  // ─── Chargement des données ───────────────────────────────────────────────
+
+  loadExercices(): void {
+    this.isLoadingExos.set(true);
+    this.hasError.set(false);
+    this.api.get<PaginatedResponse<ExerciceItem>>('/exercices', { page: 1, limit: 100 }).subscribe({
+      next: res => {
+        if (res.success) {
+          this.exercices.set(res.data ?? []);
+        } else {
+          this.hasError.set(true);
+          this.notif.error('Impossible de charger les exercices');
         }
+        this.isLoadingExos.set(false);
       },
-      error: () => {
-        this.notification.error('Erreur', 'Impossible de charger les tontines');
-        this.tontines.set([]);
+      error: err => {
+        this.hasError.set(true);
+        this.isLoadingExos.set(false);
+        this.notif.error(err.error?.message ?? 'Erreur de chargement des exercices');
       }
     });
   }
 
-  generateReport() {
-    if (!this.selectedTontineId || !this.selectedExport) return;
-
-    const option = this.exportOptions.find(o => o.id === this.selectedExport);
-    if (!option) return;
-
-    this.isLoading.set(true);
-
-    this.tontineService.exportPdf(this.selectedTontineId, option.type).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `tontine-${this.selectedTontineId}-${option.type}.pdf`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-        this.notification.success('Export réussi', 'Le PDF a été téléchargé');
-        this.isLoading.set(false);
+  onExoReleveChange(): void {
+    this.membreId.set('');
+    this.membresReleve.set([]);
+    const id = this.exoIdReleve();
+    if (!id) return;
+    this.isLoadingMembres.set(true);
+    this.api.get<ApiResponse<ExerciceMembreItem[]>>(`/exercices-membres/exercice/${id}`).subscribe({
+      next: res => {
+        if (res.success && res.data) {
+          this.membresReleve.set(res.data);
+        }
+        this.isLoadingMembres.set(false);
       },
-      error: () => {
-        this.notification.error('Erreur', "Impossible de générer le rapport");
-        this.isLoading.set(false);
+      error: () => this.isLoadingMembres.set(false)
+    });
+  }
+
+  onExoMensuelChange(): void {
+    this.reunionId.set('');
+    this.reunions.set([]);
+    const id = this.exoIdMensuel();
+    if (!id) return;
+    this.isLoadingReunions.set(true);
+    this.api.get<PaginatedResponse<ReunionItem>>('/reunions', { exerciceId: id, limit: 100 }).subscribe({
+      next: res => {
+        if (res.success) {
+          this.reunions.set(res.data ?? []);
+        }
+        this.isLoadingReunions.set(false);
+      },
+      error: () => this.isLoadingReunions.set(false)
+    });
+  }
+
+  // ─── Téléchargements ──────────────────────────────────────────────────────
+
+  downloadReleve(): void {
+    const exerciceMembreId = this.membreId();
+    if (!exerciceMembreId) return;
+    const fmt = this.formatReleve();
+    const ext = fmt === 'pdf' ? 'pdf' : 'xlsx';
+    const membre = this.membresReleve().find(m => m.id === exerciceMembreId);
+    const nomFichier = `releve-${membre?.matricule ?? exerciceMembreId}.${ext}`;
+    this.dlReleve.set(true);
+    this.api.download(`/exports/releve/${exerciceMembreId}?format=${fmt}`).subscribe({
+      next: blob => {
+        this.triggerDownload(blob, nomFichier);
+        this.dlReleve.set(false);
+        this.notif.success('Téléchargement lancé');
+      },
+      error: err => {
+        this.dlReleve.set(false);
+        this.notif.error(err.error?.message ?? 'Erreur lors du téléchargement');
       }
     });
   }
 
-  trackById(index: number, item: { id: string }) {
-    return item.id;
+  downloadExercice(): void {
+    const exerciceId = this.exoIdExercice();
+    if (!exerciceId) return;
+    const fmt = this.formatExercice();
+    const ext = fmt === 'pdf' ? 'pdf' : 'xlsx';
+    const exo = this.exercices().find(e => e.id === exerciceId);
+    const nomFichier = `rapport-exercice-${exo?.libelle ?? exerciceId}.${ext}`;
+    this.dlExercice.set(true);
+    this.api.download(`/exports/rapport-exercice/${exerciceId}?format=${fmt}`).subscribe({
+      next: blob => {
+        this.triggerDownload(blob, nomFichier);
+        this.dlExercice.set(false);
+        this.notif.success('Téléchargement lancé');
+      },
+      error: err => {
+        this.dlExercice.set(false);
+        this.notif.error(err.error?.message ?? 'Erreur lors du téléchargement');
+      }
+    });
+  }
+
+  downloadMensuel(): void {
+    const reunionId = this.reunionId();
+    if (!reunionId) return;
+    const fmt = this.formatMensuel();
+    const ext = fmt === 'pdf' ? 'pdf' : 'xlsx';
+    const reunion = this.reunions().find(r => r.id === reunionId);
+    const nomFichier = `rapport-reunion-${reunion?.numeroReunion ?? reunionId}.${ext}`;
+    this.dlMensuel.set(true);
+    this.api.download(`/exports/rapport-mensuel/${reunionId}?format=${fmt}`).subscribe({
+      next: blob => {
+        this.triggerDownload(blob, nomFichier);
+        this.dlMensuel.set(false);
+        this.notif.success('Téléchargement lancé');
+      },
+      error: err => {
+        this.dlMensuel.set(false);
+        this.notif.error(err.error?.message ?? 'Erreur lors du téléchargement');
+      }
+    });
+  }
+
+  private triggerDownload(blob: Blob, filename: string): void {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  }
+
+  // ─── Helpers ─────────────────────────────────────────────────────────────
+
+  getMembreLabel(m: ExerciceMembreItem): string {
+    if (m.utilisateur) return `${m.utilisateur.prenom} ${m.utilisateur.nom} (${m.matricule})`;
+    return m.matricule;
+  }
+
+  getExoLabel(e: ExerciceItem): string {
+    const tontine = e.tontine?.nom ? `${e.tontine.nom} — ` : '';
+    return `${tontine}${e.libelle}`;
+  }
+
+  getReunionLabel(r: ReunionItem): string {
+    const date = new Date(r.dateReunion).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return `Réunion n°${r.numeroReunion} — ${date}`;
   }
 }

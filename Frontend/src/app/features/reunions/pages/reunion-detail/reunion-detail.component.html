@@ -1,0 +1,279 @@
+<!-- Loading -->
+<div *ngIf="isLoading()" class="loading-container">
+  <div class="spinner"></div>
+  <p>Chargement de la réunion...</p>
+</div>
+
+<!-- Content -->
+<ng-container *ngIf="!isLoading() && reunion() as r">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-left">
+      <a routerLink="/dashboard/reunions" class="back-link">
+        <span class="material-icons">arrow_back</span>
+        Retour aux réunions
+      </a>
+      <div class="title-row">
+        <h1>Réunion #{{ r.numeroReunion }}</h1>
+        <span class="status-badge" [class]="getStatusClass(r.statut)">{{ getStatusLabel(r.statut) }}</span>
+      </div>
+      <p class="subtitle">
+        <span class="material-icons">business</span>
+        {{ r.exercice?.tontine?.nom }}
+        <span class="sep">—</span>
+        {{ r.exercice?.libelle }}
+      </p>
+    </div>
+
+    <div class="header-actions" *ngIf="r.statut !== 'CLOTUREE' && r.statut !== 'ANNULEE'">
+      <a [routerLink]="['/dashboard/reunions', r.id, 'edit']" class="btn-outline" *ngIf="r.statut === 'PLANIFIEE'">
+        <span class="material-icons">edit</span> Modifier
+      </a>
+      <button
+        class="btn-primary"
+        (click)="ouvrir()"
+        *ngIf="r.statut === 'PLANIFIEE'"
+        [disabled]="isActionLoading()"
+      >
+        <span class="spinner-sm" *ngIf="isActionLoading()"></span>
+        <span class="material-icons" *ngIf="!isActionLoading()">play_arrow</span>
+        Ouvrir la réunion
+      </button>
+      <button
+        class="btn-primary"
+        (click)="showCloturerForm.set(true)"
+        *ngIf="r.statut === 'OUVERTE' && !showCloturerForm()"
+        [disabled]="isActionLoading()"
+      >
+        <span class="material-icons">lock</span> Clôturer
+      </button>
+      <button
+        class="btn-danger"
+        (click)="annuler()"
+        [disabled]="isActionLoading()"
+      >
+        <span class="material-icons">cancel</span> Annuler
+      </button>
+    </div>
+  </div>
+
+  <!-- Clôturer inline form -->
+  <div *ngIf="showCloturerForm()" class="cloturer-panel">
+    <div class="cloturer-panel-inner">
+      <div class="cloturer-title">
+        <span class="material-icons">lock</span>
+        <h3>Clôturer la réunion</h3>
+      </div>
+      <p>Sélectionnez le membre responsable de la clôture :</p>
+      <div class="cloturer-row">
+        <select [(ngModel)]="cloturerMembreId" class="membre-select">
+          <option value="">-- Sélectionner un membre --</option>
+          <option *ngFor="let p of presences()" [value]="p.exerciceMembreId">
+            {{ p.exerciceMembre?.utilisateurNom || p.exerciceMembreId }}
+          </option>
+        </select>
+        <button class="btn-primary" (click)="cloturer()" [disabled]="isActionLoading() || !cloturerMembreId">
+          <span class="spinner-sm" *ngIf="isActionLoading()"></span>
+          <span class="material-icons" *ngIf="!isActionLoading()">check</span>
+          Confirmer
+        </button>
+        <button class="btn-outline" (click)="showCloturerForm.set(false); cloturerMembreId = ''">
+          Annuler
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info Grid -->
+  <div class="info-grid">
+    <div class="info-card">
+      <span class="info-icon"><span class="material-icons">event</span></span>
+      <div class="info-content">
+        <span class="info-label">Date</span>
+        <span class="info-value">{{ r.dateReunion | date:'dd MMMM yyyy' }}</span>
+      </div>
+    </div>
+
+    <div class="info-card" *ngIf="r.heureDebut">
+      <span class="info-icon"><span class="material-icons">schedule</span></span>
+      <div class="info-content">
+        <span class="info-label">Heure de début</span>
+        <span class="info-value">{{ r.heureDebut }}</span>
+      </div>
+    </div>
+
+    <div class="info-card" *ngIf="r.lieu">
+      <span class="info-icon"><span class="material-icons">place</span></span>
+      <div class="info-content">
+        <span class="info-label">Lieu</span>
+        <span class="info-value">{{ r.lieu }}</span>
+      </div>
+    </div>
+
+    <div class="info-card" *ngIf="r.hote">
+      <span class="info-icon"><span class="material-icons">person</span></span>
+      <div class="info-content">
+        <span class="info-label">Hôte</span>
+        <span class="info-value">{{ r.hote?.utilisateur?.prenom }} {{ r.hote?.utilisateur?.nom }}</span>
+      </div>
+    </div>
+
+    <div class="info-card" *ngIf="r.ouverteLe">
+      <span class="info-icon green"><span class="material-icons">play_circle</span></span>
+      <div class="info-content">
+        <span class="info-label">Ouverte le</span>
+        <span class="info-value">{{ r.ouverteLe | date:'dd/MM/yyyy HH:mm' }}</span>
+      </div>
+    </div>
+
+    <div class="info-card" *ngIf="r.clotureeLe">
+      <span class="info-icon gray"><span class="material-icons">lock</span></span>
+      <div class="info-content">
+        <span class="info-label">Clôturée le</span>
+        <span class="info-value">{{ r.clotureeLe | date:'dd/MM/yyyy HH:mm' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid" *ngIf="summary() as s">
+    <div class="stat-card">
+      <span class="stat-icon blue"><span class="material-icons">groups</span></span>
+      <div class="stat-content">
+        <span class="stat-value">{{ s.totalMembres }}</span>
+        <span class="stat-label">Total membres</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <span class="stat-icon green"><span class="material-icons">check_circle</span></span>
+      <div class="stat-content">
+        <span class="stat-value">{{ s.presents }}</span>
+        <span class="stat-label">Présents</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <span class="stat-icon red"><span class="material-icons">cancel</span></span>
+      <div class="stat-content">
+        <span class="stat-value">{{ s.absents }}</span>
+        <span class="stat-label">Absents</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <span class="stat-icon orange"><span class="material-icons">schedule</span></span>
+      <div class="stat-content">
+        <span class="stat-value">{{ s.enRetard }}</span>
+        <span class="stat-label">En retard</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <span class="stat-icon purple"><span class="material-icons">bar_chart</span></span>
+      <div class="stat-content">
+        <span class="stat-value">{{ s.tauxPresence | number:'1.0-1' }}%</span>
+        <span class="stat-label">Taux de présence</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs-bar">
+    <button
+      class="tab-btn"
+      [class.active]="activeTab() === 'presences'"
+      (click)="activeTab.set('presences')"
+    >
+      <span class="material-icons">people</span>
+      Présences
+      <span class="tab-count" *ngIf="presences().length > 0">{{ presences().length }}</span>
+    </button>
+    <button
+      class="tab-btn"
+      [class.active]="activeTab() === 'cotisations'"
+      (click)="activeTab.set('cotisations')"
+    >
+      <span class="material-icons">payments</span>
+      Cotisations dues
+      <span class="tab-count" *ngIf="cotisations().length > 0">{{ cotisations().length }}</span>
+    </button>
+  </div>
+
+  <!-- Tab: Présences -->
+  <div *ngIf="activeTab() === 'presences'" class="tab-content">
+    <div *ngIf="presences().length === 0" class="empty-state">
+      <span class="material-icons">people_outline</span>
+      <p>Aucune présence enregistrée pour cette réunion</p>
+    </div>
+
+    <div *ngIf="presences().length > 0" class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Membre</th>
+            <th>Présence</th>
+            <th>Retard</th>
+            <th>Heure d'arrivée</th>
+            <th>Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of presences()" [class.absent-row]="!p.estPresent">
+            <td class="member-cell">
+              <span class="member-avatar">
+                {{ (p.exerciceMembre?.utilisateurNom || 'M')[0].toUpperCase() }}
+              </span>
+              {{ p.exerciceMembre?.utilisateurNom || p.exerciceMembreId }}
+            </td>
+            <td>
+              <span class="badge" [class]="p.estPresent ? 'green' : 'red'">
+                <span class="material-icons">{{ p.estPresent ? 'check' : 'close' }}</span>
+                {{ p.estPresent ? 'Présent' : 'Absent' }}
+              </span>
+            </td>
+            <td>
+              <span *ngIf="p.estEnRetard" class="badge orange">En retard</span>
+              <span *ngIf="!p.estEnRetard" class="text-muted">—</span>
+            </td>
+            <td class="text-muted">{{ p.heureArrivee || '—' }}</td>
+            <td class="text-muted note-cell">{{ p.note || '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab: Cotisations -->
+  <div *ngIf="activeTab() === 'cotisations'" class="tab-content">
+    <div *ngIf="cotisations().length === 0" class="empty-state">
+      <span class="material-icons">payments</span>
+      <p>Aucune cotisation due pour cette réunion</p>
+    </div>
+
+    <div *ngIf="cotisations().length > 0" class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Membre</th>
+            <th>Montant</th>
+            <th>Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of cotisations()">
+            <td class="member-cell">
+              <span class="member-avatar">
+                {{ (c.membre ? (c.membre.prenom + ' ' + c.membre.nom) : c.exerciceMembreId)[0].toUpperCase() }}
+              </span>
+              {{ c.membre ? (c.membre.prenom + ' ' + c.membre.nom) : c.exerciceMembreId }}
+              <span *ngIf="c.membre?.matricule" class="matricule">{{ c.membre!.matricule }}</span>
+            </td>
+            <td class="amount-cell">{{ c.montant | currency:'XAF':'symbol':'1.0-0':'fr' }}</td>
+            <td>
+              <span class="badge" [class]="getCotisationClass(c.statut)">{{ c.statut }}</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</ng-container>
