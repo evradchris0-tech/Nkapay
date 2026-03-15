@@ -112,6 +112,7 @@ const router = Router();
  *       201:
  *         description: Membre ajoute
  */
+router.get('/', authenticate, exerciceMembreController.findAll.bind(exerciceMembreController));
 router.post('/', authenticate, exerciceMembreController.create.bind(exerciceMembreController));
 
 /**

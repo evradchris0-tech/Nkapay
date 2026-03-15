@@ -93,6 +93,37 @@ export class ExerciceMembreService {
   }
 
   /**
+   * Lister les membres avec filtres query params
+   */
+  async findAll(filters?: ExerciceMembreFiltersDto): Promise<{ membres: ExerciceMembreListItemDto[]; total: number }> {
+    const queryBuilder = this.exerciceMembreRepository
+      .createQueryBuilder('em')
+      .leftJoinAndSelect('em.adhesionTontine', 'adhesion')
+      .leftJoinAndSelect('adhesion.utilisateur', 'utilisateur');
+
+    if (filters?.exerciceId) {
+      queryBuilder.andWhere('em.exerciceId = :exerciceId', { exerciceId: filters.exerciceId });
+    }
+    if (filters?.adhesionTontineId) {
+      queryBuilder.andWhere('em.adhesionTontineId = :adhesionTontineId', { adhesionTontineId: filters.adhesionTontineId });
+    }
+    if (filters?.typeMembre) {
+      queryBuilder.andWhere('em.typeMembre = :typeMembre', { typeMembre: filters.typeMembre });
+    }
+    if (filters?.statut) {
+      queryBuilder.andWhere('em.statut = :statut', { statut: filters.statut });
+    } else if (filters?.estActif !== undefined) {
+      const statut = (filters.estActif === true || filters.estActif === 'true')
+        ? StatutExerciceMembre.ACTIF
+        : StatutExerciceMembre.INACTIF;
+      queryBuilder.andWhere('em.statut = :statut', { statut });
+    }
+
+    const membres = await queryBuilder.orderBy('adhesion.matricule', 'ASC').getMany();
+    return { membres: membres.map((m) => this.toListItemDto(m)), total: membres.length };
+  }
+
+  /**
    * Lister les membres d'un exercice
    */
   async findByExercice(exerciceId: string, filters?: ExerciceMembreFiltersDto): Promise<ExerciceMembreListItemDto[]> {

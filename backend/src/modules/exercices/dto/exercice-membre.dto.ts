@@ -61,6 +61,8 @@ export interface ExerciceMembreListItemDto {
 
 export interface ExerciceMembreFiltersDto {
   exerciceId?: string;
+  adhesionTontineId?: string;
   typeMembre?: TypeMembre;
   statut?: StatutExerciceMembre;
+  estActif?: boolean | string;
 }
