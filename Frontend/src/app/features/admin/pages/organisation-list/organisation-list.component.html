@@ -1,0 +1,273 @@
+<div class="page">
+
+  <!-- En-tête -->
+  <div class="page-header">
+    <div class="header-left">
+      <h1>
+        <span class="material-icons">business</span>
+        Organisations
+      </h1>
+      <p class="subtitle">Gestion des organisations de la plateforme NkapAy</p>
+    </div>
+    <button class="btn-primary" (click)="openCreateModal()">
+      <span class="material-icons">add_business</span>
+      Nouvelle organisation
+    </button>
+  </div>
+
+  <!-- Stats rapides -->
+  <div class="stats-row" *ngIf="!isLoading()">
+    <div class="stat-chip" [class.active]="filtreStatut() === ''" (click)="setFiltreStatut('')">
+      <span class="material-icons">business</span>
+      <span class="stat-value">{{ organisations().length }}</span>
+      <span class="stat-label">Total</span>
+    </div>
+    <div class="stat-chip green" [class.active]="filtreStatut() === 'ACTIVE'" (click)="setFiltreStatut('ACTIVE')">
+      <span class="material-icons">check_circle</span>
+      <span class="stat-value">{{ nbActives() }}</span>
+      <span class="stat-label">Actives</span>
+    </div>
+    <div class="stat-chip orange" [class.active]="filtreStatut() === 'SUSPENDUE'" (click)="setFiltreStatut('SUSPENDUE')">
+      <span class="material-icons">pause_circle</span>
+      <span class="stat-value">{{ nbSuspendues() }}</span>
+      <span class="stat-label">Suspendues</span>
+    </div>
+    <div class="stat-chip red" [class.active]="filtreStatut() === 'EXPIREE'" (click)="setFiltreStatut('EXPIREE')">
+      <span class="material-icons">cancel</span>
+      <span class="stat-value">{{ nbExpirees() }}</span>
+      <span class="stat-label">Expirées</span>
+    </div>
+  </div>
+
+  <!-- Barre de recherche -->
+  <div class="filters-bar">
+    <div class="search-box">
+      <span class="material-icons">search</span>
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        (keyup)="onSearchKeyup($event)"
+        placeholder="Rechercher par nom, slug ou email..."
+      />
+      <button class="clear-btn" *ngIf="searchTerm" (click)="clearSearch()" aria-label="Effacer la recherche">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-container" *ngIf="isLoading()">
+    <div class="spinner"></div>
+    <p>Chargement des organisations...</p>
+  </div>
+
+  <!-- Erreur -->
+  <div class="error-state" *ngIf="!isLoading() && hasError()">
+    <span class="material-icons">error_outline</span>
+    <p>Impossible de charger les organisations.</p>
+    <button class="btn-secondary" (click)="load()">Réessayer</button>
+  </div>
+
+  <!-- Empty -->
+  <div class="empty-state" *ngIf="isEmpty()">
+    <span class="material-icons">business_center</span>
+    <h3>Aucune organisation trouvée</h3>
+    <p *ngIf="searchTerm || filtreStatut()">Modifiez vos filtres ou créez une nouvelle organisation.</p>
+    <p *ngIf="!searchTerm && !filtreStatut()">Créez la première organisation de la plateforme.</p>
+    <button class="btn-primary" (click)="openCreateModal()">
+      <span class="material-icons">add_business</span>
+      Créer une organisation
+    </button>
+  </div>
+
+  <!-- Table -->
+  <div class="table-card" *ngIf="!isLoading() && !hasError() && !isEmpty()">
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Organisation</th>
+            <th>Email contact</th>
+            <th>Plan</th>
+            <th>Abonnement fin</th>
+            <th>Statut</th>
+            <th>Créée le</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let org of organisationsFiltrees()">
+            <td>
+              <div class="org-cell">
+                <div class="org-avatar">{{ getInitials(org.nom) }}</div>
+                <div class="org-info">
+                  <a [routerLink]="[org.id]" class="org-name">{{ org.nom }}</a>
+                  <span class="org-slug">{{ org.slug }}</span>
+                </div>
+              </div>
+            </td>
+            <td>{{ org.emailContact }}</td>
+            <td>
+              <span class="plan-badge">{{ org.planCode }}</span>
+            </td>
+            <td>
+              <span *ngIf="org.abonnementFinLe">
+                {{ org.abonnementFinLe | date:'dd/MM/yyyy' }}
+              </span>
+              <span *ngIf="!org.abonnementFinLe" class="text-muted">—</span>
+            </td>
+            <td>
+              <span class="status-badge" [class]="getStatutColor(org.statut)">
+                {{ getStatutLabel(org.statut) }}
+              </span>
+            </td>
+            <td class="date-cell">{{ org.creeLe | date:'dd/MM/yyyy' }}</td>
+            <td>
+              <div class="row-actions">
+                <a [routerLink]="[org.id]" class="btn-icon" aria-label="Voir le détail">
+                  <span class="material-icons">visibility</span>
+                </a>
+                <button
+                  *ngIf="org.statut === 'ACTIVE'"
+                  class="btn-icon orange"
+                  (click)="suspendre(org)"
+                  [disabled]="isActionInProgress(org.id)"
+                  aria-label="Suspendre l'organisation">
+                  <span class="material-icons">pause_circle</span>
+                </button>
+                <button
+                  *ngIf="org.statut === 'SUSPENDUE'"
+                  class="btn-icon green"
+                  (click)="reactiver(org)"
+                  [disabled]="isActionInProgress(org.id)"
+                  aria-label="Réactiver l'organisation">
+                  <span class="material-icons">play_circle</span>
+                </button>
+                <span class="spinner-sm" *ngIf="isActionInProgress(org.id)"></span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Modal Créer une organisation ─────────────────────────────────────────── -->
+<div class="modal-overlay" *ngIf="showCreateModal()" (click)="closeCreateModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <span class="material-icons">add_business</span>
+        Nouvelle organisation
+      </h2>
+      <button class="close-btn" (click)="closeCreateModal()" aria-label="Fermer">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+      <div class="modal-body">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="nom">Nom de l'organisation *</label>
+            <input
+              id="nom"
+              type="text"
+              formControlName="nom"
+              (input)="onNomChange()"
+              placeholder="Ex : Tontine Excellence"
+              [class.invalid]="f['nom'].invalid && f['nom'].touched"
+            />
+            <span class="field-error" *ngIf="f['nom'].invalid && f['nom'].touched">
+              Le nom est requis
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label for="slug">Identifiant URL *</label>
+            <input
+              id="slug"
+              type="text"
+              formControlName="slug"
+              placeholder="tontine-excellence"
+              [class.invalid]="f['slug'].invalid && f['slug'].touched"
+            />
+            <span class="field-error" *ngIf="f['slug'].invalid && f['slug'].touched">
+              Slug invalide (minuscules, chiffres, tirets uniquement)
+            </span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="emailContact">Email de contact *</label>
+          <input
+            id="emailContact"
+            type="email"
+            formControlName="emailContact"
+            placeholder="contact@organisation.cm"
+            [class.invalid]="f['emailContact'].invalid && f['emailContact'].touched"
+          />
+          <span class="field-error" *ngIf="f['emailContact'].invalid && f['emailContact'].touched">
+            Email invalide
+          </span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="telephoneContact">Téléphone de contact</label>
+            <input
+              id="telephoneContact"
+              type="tel"
+              formControlName="telephoneContact"
+              placeholder="+237 6XX XXX XXX"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="pays">Pays</label>
+            <input
+              id="pays"
+              type="text"
+              formControlName="pays"
+              placeholder="CM"
+            />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="devise">Devise</label>
+            <input
+              id="devise"
+              type="text"
+              formControlName="devise"
+              placeholder="XAF"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="planAbonnementId">Plan d'abonnement</label>
+            <select id="planAbonnementId" formControlName="planAbonnementId">
+              <option value="">Par défaut (FREE)</option>
+              <option *ngFor="let plan of plans()" [value]="plan.id">
+                {{ plan.libelle }} — {{ plan.prixMensuel | number:'1.0-0' }} XAF/mois
+              </option>
+            </select>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" (click)="closeCreateModal()">Annuler</button>
+        <button type="submit" class="btn-submit" [disabled]="form.invalid || isSubmitting()">
+          <span class="spinner-sm" *ngIf="isSubmitting()"></span>
+          <span class="material-icons" *ngIf="!isSubmitting()">add_business</span>
+          {{ isSubmitting() ? 'Création...' : 'Créer l\'organisation' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

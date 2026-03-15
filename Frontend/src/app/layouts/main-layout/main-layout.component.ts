@@ -43,7 +43,8 @@ export class MainLayoutComponent {
   ];
 
   adminMenuItems: MenuItem[] = [
-    { label: 'Administration', icon: 'admin_panel_settings', route: '/dashboard/admin' }
+    { label: 'Utilisateurs', icon: 'manage_accounts', route: '/dashboard/admin' },
+    { label: 'Organisations', icon: 'corporate_fare', route: '/dashboard/admin/organisations' }
   ];
 
   isSuperAdmin = computed(() => {
