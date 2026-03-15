@@ -26,6 +26,9 @@ export interface AuthUser {
   id: string;       // alias pour sub (utilisateurId)
   sub: string;      // utilisateurId original
   type: 'access' | 'refresh';
+  estSuperAdmin: boolean;
+  organisationId?: string;
+  orgRole?: string;
   iat: number;
   exp: number;
 }
@@ -63,6 +66,7 @@ export function authenticate(req: Request, _res: Response, next: NextFunction): 
       id: decoded.sub,
       sub: decoded.sub,
       type: decoded.type,
+      estSuperAdmin: (decoded as any).estSuperAdmin ?? false,
       iat: decoded.iat,
       exp: decoded.exp,
     };
@@ -104,6 +108,7 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction): 
         id: decoded.sub,
         sub: decoded.sub,
         type: decoded.type,
+        estSuperAdmin: (decoded as any).estSuperAdmin ?? false,
         iat: decoded.iat,
         exp: decoded.exp,
       };

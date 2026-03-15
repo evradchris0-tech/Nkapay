@@ -39,11 +39,20 @@ export interface LogoutDto {
 }
 
 /**
+ * DTO pour le changement de mot de passe
+ */
+export interface ChangePasswordDto {
+  ancienMotDePasse: string;
+  nouveauMotDePasse: string;
+}
+
+/**
  * Payload du JWT
  */
 export interface JwtPayload {
   sub: string; // utilisateurId
   type: 'access' | 'refresh';
+  estSuperAdmin?: boolean;
   iat: number;
   exp: number;
 }

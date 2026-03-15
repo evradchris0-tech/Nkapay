@@ -82,7 +82,7 @@ export class AuthService {
     await this.tentativeRepository.save(tentative);
 
     // Generation des tokens
-    const accessToken = generateAccessToken(utilisateur.id);
+    const accessToken = generateAccessToken(utilisateur.id, utilisateur.estSuperAdmin);
     const refreshToken = generateRefreshToken(utilisateur.id);
 
     // Creation de la session
@@ -230,6 +230,28 @@ export class AuthService {
     await this.sessionRepository.save(session);
 
     return utilisateur;
+  }
+
+  /**
+   * Changement de mot de passe
+   */
+  async changePassword(utilisateurId: string, ancienMotDePasse: string, nouveauMotDePasse: string): Promise<void> {
+    const utilisateur = await this.utilisateurRepository.findOne({ where: { id: utilisateurId } });
+    if (!utilisateur) {
+      throw new UnauthorizedError('Utilisateur non trouve');
+    }
+
+    const isValid = await verifyPassword(ancienMotDePasse, utilisateur.passwordHash);
+    if (!isValid) {
+      throw new UnauthorizedError('Ancien mot de passe incorrect');
+    }
+
+    utilisateur.passwordHash = await (await import('../utils/password.util')).hashPassword(nouveauMotDePasse);
+    utilisateur.doitChangerMotDePasse = false;
+    utilisateur.motDePasseModifieLe = new Date();
+    await this.utilisateurRepository.save(utilisateur);
+
+    logger.info(`Mot de passe modifie pour l'utilisateur ${utilisateurId}`);
   }
 
   /**

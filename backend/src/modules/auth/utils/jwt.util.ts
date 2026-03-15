@@ -10,10 +10,11 @@ import { JwtPayload } from '../dtos/auth.dto';
 /**
  * Genere un access token
  */
-export function generateAccessToken(utilisateurId: string): string {
+export function generateAccessToken(utilisateurId: string, estSuperAdmin = false): string {
   const payload: Omit<JwtPayload, 'iat' | 'exp'> = {
     sub: utilisateurId,
     type: 'access',
+    estSuperAdmin,
   };
 
   const options: SignOptions = {
