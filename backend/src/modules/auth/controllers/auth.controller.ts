@@ -6,7 +6,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/auth.service';
 import { UtilisateurService } from '../../utilisateurs/services/utilisateur.service';
-import { LoginDto, RefreshTokenDto, LogoutDto } from '../dtos/auth.dto';
+import { LoginDto, RefreshTokenDto, LogoutDto, ChangePasswordDto } from '../dtos/auth.dto';
 import { ApiResponse } from '../../../shared/utils/api-response.util';
 
 // Lazy initialization pour eviter d'appeler getRepository() avant DataSource.initialize()
@@ -104,6 +104,28 @@ export async function getSessions(req: Request, res: Response, next: NextFunctio
     }));
 
     res.json(ApiResponse.success(sessionsResponse));
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * POST /auth/change-password
+ * Changement de mot de passe
+ */
+export async function changePassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const dto: ChangePasswordDto = req.body;
+    const utilisateurId = req.user?.id;
+
+    if (!utilisateurId) {
+      res.status(401).json(ApiResponse.error('Non authentifie'));
+      return;
+    }
+
+    await getAuthService().changePassword(utilisateurId, dto.ancienMotDePasse, dto.nouveauMotDePasse);
+
+    res.json(ApiResponse.success(null, 'Mot de passe modifie avec succes'));
   } catch (error) {
     next(error);
   }

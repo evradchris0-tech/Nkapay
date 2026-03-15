@@ -31,10 +31,12 @@ export class Utilisateur {
   @Column({ type: 'varchar', length: 100 })
   nom: string;
 
-  @Column({ type: 'varchar', length: 20, unique: true })
+  @Index('IDX_utilisateur_telephone1', { unique: true })
+  @Column({ type: 'varchar', length: 20 })
   telephone1: string;
 
-  @Column({ type: 'varchar', length: 20, unique: true, nullable: true })
+  @Index('IDX_utilisateur_telephone2', { unique: true })
+  @Column({ type: 'varchar', length: 20, nullable: true })
   telephone2: string | null;
 
   @Column({ name: 'adresse_residence', type: 'varchar', length: 255, nullable: true })

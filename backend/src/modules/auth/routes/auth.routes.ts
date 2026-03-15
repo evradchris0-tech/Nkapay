@@ -3,8 +3,8 @@
  */
 
 import { Router } from 'express';
-import { login, refreshToken, logout, getSessions, getCurrentUser } from '../controllers/auth.controller';
-import { loginValidator, refreshTokenValidator, logoutValidator } from '../validators/auth.validator';
+import { login, refreshToken, logout, getSessions, getCurrentUser, changePassword } from '../controllers/auth.controller';
+import { loginValidator, refreshTokenValidator, logoutValidator, changePasswordValidator } from '../validators/auth.validator';
 import { validate, authenticate } from '../../../shared/middlewares';
 
 const router = Router();
@@ -115,5 +115,7 @@ router.get('/sessions', authenticate, getSessions);
  *         description: Informations utilisateur
  */
 router.get('/me', authenticate, getCurrentUser);
+
+router.post('/change-password', authenticate, changePasswordValidator, validate, changePassword);
 
 export default router;

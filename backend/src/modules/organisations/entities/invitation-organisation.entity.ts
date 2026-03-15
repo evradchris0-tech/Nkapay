@@ -35,8 +35,8 @@ export class InvitationOrganisation {
   @Column({ name: 'role_propose', type: 'enum', enum: [RoleOrganisation.ORG_ADMIN, RoleOrganisation.ORG_MEMBRE], default: RoleOrganisation.ORG_MEMBRE })
   rolePropose: RoleOrganisation.ORG_ADMIN | RoleOrganisation.ORG_MEMBRE;
 
-  @Index()
-  @Column({ type: 'varchar', length: 100, unique: true })
+  @Index('IDX_invitation_organisation_token', { unique: true })
+  @Column({ type: 'varchar', length: 100 })
   token: string;
 
   @Column({ name: 'expire_le', type: 'timestamp' })

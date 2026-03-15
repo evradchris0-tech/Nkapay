@@ -24,6 +24,18 @@ export const refreshTokenValidator = [
     .withMessage('Le token de rafraichissement est requis'),
 ];
 
+export const changePasswordValidator = [
+  body('ancienMotDePasse')
+    .notEmpty()
+    .withMessage('L\'ancien mot de passe est requis'),
+
+  body('nouveauMotDePasse')
+    .notEmpty()
+    .withMessage('Le nouveau mot de passe est requis')
+    .isLength({ min: 8 })
+    .withMessage('Le nouveau mot de passe doit contenir au moins 8 caracteres'),
+];
+
 export const logoutValidator = [
   body('sessionId')
     .optional()
