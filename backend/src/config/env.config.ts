@@ -25,7 +25,7 @@ interface EnvironmentConfig {
 
   jwt: {
     secret: string;
-    expiresIn: string;
+    accessExpiresIn: string;
     refreshExpiresIn: string;
   };
 
@@ -44,7 +44,7 @@ interface EnvironmentConfig {
   };
 }
 
-function getEnvString(key: string, defaultValue: string = ''): string {
+function getEnvString(key: string, defaultValue = ''): string {
   return process.env[key] || defaultValue;
 }
 
@@ -71,14 +71,14 @@ export const env: EnvironmentConfig = {
     port: getEnvNumber('DB_PORT', 3306),
     username: getEnvString('DB_USERNAME', 'root'),
     password: getEnvString('DB_PASSWORD', ''),
-    database: getEnvString('DB_DATABASE', 'nkapay_db'),
+    database: getEnvString('DB_DATABASE', 'nkapay'),
     synchronize: getEnvBoolean('DB_SYNCHRONIZE', false),
     logging: getEnvBoolean('DB_LOGGING', true),
   },
 
   jwt: {
     secret: getEnvString('JWT_SECRET', 'default-secret-change-in-production'),
-    expiresIn: getEnvString('JWT_EXPIRES_IN', '1h'),
+    accessExpiresIn: getEnvString('JWT_ACCESS_EXPIRES_IN', '1h'),
     refreshExpiresIn: getEnvString('JWT_REFRESH_EXPIRES_IN', '7d'),
   },
 

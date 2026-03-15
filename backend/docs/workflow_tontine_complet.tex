@@ -1,0 +1,184 @@
+\documentclass[12pt,a4paper]{report}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows}
+
+\geometry{hmargin=2.5cm,vmargin=2.5cm}
+
+\title{\textbf{Workflow Opérationnel Complet et Détaillé}\\Système de Gestion de Tontine (Nkapay)}
+\author{Documentation Technique Backend}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+\chapter{Introduction}
+Ce document décrit de manière exhaustive les processus métier implémentés dans le backend Nkapay. Il couvre le cycle de vie complet d'une tontine, de sa création à la cassation finale, en incluant les cas nominaux (scénarios idéaux) et les cas alternatifs (échecs, retards, annulations).
+
+\section{Concepts Clés}
+\begin{itemize}
+    \item \textbf{Tontine} : L'organisation globale.
+    \item \textbf{Exercice} : Un cycle d'activité (généralement 12 mois/réunions).
+    \item \textbf{Réunion} : L'événement mensuel où se déroulent les transactions.
+    \item \textbf{Dues (Dettes)} : Obligations financières générées automatiquement (Cotisation, Pot, Épargne).
+    \item \textbf{Cassation} : Processus de distribution des fonds en fin d'exercice.
+\end{itemize}
+
+\chapter{Initialisation et Configuration}
+
+\section{1. Création de la Tontine}
+\textbf{Acteur :} Créateur / Admin
+\begin{itemize}
+    \item \textbf{Action :} Création d'une nouvelle tontine.
+    \item \textbf{Automatisme :} Le système initialise automatiquement les règles par défaut obligatoires (ex: Taux d'intérêt défaut 5\%).
+\end{itemize}
+
+\section{2. Gestion des Adhésions}
+\textbf{Acteur :} Utilisateur
+\begin{enumerate}
+    \item L'utilisateur envoie une demande via code d'invitation.
+    \item L'Admin valide la demande.
+    \item \textbf{Résultat :} Création d'un lien \texttt{AdhesionTontine} actif.
+\end{enumerate}
+
+\chapter{Cycle de Vie de l'Exercice}
+
+\section{1. Création et Paramétrage}
+\textbf{État initial :} BROUILLON.
+\begin{itemize}
+    \item L'Admin définit la date de début et de fin.
+    \item \textbf{Cas Alternatif :} Modification des règles spécifiques à cet exercice (ex: augmenter la cotisation min pour cette année). Ces règles surchargent celles de la Tontine.
+\end{itemize}
+
+\section{2. Ouverture de l'Exercice}
+\textbf{Transition :} BROUILLON $\rightarrow$ OUVERT.
+\begin{itemize}
+    \item \textbf{Automatisme 1 (Membres) :} Le système importe tous les membres actifs de la Tontine vers l'Exercice (\texttt{ExerciceMembre}).
+    \item \textbf{Automatisme 2 (Règles) :} Le système copie et gèle les règles actives de la Tontine dans le contexte de l'Exercice.
+    \item \textbf{Check Intégrité :} Impossible d'ouvrir si un autre exercice est déjà OUVERT.
+\end{itemize}
+
+\chapter{Gestion des Réunions et Finances (Mensuel)}
+
+\section{1. Planification}
+L'Admin génère les séances (souvent 12).
+\textbf{État :} PLANIFIEE.
+
+\section{2. Ouverture d'une Réunion}
+\textbf{Transition :} PLANIFIEE $\rightarrow$ OUVERTE.
+\textbf{Processus Critique Automatique :}
+\begin{enumerate}
+    \item \textbf{Présences :} Création des fiches de présence pour chaque membre actif.
+    \item \textbf{Génération des Dettes :}
+    \begin{itemize}
+        \item Lecture de la règle \texttt{COTISATION\_MENSUELLE\_MIN}. $\rightarrow$ Création \texttt{CotisationDue}.
+        \item Lecture de la règle \texttt{POT\_MENSUEL\_MONTANT}. $\rightarrow$ Création \texttt{PotDu}.
+        \item Lecture de la règle \texttt{EPARGNE\_MENSUELLE\_MIN}. $\rightarrow$ Création \texttt{EpargneDue}.
+    \end{itemize}
+\end{enumerate}
+
+\section{3. Paiements (Transactions ACID)}
+\textit{Chaque paiement est une transaction atomique. Si la validation échoue, aucun fond n'est mouvementé.}
+
+\subsection{A. Paiement de Cotisation}
+\textbf{Cas Nominal :}
+\begin{itemize}
+    \item Membre paie le montant exact.
+    \item Transaction validée.
+    \item \texttt{CotisationDue} passe à \textbf{PAYEE}.
+\end{itemize}
+\textbf{Cas Alternatif 1 (Partiel) :}
+\begin{itemize}
+    \item Membre paie moins que le dû.
+    \item \texttt{CotisationDue} reste \textbf{EN\_INTANCE} ou partielle.
+    \item Solde restant > 0.
+\end{itemize}
+\textbf{Cas Alternatif 2 (Trop perçu) :}
+\begin{itemize}
+    \item Membre paie plus.
+    \item Le surplus peut être crédité en Épargne (selon règles implémentées) ou reste en solde positif.
+\end{itemize}
+
+\subsection{B. Paiement de Pot (Bouffe)}
+Idem que cotisation, mais lié à l'entité \texttt{PotDuMensuel}.
+
+\subsection{C. Épargne Libre}
+\begin{itemize}
+    \item Tout montant versé au titre \texttt{type=EPARGNE} incrémente le solde \texttt{EpargneDueMensuelle} du membre.
+    \item Ces fonds ne sont PAS redistribués immédiatement (contrairement au Pot qui est donné au bénéficiaire).
+\end{itemize}
+
+\section{4. Distribution (Bénéficiaire du tour)}
+\textbf{Contexte :} L'argent des cotisations (et parfois du pot) est remis à un bénéficiaire.
+\begin{itemize}
+    \item L'Admin crée une \texttt{Distribution}.
+    \item Le montant est déduit de la caisse virtuelle de la réunion.
+\end{itemize}
+
+\section{5. Prêts et Remboursements}
+\subsection{A. Octroi}
+\begin{enumerate}
+    \item Demande de prêt par le membre.
+    \item Vérification des règles (\texttt{PRET\_PLAFOND\_MONTANT}, etc.).
+    \item Validation Admin $\rightarrow$ Décaissement.
+    \item Statut Prêt : \textbf{EN\_COURS}.
+\end{enumerate}
+
+\subsection{B. Remboursement}
+\begin{itemize}
+    \item Transaction de type \texttt{REMBOURSEMENT\_PRET}.
+    \item Le système impute d'abord les intérêts, puis le capital.
+    \item Une fois \texttt{capitalRestant = 0}, le prêt passe à \textbf{REMBOURSE}.
+\end{itemize}
+
+\chapter{Clôture d'Exercice et Cassation}
+
+\section{1. Le processus de Cassation}
+Ce processus intervient après la dernière réunion. Il vise à rendre leur argent aux membres.
+
+\textbf{Algorithme de Calcul (par membre) :}
+\begin{enumerate}
+    \item \textbf{Somme des Avoirs :} $\Sigma$ Épargnes versées sur les 12 mois.
+    \item \textbf{Calcul des Dettes (Déductions) :}
+    \begin{itemize}
+        \item (+) Capital restant des prêts non remboursés.
+        \item (+) Intérêts de prêts impayés.
+        \item (+) Pénalités impayées (Retards, Absences).
+        \item (+) Dettes de cotisations/pots non réglées.
+    \end{itemize}
+    \item \textbf{Résultat Net :} $Net = Avoirs - Dettes$.
+\end{enumerate}
+
+\section{2. Scénarios de Fin}
+\textbf{Cas Nominal :}
+\begin{itemize}
+    \item Tous les prêts sont remboursés. Toutes les pénalités payées.
+    \item Le membre reçoit 100\% de son épargne.
+\end{itemize}
+
+\textbf{Cas "Membre Défaillant" :}
+\begin{itemize}
+    \item Le membre a un prêt en cours de 100.000 non remboursé.
+    \item Il a une épargne de 150.000.
+    \item Le système effectue une \textbf{compensation automatique}.
+    \item Le membre ne reçoit que 50.000. La dette est effacée.
+\end{itemize}
+
+\textbf{Cas "Faillite Membre" (Rare) :}
+\begin{itemize}
+    \item Dettes > Épargne.
+    \item Le solde de cassation est 0. Le membre reste débiteur envers l'association pour l'exercice suivant (Report à nouveau).
+\end{itemize}
+
+\end{document}

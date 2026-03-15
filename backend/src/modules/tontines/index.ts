@@ -1,1 +1,1 @@
-# Module Tontines
+export * from './entities';

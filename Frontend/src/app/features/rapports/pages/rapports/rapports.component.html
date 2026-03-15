@@ -1,0 +1,276 @@
+<div class="page">
+
+  <!-- En-tête -->
+  <div class="page-header">
+    <div class="header-left">
+      <h1>
+        <span class="material-icons">assessment</span>
+        Rapports & Exports
+      </h1>
+      <p class="subtitle">Téléchargez vos rapports en PDF ou Excel</p>
+    </div>
+  </div>
+
+  <!-- Loading exercices -->
+  <div class="loading-container" *ngIf="isLoadingExos()">
+    <div class="spinner"></div>
+    <p>Chargement des exercices...</p>
+  </div>
+
+  <!-- Erreur -->
+  <div class="error-state" *ngIf="!isLoadingExos() && hasError()">
+    <span class="material-icons">error_outline</span>
+    <p>Impossible de charger les exercices.</p>
+    <button class="btn-secondary" (click)="loadExercices()">Réessayer</button>
+  </div>
+
+  <!-- Contenu -->
+  <div class="reports-grid" *ngIf="!isLoadingExos() && !hasError()">
+
+    <!-- ─── Carte 1 : Relevé individuel ─────────────────────────────────────── -->
+    <div class="report-card">
+      <div class="card-header">
+        <div class="card-icon purple">
+          <span class="material-icons">person</span>
+        </div>
+        <div class="card-title">
+          <h3>Relevé individuel</h3>
+          <p>Relevé de compte complet d'un membre pour un exercice donné</p>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <!-- Exercice -->
+        <div class="form-group">
+          <label>Exercice *</label>
+          <select [(ngModel)]="exoIdReleve" (change)="onExoReleveChange()">
+            <option value="">— Choisir un exercice —</option>
+            <option *ngFor="let e of exercices()" [value]="e.id">
+              {{ getExoLabel(e) }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Membre -->
+        <div class="form-group" *ngIf="exoIdReleve()">
+          <label>
+            Membre *
+            <span class="loading-badge" *ngIf="isLoadingMembres()">chargement...</span>
+          </label>
+          <select [(ngModel)]="membreId" [disabled]="isLoadingMembres()">
+            <option value="">— Choisir un membre —</option>
+            <option *ngFor="let m of membresReleve()" [value]="m.id">
+              {{ getMembreLabel(m) }}
+            </option>
+          </select>
+          <span class="empty-hint" *ngIf="!isLoadingMembres() && membresReleve().length === 0">
+            Aucun membre trouvé pour cet exercice
+          </span>
+        </div>
+
+        <!-- Format -->
+        <div class="format-group" *ngIf="exoIdReleve() && membreId()">
+          <label>Format</label>
+          <div class="format-btns">
+            <button
+              class="format-btn"
+              [class.active]="formatReleve() === 'pdf'"
+              (click)="formatReleve.set('pdf')"
+              type="button">
+              <span class="material-icons">picture_as_pdf</span>
+              PDF
+            </button>
+            <button
+              class="format-btn"
+              [class.active]="formatReleve() === 'excel'"
+              (click)="formatReleve.set('excel')"
+              type="button">
+              <span class="material-icons">table_chart</span>
+              Excel
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-footer">
+        <button
+          class="btn-download"
+          [class.pdf]="formatReleve() === 'pdf'"
+          [class.excel]="formatReleve() === 'excel'"
+          [disabled]="!canDownloadReleve()"
+          (click)="downloadReleve()">
+          <span class="spinner-sm" *ngIf="dlReleve()"></span>
+          <span class="material-icons" *ngIf="!dlReleve()">download</span>
+          {{ dlReleve() ? 'Téléchargement...' : 'Télécharger le relevé' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- ─── Carte 2 : Rapport d'exercice ─────────────────────────────────────── -->
+    <div class="report-card">
+      <div class="card-header">
+        <div class="card-icon blue">
+          <span class="material-icons">summarize</span>
+        </div>
+        <div class="card-title">
+          <h3>Rapport d'exercice</h3>
+          <p>Rapport complet d'un exercice : membres, cotisations, prêts, distributions</p>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <!-- Exercice -->
+        <div class="form-group">
+          <label>Exercice *</label>
+          <select [(ngModel)]="exoIdExercice">
+            <option value="">— Choisir un exercice —</option>
+            <option *ngFor="let e of exercices()" [value]="e.id">
+              {{ getExoLabel(e) }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Format -->
+        <div class="format-group" *ngIf="exoIdExercice()">
+          <label>Format</label>
+          <div class="format-btns">
+            <button
+              class="format-btn"
+              [class.active]="formatExercice() === 'pdf'"
+              (click)="formatExercice.set('pdf')"
+              type="button">
+              <span class="material-icons">picture_as_pdf</span>
+              PDF
+            </button>
+            <button
+              class="format-btn"
+              [class.active]="formatExercice() === 'excel'"
+              (click)="formatExercice.set('excel')"
+              type="button">
+              <span class="material-icons">table_chart</span>
+              Excel
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-footer">
+        <button
+          class="btn-download"
+          [class.pdf]="formatExercice() === 'pdf'"
+          [class.excel]="formatExercice() === 'excel'"
+          [disabled]="!canDownloadExercice()"
+          (click)="downloadExercice()">
+          <span class="spinner-sm" *ngIf="dlExercice()"></span>
+          <span class="material-icons" *ngIf="!dlExercice()">download</span>
+          {{ dlExercice() ? 'Téléchargement...' : 'Télécharger le rapport' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- ─── Carte 3 : Rapport mensuel ─────────────────────────────────────────── -->
+    <div class="report-card">
+      <div class="card-header">
+        <div class="card-icon green">
+          <span class="material-icons">event_note</span>
+        </div>
+        <div class="card-title">
+          <h3>Rapport mensuel</h3>
+          <p>Compte-rendu d'une réunion : présences, cotisations, pénalités</p>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <!-- Exercice -->
+        <div class="form-group">
+          <label>Exercice *</label>
+          <select [(ngModel)]="exoIdMensuel" (change)="onExoMensuelChange()">
+            <option value="">— Choisir un exercice —</option>
+            <option *ngFor="let e of exercices()" [value]="e.id">
+              {{ getExoLabel(e) }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Réunion -->
+        <div class="form-group" *ngIf="exoIdMensuel()">
+          <label>
+            Réunion *
+            <span class="loading-badge" *ngIf="isLoadingReunions()">chargement...</span>
+          </label>
+          <select [(ngModel)]="reunionId" [disabled]="isLoadingReunions()">
+            <option value="">— Choisir une réunion —</option>
+            <option *ngFor="let r of reunions()" [value]="r.id">
+              {{ getReunionLabel(r) }}
+            </option>
+          </select>
+          <span class="empty-hint" *ngIf="!isLoadingReunions() && reunions().length === 0">
+            Aucune réunion trouvée pour cet exercice
+          </span>
+        </div>
+
+        <!-- Format -->
+        <div class="format-group" *ngIf="exoIdMensuel() && reunionId()">
+          <label>Format</label>
+          <div class="format-btns">
+            <button
+              class="format-btn"
+              [class.active]="formatMensuel() === 'pdf'"
+              (click)="formatMensuel.set('pdf')"
+              type="button">
+              <span class="material-icons">picture_as_pdf</span>
+              PDF
+            </button>
+            <button
+              class="format-btn"
+              [class.active]="formatMensuel() === 'excel'"
+              (click)="formatMensuel.set('excel')"
+              type="button">
+              <span class="material-icons">table_chart</span>
+              Excel
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-footer">
+        <button
+          class="btn-download"
+          [class.pdf]="formatMensuel() === 'pdf'"
+          [class.excel]="formatMensuel() === 'excel'"
+          [disabled]="!canDownloadMensuel()"
+          (click)="downloadMensuel()">
+          <span class="spinner-sm" *ngIf="dlMensuel()"></span>
+          <span class="material-icons" *ngIf="!dlMensuel()">download</span>
+          {{ dlMensuel() ? 'Téléchargement...' : 'Télécharger le rapport' }}
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /reports-grid -->
+
+  <!-- Guide d'utilisation -->
+  <div class="guide-card" *ngIf="!isLoadingExos() && !hasError()">
+    <h3>
+      <span class="material-icons">help_outline</span>
+      Formats disponibles
+    </h3>
+    <div class="guide-items">
+      <div class="guide-item">
+        <span class="material-icons pdf-icon">picture_as_pdf</span>
+        <div>
+          <strong>PDF</strong>
+          <p>Idéal pour imprimer, archiver ou partager en lecture seule.</p>
+        </div>
+      </div>
+      <div class="guide-item">
+        <span class="material-icons excel-icon">table_chart</span>
+        <div>
+          <strong>Excel (.xlsx)</strong>
+          <p>Idéal pour analyser, filtrer et calculer dans un tableur.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

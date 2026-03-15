@@ -1,1 +1,1 @@
-# Module Secours
+export * from './entities';

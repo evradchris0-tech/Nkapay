@@ -1,0 +1,23 @@
+{
+  "files.autoSave": "afterDelay",
+  "editor.minimap.enabled": false,
+  "workbench.list.smoothScrolling": false,
+
+
+  "antigravity.agents.maxConcurrent": 2, 
+  
+  "antigravity.storage.cachePath": "D:\\Antigravity_Cache\\Nkapay_Artifacts",
+  
+  "antigravity.indexing.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/build": true,
+    "**/.git": true,
+    "**/vendor": true,
+    "**/tmp": true
+  },
+
+  "antigravity.network.lowBandwidthMode": true,
+  
+  "antigravity.preview.autoPlayVideos": false
+}

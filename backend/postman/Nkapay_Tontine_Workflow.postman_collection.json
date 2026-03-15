@@ -1,0 +1,1822 @@
+{
+  "info": {
+    "name": "Nkapay - Workflow Exercice Tontine",
+    "description": "Collection complète pour simuler un exercice de tontine avec 4 membres sur 4 réunions mensuelles.\n\nWorkflow:\n1. Authentification\n2. Création des membres\n3. Création tontine et adhésions\n4. Exercice et inscriptions\n5. Réunions avec cotisations, épargnes, pots\n6. Prêt, secours, pénalités\n7. Cassation finale",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/v1"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "tontineTypeId",
+      "value": "0ec7e39c-a22a-4e90-837e-576a161bf7eb"
+    },
+    {
+      "key": "tontineId",
+      "value": ""
+    },
+    {
+      "key": "exerciceId",
+      "value": ""
+    },
+    {
+      "key": "user1Id",
+      "value": ""
+    },
+    {
+      "key": "user2Id",
+      "value": ""
+    },
+    {
+      "key": "user3Id",
+      "value": ""
+    },
+    {
+      "key": "user4Id",
+      "value": ""
+    },
+    {
+      "key": "adhesion1Id",
+      "value": ""
+    },
+    {
+      "key": "adhesion2Id",
+      "value": ""
+    },
+    {
+      "key": "adhesion3Id",
+      "value": ""
+    },
+    {
+      "key": "adhesion4Id",
+      "value": ""
+    },
+    {
+      "key": "em1Id",
+      "value": ""
+    },
+    {
+      "key": "em2Id",
+      "value": ""
+    },
+    {
+      "key": "em3Id",
+      "value": ""
+    },
+    {
+      "key": "em4Id",
+      "value": ""
+    },
+    {
+      "key": "reunion1Id",
+      "value": ""
+    },
+    {
+      "key": "reunion2Id",
+      "value": ""
+    },
+    {
+      "key": "reunion3Id",
+      "value": ""
+    },
+    {
+      "key": "reunion4Id",
+      "value": ""
+    },
+    {
+      "key": "pretId",
+      "value": ""
+    },
+    {
+      "key": "timestamp",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentification",
+      "item": [
+        {
+          "name": "1.1 Login Admin",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Générer un timestamp unique pour cette exécution",
+                  "pm.collectionVariables.set('timestamp', Date.now().toString().slice(-6));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login réussi', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Token reçu', function() {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.accessToken).to.be.a('string');",
+                  "    pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
+                  "    console.log('✅ Token sauvegardé');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifiant\": \"690000001\",\n  \"motDePasse\": \"Admin123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Création des Membres",
+      "item": [
+        {
+          "name": "2.1 Créer Paul (Président)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Utilisateur créé', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('user1Id', jsonData.data.id);",
+                  "console.log('✅ Paul créé: ' + jsonData.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var ts = pm.collectionVariables.get('timestamp');",
+                  "pm.variables.set('phone1', '69101' + ts + '1');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prenom\": \"Paul\",\n  \"nom\": \"NKOULOU\",\n  \"telephone1\": \"{{phone1}}\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/utilisateurs",
+              "host": ["{{baseUrl}}"],
+              "path": ["utilisateurs"]
+            }
+          }
+        },
+        {
+          "name": "2.2 Créer Jeanne (Trésorier)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Utilisateur créé', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('user2Id', jsonData.data.id);",
+                  "console.log('✅ Jeanne créée: ' + jsonData.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var ts = pm.collectionVariables.get('timestamp');",
+                  "pm.variables.set('phone2', '69102' + ts + '2');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prenom\": \"Jeanne\",\n  \"nom\": \"MBARGA\",\n  \"telephone1\": \"{{phone2}}\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/utilisateurs",
+              "host": ["{{baseUrl}}"],
+              "path": ["utilisateurs"]
+            }
+          }
+        },
+        {
+          "name": "2.3 Créer Michel (Membre)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Utilisateur créé', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('user3Id', jsonData.data.id);",
+                  "console.log('✅ Michel créé: ' + jsonData.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var ts = pm.collectionVariables.get('timestamp');",
+                  "pm.variables.set('phone3', '69103' + ts + '3');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prenom\": \"Michel\",\n  \"nom\": \"ATANGANA\",\n  \"telephone1\": \"{{phone3}}\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/utilisateurs",
+              "host": ["{{baseUrl}}"],
+              "path": ["utilisateurs"]
+            }
+          }
+        },
+        {
+          "name": "2.4 Créer Sophie (Membre)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Utilisateur créé', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('user4Id', jsonData.data.id);",
+                  "console.log('✅ Sophie créée: ' + jsonData.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var ts = pm.collectionVariables.get('timestamp');",
+                  "pm.variables.set('phone4', '69104' + ts + '4');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prenom\": \"Sophie\",\n  \"nom\": \"ESSOMBA\",\n  \"telephone1\": \"{{phone4}}\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/utilisateurs",
+              "host": ["{{baseUrl}}"],
+              "path": ["utilisateurs"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Tontine et Adhésions",
+      "item": [
+        {
+          "name": "3.1 Créer Tontine",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Tontine créée', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('tontineId', jsonData.data.id);",
+                  "console.log('✅ Tontine créée: ' + jsonData.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var ts = pm.collectionVariables.get('timestamp');",
+                  "pm.variables.set('tontineName', 'Tontine Workflow ' + ts);",
+                  "pm.variables.set('tontineCode', 'TWF' + ts);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"{{tontineName}}\",\n  \"nomCourt\": \"{{tontineCode}}\",\n  \"tontineTypeId\": \"{{tontineTypeId}}\",\n  \"anneeFondation\": 2026,\n  \"motto\": \"Ensemble pour réussir\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tontines",
+              "host": ["{{baseUrl}}"],
+              "path": ["tontines"]
+            }
+          }
+        },
+        {
+          "name": "3.2 Adhésion Paul (Président)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Adhésion créée', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('adhesion1Id', jsonData.data.id);",
+                  "console.log('✅ Adhésion Paul: ' + jsonData.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var ts = pm.collectionVariables.get('timestamp');",
+                  "pm.variables.set('matricule1', 'TWF' + ts + '-001');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tontineId\": \"{{tontineId}}\",\n  \"utilisateurId\": \"{{user1Id}}\",\n  \"matricule\": \"{{matricule1}}\",\n  \"role\": \"PRESIDENT\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/adhesions",
+              "host": ["{{baseUrl}}"],
+              "path": ["adhesions"]
+            }
+          }
+        },
+        {
+          "name": "3.3 Adhésion Jeanne (Trésorier)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Adhésion créée', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('adhesion2Id', jsonData.data.id);",
+                  "console.log('✅ Adhésion Jeanne: ' + jsonData.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var ts = pm.collectionVariables.get('timestamp');",
+                  "pm.variables.set('matricule2', 'TWF' + ts + '-002');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tontineId\": \"{{tontineId}}\",\n  \"utilisateurId\": \"{{user2Id}}\",\n  \"matricule\": \"{{matricule2}}\",\n  \"role\": \"TRESORIER\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/adhesions",
+              "host": ["{{baseUrl}}"],
+              "path": ["adhesions"]
+            }
+          }
+        },
+        {
+          "name": "3.4 Adhésion Michel (Membre)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Adhésion créée', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('adhesion3Id', jsonData.data.id);",
+                  "console.log('✅ Adhésion Michel: ' + jsonData.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var ts = pm.collectionVariables.get('timestamp');",
+                  "pm.variables.set('matricule3', 'TWF' + ts + '-003');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tontineId\": \"{{tontineId}}\",\n  \"utilisateurId\": \"{{user3Id}}\",\n  \"matricule\": \"{{matricule3}}\",\n  \"role\": \"MEMBRE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/adhesions",
+              "host": ["{{baseUrl}}"],
+              "path": ["adhesions"]
+            }
+          }
+        },
+        {
+          "name": "3.5 Adhésion Sophie (Membre)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Adhésion créée', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('adhesion4Id', jsonData.data.id);",
+                  "console.log('✅ Adhésion Sophie: ' + jsonData.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var ts = pm.collectionVariables.get('timestamp');",
+                  "pm.variables.set('matricule4', 'TWF' + ts + '-004');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tontineId\": \"{{tontineId}}\",\n  \"utilisateurId\": \"{{user4Id}}\",\n  \"matricule\": \"{{matricule4}}\",\n  \"role\": \"MEMBRE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/adhesions",
+              "host": ["{{baseUrl}}"],
+              "path": ["adhesions"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Exercice",
+      "item": [
+        {
+          "name": "4.1 Créer Exercice 2026",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Exercice créé', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('exerciceId', jsonData.data.id);",
+                  "console.log('✅ Exercice créé: ' + jsonData.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tontineId\": \"{{tontineId}}\",\n  \"nom\": \"Exercice 2026\",\n  \"dateDebut\": \"2026-02-01\",\n  \"dateFin\": \"2026-05-31\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/exercices",
+              "host": ["{{baseUrl}}"],
+              "path": ["exercices"]
+            }
+          }
+        },
+        {
+          "name": "4.2 Ouvrir Exercice",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Exercice ouvert', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ Exercice ouvert');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {
+              "raw": "{{baseUrl}}/exercices/{{exerciceId}}/ouvrir",
+              "host": ["{{baseUrl}}"],
+              "path": ["exercices", "{{exerciceId}}", "ouvrir"]
+            }
+          }
+        },
+        {
+          "name": "4.3 Inscrire Paul",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Membre inscrit', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('em1Id', jsonData.data.id);",
+                  "console.log('✅ Paul inscrit: ' + jsonData.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exerciceId\": \"{{exerciceId}}\",\n  \"adhesionTontineId\": \"{{adhesion1Id}}\",\n  \"numeroOrdre\": 1,\n  \"role\": \"PRESIDENT\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/exercices/{{exerciceId}}/membres",
+              "host": ["{{baseUrl}}"],
+              "path": ["exercices", "{{exerciceId}}", "membres"]
+            }
+          }
+        },
+        {
+          "name": "4.4 Inscrire Jeanne",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Membre inscrit', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('em2Id', jsonData.data.id);",
+                  "console.log('✅ Jeanne inscrite: ' + jsonData.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exerciceId\": \"{{exerciceId}}\",\n  \"adhesionTontineId\": \"{{adhesion2Id}}\",\n  \"numeroOrdre\": 2,\n  \"role\": \"TRESORIER\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/exercices/{{exerciceId}}/membres",
+              "host": ["{{baseUrl}}"],
+              "path": ["exercices", "{{exerciceId}}", "membres"]
+            }
+          }
+        },
+        {
+          "name": "4.5 Inscrire Michel",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Membre inscrit', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('em3Id', jsonData.data.id);",
+                  "console.log('✅ Michel inscrit: ' + jsonData.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exerciceId\": \"{{exerciceId}}\",\n  \"adhesionTontineId\": \"{{adhesion3Id}}\",\n  \"numeroOrdre\": 3,\n  \"role\": \"MEMBRE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/exercices/{{exerciceId}}/membres",
+              "host": ["{{baseUrl}}"],
+              "path": ["exercices", "{{exerciceId}}", "membres"]
+            }
+          }
+        },
+        {
+          "name": "4.6 Inscrire Sophie",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Membre inscrit', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('em4Id', jsonData.data.id);",
+                  "console.log('✅ Sophie inscrite: ' + jsonData.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exerciceId\": \"{{exerciceId}}\",\n  \"adhesionTontineId\": \"{{adhesion4Id}}\",\n  \"numeroOrdre\": 4,\n  \"role\": \"MEMBRE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/exercices/{{exerciceId}}/membres",
+              "host": ["{{baseUrl}}"],
+              "path": ["exercices", "{{exerciceId}}", "membres"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Réunion 1 - Février",
+      "item": [
+        {
+          "name": "5.1 Créer Réunion 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Réunion créée', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('reunion1Id', jsonData.data.id);",
+                  "console.log('✅ Réunion 1 créée: ' + jsonData.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exerciceId\": \"{{exerciceId}}\",\n  \"numero\": 1,\n  \"dateReunion\": \"2026-02-15\",\n  \"heureDebut\": \"14:00\",\n  \"lieu\": \"Chez Paul\",\n  \"hoteExerciceMembreId\": \"{{em1Id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reunions",
+              "host": ["{{baseUrl}}"],
+              "path": ["reunions"]
+            }
+          }
+        },
+        {
+          "name": "5.2 Ouvrir Réunion 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Réunion ouverte', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ Réunion 1 ouverte');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reunions/{{reunion1Id}}/ouvrir",
+              "host": ["{{baseUrl}}"],
+              "path": ["reunions", "{{reunion1Id}}", "ouvrir"]
+            }
+          }
+        },
+        {
+          "name": "5.3 Cotisations Réunion 1 (Paul)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Cotisation enregistrée', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "console.log('✅ Cotisation Paul: 10000 FCFA');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reunionId\": \"{{reunion1Id}}\",\n  \"exerciceMembreId\": \"{{em1Id}}\",\n  \"montantPaye\": 10000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reunions/{{reunion1Id}}/cotisations",
+              "host": ["{{baseUrl}}"],
+              "path": ["reunions", "{{reunion1Id}}", "cotisations"]
+            }
+          }
+        },
+        {
+          "name": "5.4 Cotisations Réunion 1 (Jeanne)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Cotisation enregistrée', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "console.log('✅ Cotisation Jeanne: 10000 FCFA');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reunionId\": \"{{reunion1Id}}\",\n  \"exerciceMembreId\": \"{{em2Id}}\",\n  \"montantPaye\": 10000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reunions/{{reunion1Id}}/cotisations",
+              "host": ["{{baseUrl}}"],
+              "path": ["reunions", "{{reunion1Id}}", "cotisations"]
+            }
+          }
+        },
+        {
+          "name": "5.5 Cotisations Réunion 1 (Michel)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Cotisation enregistrée', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "console.log('✅ Cotisation Michel: 10000 FCFA');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reunionId\": \"{{reunion1Id}}\",\n  \"exerciceMembreId\": \"{{em3Id}}\",\n  \"montantPaye\": 10000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reunions/{{reunion1Id}}/cotisations",
+              "host": ["{{baseUrl}}"],
+              "path": ["reunions", "{{reunion1Id}}", "cotisations"]
+            }
+          }
+        },
+        {
+          "name": "5.6 Cotisations Réunion 1 (Sophie)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Cotisation enregistrée', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "console.log('✅ Cotisation Sophie: 10000 FCFA');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reunionId\": \"{{reunion1Id}}\",\n  \"exerciceMembreId\": \"{{em4Id}}\",\n  \"montantPaye\": 10000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reunions/{{reunion1Id}}/cotisations",
+              "host": ["{{baseUrl}}"],
+              "path": ["reunions", "{{reunion1Id}}", "cotisations"]
+            }
+          }
+        },
+        {
+          "name": "5.7 Distribution à Paul (Bénéficiaire 1)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Distribution créée', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "console.log('✅ Distribution à Paul: 40000 FCFA');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reunionId\": \"{{reunion1Id}}\",\n  \"exerciceMembreId\": \"{{em1Id}}\",\n  \"montantBrut\": 40000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/distributions",
+              "host": ["{{baseUrl}}"],
+              "path": ["distributions"]
+            }
+          }
+        },
+        {
+          "name": "5.8 Clôturer Réunion 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Réunion clôturée', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ Réunion 1 clôturée');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clotureeParExerciceMembreId\": \"{{em1Id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reunions/{{reunion1Id}}/cloturer",
+              "host": ["{{baseUrl}}"],
+              "path": ["reunions", "{{reunion1Id}}", "cloturer"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Réunion 2 - Mars (avec Prêt)",
+      "item": [
+        {
+          "name": "6.1 Créer Réunion 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Réunion créée', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('reunion2Id', jsonData.data.id);",
+                  "console.log('✅ Réunion 2 créée: ' + jsonData.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exerciceId\": \"{{exerciceId}}\",\n  \"numero\": 2,\n  \"dateReunion\": \"2026-03-15\",\n  \"heureDebut\": \"14:00\",\n  \"lieu\": \"Chez Jeanne\",\n  \"hoteExerciceMembreId\": \"{{em2Id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reunions",
+              "host": ["{{baseUrl}}"],
+              "path": ["reunions"]
+            }
+          }
+        },
+        {
+          "name": "6.2 Ouvrir et Cotisations Réunion 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Réunion ouverte', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ Réunion 2 ouverte');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reunions/{{reunion2Id}}/ouvrir",
+              "host": ["{{baseUrl}}"],
+              "path": ["reunions", "{{reunion2Id}}", "ouvrir"]
+            }
+          }
+        },
+        {
+          "name": "6.3 Prêt à Michel (50000 FCFA)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Prêt créé', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('pretId', jsonData.data.id);",
+                  "console.log('✅ Prêt accordé à Michel: 50000 FCFA');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exerciceMembreId\": \"{{em3Id}}\",\n  \"montantDemande\": 50000,\n  \"tauxInteret\": 5,\n  \"dateEcheance\": \"2026-05-15\",\n  \"motif\": \"Besoins personnels\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/prets",
+              "host": ["{{baseUrl}}"],
+              "path": ["prets"]
+            }
+          }
+        },
+        {
+          "name": "6.4 Approuver Prêt Michel",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Prêt approuvé', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ Prêt approuvé - À rembourser: 52500 FCFA');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approuveParExerciceMembreId\": \"{{em1Id}}\",\n  \"montantApprouve\": 50000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/prets/{{pretId}}/approuver",
+              "host": ["{{baseUrl}}"],
+              "path": ["prets", "{{pretId}}", "approuver"]
+            }
+          }
+        },
+        {
+          "name": "6.5 Distribution à Jeanne (Bénéficiaire 2)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Distribution créée', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "console.log('✅ Distribution à Jeanne: 40000 FCFA');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reunionId\": \"{{reunion2Id}}\",\n  \"exerciceMembreId\": \"{{em2Id}}\",\n  \"montantBrut\": 40000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/distributions",
+              "host": ["{{baseUrl}}"],
+              "path": ["distributions"]
+            }
+          }
+        },
+        {
+          "name": "6.6 Clôturer Réunion 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Réunion clôturée', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ Réunion 2 clôturée');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clotureeParExerciceMembreId\": \"{{em1Id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reunions/{{reunion2Id}}/cloturer",
+              "host": ["{{baseUrl}}"],
+              "path": ["reunions", "{{reunion2Id}}", "cloturer"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Réunion 3 - Avril (Secours + Pénalités)",
+      "item": [
+        {
+          "name": "7.1 Créer Réunion 3",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Réunion créée', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('reunion3Id', jsonData.data.id);",
+                  "console.log('✅ Réunion 3 créée');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exerciceId\": \"{{exerciceId}}\",\n  \"numero\": 3,\n  \"dateReunion\": \"2026-04-15\",\n  \"heureDebut\": \"14:00\",\n  \"lieu\": \"Chez Michel\",\n  \"hoteExerciceMembreId\": \"{{em3Id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reunions",
+              "host": ["{{baseUrl}}"],
+              "path": ["reunions"]
+            }
+          }
+        },
+        {
+          "name": "7.2 Ouvrir Réunion 3",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Réunion ouverte', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ Réunion 3 ouverte');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reunions/{{reunion3Id}}/ouvrir",
+              "host": ["{{baseUrl}}"],
+              "path": ["reunions", "{{reunion3Id}}", "ouvrir"]
+            }
+          }
+        },
+        {
+          "name": "7.3 Événement Secours - Décès parent Jeanne",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Événement secours créé', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "console.log('🕯️ Secours - Décès parent Jeanne: 30000 FCFA');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exerciceMembreId\": \"{{em2Id}}\",\n  \"typeCode\": \"DECES_PARENT\",\n  \"dateEvenement\": \"2026-04-10\",\n  \"description\": \"Décès du père de Jeanne\",\n  \"montantDemande\": 30000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/secours/evenements",
+              "host": ["{{baseUrl}}"],
+              "path": ["secours", "evenements"]
+            }
+          }
+        },
+        {
+          "name": "7.4 Pénalité Sophie - Absence",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Pénalité créée', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "console.log('⚠️ Pénalité Sophie (absence): 1000 FCFA');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exerciceMembreId\": \"{{em4Id}}\",\n  \"reunionId\": \"{{reunion3Id}}\",\n  \"typeCode\": \"ABSENCE\",\n  \"montant\": 1000,\n  \"motif\": \"Absence non justifiée à la réunion 3\",\n  \"appliqueParExerciceMembreId\": \"{{em1Id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/penalites",
+              "host": ["{{baseUrl}}"],
+              "path": ["penalites"]
+            }
+          }
+        },
+        {
+          "name": "7.5 Pénalité Michel - Retard",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Pénalité créée', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "console.log('⚠️ Pénalité Michel (retard): 500 FCFA');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exerciceMembreId\": \"{{em3Id}}\",\n  \"reunionId\": \"{{reunion3Id}}\",\n  \"typeCode\": \"RETARD\",\n  \"montant\": 500,\n  \"motif\": \"Retard de 45 minutes à la réunion 3\",\n  \"appliqueParExerciceMembreId\": \"{{em1Id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/penalites",
+              "host": ["{{baseUrl}}"],
+              "path": ["penalites"]
+            }
+          }
+        },
+        {
+          "name": "7.6 Distribution à Michel (Bénéficiaire 3)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Distribution créée', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "console.log('✅ Distribution à Michel: 40000 FCFA');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reunionId\": \"{{reunion3Id}}\",\n  \"exerciceMembreId\": \"{{em3Id}}\",\n  \"montantBrut\": 40000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/distributions",
+              "host": ["{{baseUrl}}"],
+              "path": ["distributions"]
+            }
+          }
+        },
+        {
+          "name": "7.7 Clôturer Réunion 3",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Réunion clôturée', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ Réunion 3 clôturée');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clotureeParExerciceMembreId\": \"{{em1Id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reunions/{{reunion3Id}}/cloturer",
+              "host": ["{{baseUrl}}"],
+              "path": ["reunions", "{{reunion3Id}}", "cloturer"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Réunion 4 - Mai (Remboursement + Cassation)",
+      "item": [
+        {
+          "name": "8.1 Créer Réunion 4",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Réunion créée', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('reunion4Id', jsonData.data.id);",
+                  "console.log('✅ Réunion 4 créée');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"exerciceId\": \"{{exerciceId}}\",\n  \"numero\": 4,\n  \"dateReunion\": \"2026-05-15\",\n  \"heureDebut\": \"14:00\",\n  \"lieu\": \"Chez Sophie\",\n  \"hoteExerciceMembreId\": \"{{em4Id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reunions",
+              "host": ["{{baseUrl}}"],
+              "path": ["reunions"]
+            }
+          }
+        },
+        {
+          "name": "8.2 Ouvrir Réunion 4",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Réunion ouverte', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ Réunion 4 ouverte');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reunions/{{reunion4Id}}/ouvrir",
+              "host": ["{{baseUrl}}"],
+              "path": ["reunions", "{{reunion4Id}}", "ouvrir"]
+            }
+          }
+        },
+        {
+          "name": "8.3 Remboursement Prêt Michel",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Remboursement enregistré', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "console.log('✅ Remboursement prêt Michel: 52500 FCFA');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pretId\": \"{{pretId}}\",\n  \"montant\": 52500,\n  \"commentaire\": \"Remboursement intégral du prêt\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/prets/{{pretId}}/remboursements",
+              "host": ["{{baseUrl}}"],
+              "path": ["prets", "{{pretId}}", "remboursements"]
+            }
+          }
+        },
+        {
+          "name": "8.4 Distribution à Sophie (Bénéficiaire 4)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Distribution créée', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "console.log('✅ Distribution à Sophie: 40000 FCFA');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reunionId\": \"{{reunion4Id}}\",\n  \"exerciceMembreId\": \"{{em4Id}}\",\n  \"montantBrut\": 40000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/distributions",
+              "host": ["{{baseUrl}}"],
+              "path": ["distributions"]
+            }
+          }
+        },
+        {
+          "name": "8.5 Clôturer Réunion 4",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Réunion clôturée', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ Réunion 4 clôturée');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clotureeParExerciceMembreId\": \"{{em1Id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reunions/{{reunion4Id}}/cloturer",
+              "host": ["{{baseUrl}}"],
+              "path": ["reunions", "{{reunion4Id}}", "cloturer"]
+            }
+          }
+        },
+        {
+          "name": "8.6 Fermer Exercice",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Exercice fermé', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('✅ Exercice 2026 fermé');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/exercices/{{exerciceId}}/fermer",
+              "host": ["{{baseUrl}}"],
+              "path": ["exercices", "{{exerciceId}}", "fermer"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Vérification Finale",
+      "item": [
+        {
+          "name": "9.1 Voir Tontine",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Tontine récupérée', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "console.log('📋 Détails tontine récupérés');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tontines/{{tontineId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tontines", "{{tontineId}}"]
+            }
+          }
+        },
+        {
+          "name": "9.2 Voir Exercice",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Exercice récupéré', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "console.log('📊 BILAN EXERCICE:');",
+                  "console.log('   Statut: ' + jsonData.data.statut);",
+                  "console.log('   Membres: 4');",
+                  "console.log('   Réunions: 4');",
+                  "console.log('');",
+                  "console.log('💰 FLUX FINANCIERS:');",
+                  "console.log('   Cotisations: 160,000 FCFA (4x4x10000)');",
+                  "console.log('   Distributions: 160,000 FCFA');",
+                  "console.log('   Prêt accordé: 50,000 FCFA');",
+                  "console.log('   Intérêts: 2,500 FCFA');",
+                  "console.log('   Secours versé: 30,000 FCFA');",
+                  "console.log('   Pénalités: 1,500 FCFA');",
+                  "console.log('');",
+                  "console.log('✅ WORKFLOW TERMINÉ AVEC SUCCÈS!');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{"key": "token", "value": "{{accessToken}}"}]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/exercices/{{exerciceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["exercices", "{{exerciceId}}"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,1 +1,1 @@
-# Module Prets
+export * from './entities';

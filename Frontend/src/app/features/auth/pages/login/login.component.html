@@ -1,0 +1,68 @@
+<h2>Connexion</h2>
+
+<form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+  <div class="form-group">
+    <label for="telephone">Numéro de téléphone</label>
+    <div class="input-wrapper">
+      <span class="material-icons">phone</span>
+      <span class="country-prefix">+237</span>
+      <input 
+        type="tel" 
+        id="telephone" 
+        formControlName="telephone" 
+        placeholder="Ex: 690123456"
+        [class.invalid]="f['telephone'].invalid && f['telephone'].touched"
+      />
+    </div>
+    <ng-container *ngIf="f['telephone'].invalid && f['telephone'].touched">
+      <span class="error-message">
+        <ng-container *ngIf="f['telephone'].errors?.['required']">Le numéro de téléphone est requis</ng-container>
+        <ng-container *ngIf="f['telephone'].errors?.['pattern']">Format invalide (9-15 chiffres)</ng-container>
+      </span>
+    </ng-container>
+  </div>
+
+  <div class="form-group">
+    <label for="password">Mot de passe</label>
+    <div class="input-wrapper">
+      <span class="material-icons">lock</span>
+      <input 
+        [type]="showPassword() ? 'text' : 'password'" 
+        id="password" 
+        formControlName="password" 
+        placeholder="Votre mot de passe"
+        [class.invalid]="f['password'].invalid && f['password'].touched"
+      />
+      <button 
+        type="button" 
+        class="toggle-password" 
+        (click)="togglePassword()"
+      >
+        <span class="material-icons">
+          {{ showPassword() ? 'visibility_off' : 'visibility' }}
+        </span>
+      </button>
+    </div>
+    <ng-container *ngIf="f['password'].invalid && f['password'].touched">
+      <span class="error-message">
+        <ng-container *ngIf="f['password'].errors?.['required']">Le mot de passe est requis</ng-container>
+        <ng-container *ngIf="f['password'].errors?.['minlength']">Au moins 4 caractères</ng-container>
+      </span>
+    </ng-container>
+  </div>
+
+  <button
+    type="submit"
+    class="btn-submit"
+    [disabled]="isLoading()"
+  >
+    <ng-container *ngIf="isLoading(); else loginLabel">
+      <span class="spinner"></span>
+      Connexion en cours...
+    </ng-container>
+    <ng-template #loginLabel>
+      <span class="material-icons">login</span>
+      Se connecter
+    </ng-template>
+  </button>
+</form>

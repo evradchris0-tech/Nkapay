@@ -1,0 +1,77 @@
+<div class="main-layout" [class.collapsed]="sidebarCollapsed()">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <img src="assets/logo.svg" alt="Nkapay" class="logo" />
+      <span *ngIf="!sidebarCollapsed()" class="app-name">Nkapay</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a *ngFor="let item of menuItems"
+         [routerLink]="item.route"
+         routerLinkActive="active"
+         [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }"
+         class="nav-item"
+         [title]="sidebarCollapsed() ? item.label : ''">
+        <span class="material-icons">{{ item.icon }}</span>
+        <span *ngIf="!sidebarCollapsed()" class="nav-label">{{ item.label }}</span>
+        <span *ngIf="item.badge && !sidebarCollapsed()" class="badge">{{ item.badge }}</span>
+      </a>
+
+      <!-- Admin Section -->
+      <ng-container *ngIf="isSuperAdmin()">
+        <div class="nav-divider" *ngIf="!sidebarCollapsed()">
+          <span>Administration</span>
+        </div>
+        <a *ngFor="let item of adminMenuItems"
+           [routerLink]="item.route"
+           routerLinkActive="active"
+           class="nav-item admin"
+           [title]="sidebarCollapsed() ? item.label : ''">
+          <span class="material-icons">{{ item.icon }}</span>
+          <span *ngIf="!sidebarCollapsed()" class="nav-label">{{ item.label }}</span>
+        </a>
+      </ng-container>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="toggle-btn" (click)="toggleSidebar()">
+        <span class="material-icons">
+          {{ sidebarCollapsed() ? 'chevron_right' : 'chevron_left' }}
+        </span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <button class="menu-btn" (click)="toggleSidebar()">
+          <span class="material-icons">menu</span>
+        </button>
+      </div>
+
+      <div class="header-right">
+        <div class="user-menu">
+          <div class="user-avatar">{{ userInitials() }}</div>
+          <ng-container *ngIf="currentUser() as user">
+            <div class="user-info">
+              <span class="user-name">{{ user.prenom }} {{ user.nom }}</span>
+              <span class="user-role">{{ user.telephone1 | phoneFormat }}</span>
+            </div>
+          </ng-container>
+          <button class="logout-btn" (click)="logout()" title="Déconnexion">
+            <span class="material-icons">logout</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <main class="content">
+      <router-outlet />
+    </main>
+  </div>
+</div>

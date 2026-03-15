@@ -27,5 +27,8 @@
   "license": "PROPRIETARY",
   "engines": {
     "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@stitches/react": "^1.2.8"
   }
 }

@@ -1,0 +1,334 @@
+.dashboard {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+// ─── Welcome ──────────────────────────────────────────────────────────────────
+
+.welcome-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+
+  .welcome-text {
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--color-text);
+      margin: 0;
+    }
+    p { color: var(--color-text-muted); margin-top: 0.25rem; }
+  }
+
+  .date-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+    text-transform: capitalize;
+
+    .material-icons { font-size: 1.25rem; color: var(--color-primary); }
+  }
+}
+
+// ─── Loading / Error ──────────────────────────────────────────────────────────
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem;
+  color: var(--color-text-muted);
+}
+
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4rem;
+  gap: 1rem;
+  color: var(--color-text-muted);
+
+  .material-icons { font-size: 3rem; color: var(--color-danger); opacity: 0.6; }
+}
+
+.spinner-large {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+// ─── Stats Grid ───────────────────────────────────────────────────────────────
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: var(--color-surface, #fff);
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+
+  .stat-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    .material-icons { font-size: 1.75rem; color: var(--color-white, #fff); }
+  }
+
+  .stat-content {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    .stat-label  { font-size: 0.875rem; color: var(--color-text-muted); }
+    .stat-value  { font-size: 1.5rem; font-weight: 700; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stat-detail { font-size: 0.75rem; color: var(--color-text-muted); }
+  }
+
+  &.purple .stat-icon { background: linear-gradient(135deg, var(--color-primary, #667eea), var(--color-primary-dark, #764ba2)); }
+  &.blue   .stat-icon { background: linear-gradient(135deg, var(--color-info, #3b82f6), var(--color-info-dark, #1d4ed8)); }
+  &.green  .stat-icon { background: linear-gradient(135deg, var(--color-success, #10b981), var(--color-success-dark, #059669)); }
+  &.orange .stat-icon { background: linear-gradient(135deg, var(--color-warning, #f59e0b), var(--color-warning-dark, #d97706)); }
+}
+
+// ─── Main Grid ────────────────────────────────────────────────────────────────
+
+.main-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 1.5rem;
+}
+
+.card {
+  background: var(--color-surface, #fff);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  grid-column: span 12;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0;
+
+    .material-icons { font-size: 1.25rem; color: var(--color-primary); }
+  }
+
+  .view-all {
+    font-size: 0.875rem;
+    color: var(--color-primary);
+    text-decoration: none;
+
+    &:hover { text-decoration: underline; }
+  }
+}
+
+// ─── Next Meeting ─────────────────────────────────────────────────────────────
+
+.next-meeting {
+  .meeting-info { display: flex; gap: 1rem; }
+
+  .meeting-date {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, var(--color-primary, #667eea), var(--color-primary-dark, #764ba2));
+    border-radius: 12px;
+    color: var(--color-white, #fff);
+    flex-shrink: 0;
+
+    .day   { font-size: 1.5rem; font-weight: 700; line-height: 1; }
+    .month { font-size: 0.75rem; text-transform: uppercase; }
+  }
+
+  .meeting-details {
+    h4 { margin: 0 0 0.5rem; font-size: 1rem; color: var(--color-text); }
+
+    p {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      margin: 0.25rem 0;
+      font-size: 0.875rem;
+      color: var(--color-text-muted);
+
+      .material-icons { font-size: 1rem; }
+    }
+  }
+}
+
+// ─── Quick Actions ────────────────────────────────────────────────────────────
+
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--color-bg, #f9fafb);
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--color-text);
+  transition: all 0.2s;
+
+  .material-icons { font-size: 1.5rem; color: var(--color-primary); }
+  span:last-child  { font-size: 0.75rem; text-align: center; }
+
+  &:hover {
+    background: var(--color-primary);
+    color: var(--color-white, #fff);
+
+    .material-icons { color: var(--color-white, #fff); }
+  }
+}
+
+// ─── Activities ───────────────────────────────────────────────────────────────
+
+.activities-list {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--color-border);
+
+  &:last-child { border-bottom: none; }
+}
+
+.activity-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  .material-icons { font-size: 1.125rem; color: var(--color-white, #fff); }
+
+  &.green  { background: var(--color-success, #10b981); }
+  &.blue   { background: var(--color-info, #3b82f6); }
+  &.purple { background: var(--color-primary, #667eea); }
+  &.orange { background: var(--color-warning, #f59e0b); }
+  &.gray   { background: var(--color-text-muted, #6b7280); }
+}
+
+.activity-content {
+  flex: 1;
+  min-width: 0;
+
+  .activity-desc   { margin: 0; font-size: 0.875rem; color: var(--color-text); }
+  .activity-user,
+  .activity-amount { font-size: 0.75rem; color: var(--color-text-muted); margin-right: 0.5rem; }
+  .activity-amount { color: var(--color-success, #10b981); font-weight: 500; }
+}
+
+.activity-time {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+// ─── Summary ──────────────────────────────────────────────────────────────────
+
+.summary-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  background: var(--color-bg, #f9fafb);
+  border-radius: 8px;
+
+  .label { font-size: 0.875rem; color: var(--color-text-muted); margin-bottom: 0.25rem; }
+  .value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-text);
+
+    &.green { color: var(--color-success, #10b981); }
+    &.red   { color: var(--color-danger, #ef4444); }
+  }
+}
+
+.empty-message {
+  text-align: center;
+  color: var(--color-text-muted);
+  padding: 2rem;
+}
+
+// ─── Responsive ───────────────────────────────────────────────────────────────
+
+@media (min-width: 768px) {
+  .main-grid > .card { grid-column: span 6; }
+}
+
+@media (min-width: 1024px) {
+  .next-meeting  { grid-column: span 4; }
+  .quick-actions { grid-column: span 4; }
+  .activities    { grid-column: span 4; }
+  .summary       { grid-column: span 12; }
+}
+
+@media (min-width: 1280px) {
+  .stats-grid { gap: 2rem; }
+  .main-grid  { gap: 2rem; }
+}

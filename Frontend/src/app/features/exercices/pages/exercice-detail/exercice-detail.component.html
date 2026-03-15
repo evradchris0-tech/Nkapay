@@ -1,0 +1,240 @@
+<div class="page">
+  <a routerLink="/dashboard/exercices" class="back-link">
+    <span class="material-icons">arrow_back</span>
+    Retour aux exercices
+  </a>
+
+  <!-- Loading -->
+  <div class="loading-container" *ngIf="isLoading()">
+    <div class="spinner"></div>
+    <p>Chargement...</p>
+  </div>
+
+  <!-- Erreur -->
+  <div class="error-state" *ngIf="!isLoading() && hasError()">
+    <span class="material-icons">error_outline</span>
+    <p>Impossible de charger cet exercice.</p>
+    <a routerLink="/dashboard/exercices" class="btn-secondary">Retour à la liste</a>
+  </div>
+
+  <!-- Contenu principal -->
+  <ng-container *ngIf="!isLoading() && !hasError() && exercice() as ex">
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="header-left">
+        <h1>{{ ex.libelle }}</h1>
+        <div class="header-meta">
+          <span class="tontine-badge" *ngIf="ex.tontine">
+            <span class="material-icons">savings</span>
+            {{ ex.tontine.nom }}
+          </span>
+          <span class="status-badge" [class]="getStatutColor(ex.statut)">
+            {{ getStatutLabel(ex.statut) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Actions state machine -->
+      <div class="header-actions" *ngIf="!actionInProgress()">
+        <button
+          *ngIf="canOuvrir()"
+          class="btn-action green"
+          (click)="ouvrir()"
+          aria-label="Ouvrir l'exercice">
+          <span class="material-icons">lock_open</span>
+          Ouvrir
+        </button>
+        <button
+          *ngIf="canReprendre()"
+          class="btn-action blue"
+          (click)="reprendre()"
+          aria-label="Reprendre l'exercice">
+          <span class="material-icons">play_circle</span>
+          Reprendre
+        </button>
+        <button
+          *ngIf="canSuspendre()"
+          class="btn-action yellow-outline"
+          (click)="suspendre()"
+          aria-label="Suspendre l'exercice">
+          <span class="material-icons">pause_circle</span>
+          Suspendre
+        </button>
+        <button
+          *ngIf="canFermer()"
+          class="btn-action red-outline"
+          (click)="fermer()"
+          aria-label="Fermer définitivement l'exercice">
+          <span class="material-icons">lock</span>
+          Fermer
+        </button>
+        <a [routerLink]="['edit']" class="btn-secondary" *ngIf="ex.statut === 'BROUILLON'">
+          <span class="material-icons">edit</span>
+          Modifier
+        </a>
+      </div>
+
+      <div class="action-loading" *ngIf="actionInProgress()">
+        <div class="spinner-sm"></div>
+        <span>Action en cours...</span>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button [class.active]="activeTab() === 'apercu'" (click)="setTab('apercu')">
+        <span class="material-icons">dashboard</span>
+        Aperçu
+      </button>
+      <button [class.active]="activeTab() === 'membres'" (click)="setTab('membres')">
+        <span class="material-icons">people</span>
+        Membres
+        <span class="tab-count" *ngIf="ex.nombreMembres">{{ ex.nombreMembres }}</span>
+      </button>
+    </div>
+
+    <!-- ─── Tab Aperçu ─────────────────────────────────────────────────── -->
+    <div class="tab-content" *ngIf="activeTab() === 'apercu'">
+      <div class="overview-grid">
+
+        <!-- Informations générales -->
+        <div class="info-card">
+          <h3>Informations de l'exercice</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="label">Tontine</span>
+              <span class="value">{{ ex.tontine?.nom ?? '—' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Période</span>
+              <span class="value">
+                {{ getMoisLabel(ex.moisDebut) }} {{ ex.anneeDebut }}
+                — {{ getMoisLabel(ex.moisFin) }} {{ ex.anneeFin }}
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="label">Durée</span>
+              <span class="value">{{ ex.dureeMois }} mois</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Statut</span>
+              <span class="status-badge" [class]="getStatutColor(ex.statut)">
+                {{ getStatutLabel(ex.statut) }}
+              </span>
+            </div>
+            <div class="info-item" *ngIf="ex.ouvertLe">
+              <span class="label">Ouvert le</span>
+              <span class="value">{{ ex.ouvertLe | date:'dd MMMM yyyy':'':'fr' }}</span>
+            </div>
+            <div class="info-item" *ngIf="ex.fermeLe">
+              <span class="label">Fermé le</span>
+              <span class="value">{{ ex.fermeLe | date:'dd MMMM yyyy':'':'fr' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Créé le</span>
+              <span class="value">{{ ex.creeLe | date:'dd MMMM yyyy':'':'fr' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Statistiques -->
+        <div class="stats-card">
+          <h3>Statistiques</h3>
+          <div class="stats-grid">
+            <div class="stat">
+              <span class="stat-value">{{ ex.nombreMembres ?? 0 }}</span>
+              <span class="stat-label">Membres</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value">{{ ex.nombreReunions ?? 0 }}</span>
+              <span class="stat-label">Réunions</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value">{{ ex.dureeMois }}</span>
+              <span class="stat-label">Mois</span>
+            </div>
+          </div>
+
+          <!-- Timeline statut -->
+          <div class="statut-timeline">
+            <div class="statut-step" [class.done]="ex.statut !== 'BROUILLON'">
+              <div class="step-dot"></div>
+              <span class="step-label">Brouillon</span>
+            </div>
+            <div class="step-line" [class.done]="ex.statut === 'OUVERT' || ex.statut === 'SUSPENDU' || ex.statut === 'FERME'"></div>
+            <div class="statut-step" [class.active]="ex.statut === 'OUVERT'" [class.done]="ex.statut === 'FERME'">
+              <div class="step-dot"></div>
+              <span class="step-label">Ouvert</span>
+            </div>
+            <div class="step-line" [class.done]="ex.statut === 'FERME'"></div>
+            <div class="statut-step" [class.active]="ex.statut === 'FERME'">
+              <div class="step-dot"></div>
+              <span class="step-label">Fermé</span>
+            </div>
+          </div>
+
+          <div class="suspendu-notice" *ngIf="ex.statut === 'SUSPENDU'">
+            <span class="material-icons">pause_circle</span>
+            Exercice suspendu — les opérations sont bloquées
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Tab Membres ────────────────────────────────────────────────── -->
+    <div class="tab-content" *ngIf="activeTab() === 'membres'">
+
+      <!-- Chargement membres -->
+      <div class="loading-small" *ngIf="isMembresLoading()">
+        <div class="spinner"></div>
+      </div>
+
+      <ng-container *ngIf="!isMembresLoading()">
+
+        <!-- Stats membres rapides -->
+        <div class="membres-stats" *ngIf="membres().length > 0">
+          <div class="membre-stat">
+            <span class="material-icons">person</span>
+            <span>{{ membresActifs() }} actif{{ membresActifs() > 1 ? 's' : '' }}</span>
+          </div>
+          <div class="membre-stat inactive" *ngIf="membresInactifs() > 0">
+            <span class="material-icons">person_off</span>
+            <span>{{ membresInactifs() }} inactif{{ membresInactifs() > 1 ? 's' : '' }}</span>
+          </div>
+        </div>
+
+        <!-- Empty -->
+        <div class="empty-state" *ngIf="isMembresEmpty()">
+          <span class="material-icons">people</span>
+          <p>Aucun membre inscrit à cet exercice</p>
+        </div>
+
+        <!-- Liste membres -->
+        <div class="membres-list" *ngIf="membres().length > 0">
+          <div *ngFor="let m of membres()" class="membre-card">
+            <div class="membre-avatar">
+              <span class="material-icons">person</span>
+            </div>
+            <div class="membre-info">
+              <span class="membre-name">{{ getMembreNom(m) }}</span>
+              <span class="membre-matricule">{{ m.adhesionTontine?.matricule ?? '—' }}</span>
+            </div>
+            <div class="membre-details">
+              <span class="type-badge">{{ getTypeMembreLabel(m.typeMembre) }}</span>
+              <span class="parts-info" *ngIf="m.nombreParts > 1">
+                {{ m.nombreParts }} part{{ m.nombreParts > 1 ? 's' : '' }}
+              </span>
+            </div>
+            <div class="membre-statut">
+              <span class="status-badge small" [class]="m.statut === 'ACTIF' ? 'green' : 'gray'">
+                {{ m.statut === 'ACTIF' ? 'Actif' : 'Inactif' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+    </div>
+
+  </ng-container>
+</div>

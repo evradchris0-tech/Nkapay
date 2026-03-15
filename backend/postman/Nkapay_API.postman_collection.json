@@ -1,0 +1,1760 @@
+﻿{
+	"info": {
+		"_postman_id": "nkapay-api-collection",
+		"name": "Nkapay API",
+		"description": "Collection API pour le systÃ¨me de gestion de tontines Nkapay",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000/api/v1"
+		},
+		{
+			"key": "accessToken",
+			"value": ""
+		},
+		{
+			"key": "refreshToken",
+			"value": ""
+		},
+		{
+			"key": "userId",
+			"value": ""
+		},
+		{
+			"key": "newUserId",
+			"value": ""
+		},
+		{
+			"key": "tontineTypeId",
+			"value": ""
+		},
+		{
+			"key": "tontineId",
+			"value": ""
+		},
+		{
+			"key": "exerciceId",
+			"value": ""
+		},
+		{
+			"key": "transactionId",
+			"value": ""
+		},
+		{
+			"key": "paiementMobileId",
+			"value": ""
+		},
+		{
+			"key": "operateurPaiementId",
+			"value": ""
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{accessToken}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "ðŸ¥ Health Check",
+			"item": [
+				{
+					"name": "Health Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has healthy status', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.status).to.eql('healthy');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"auth": {
+							"type": "noauth"
+						},
+						"url": {
+							"raw": "http://localhost:3000/health",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "3000",
+							"path": ["health"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "ðŸ” Authentification",
+			"item": [
+				{
+					"name": "Login SuperAdmin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains tokens', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.accessToken).to.be.a('string');",
+									"    pm.expect(jsonData.data.refreshToken).to.be.a('string');",
+									"    pm.expect(jsonData.data.utilisateur).to.be.an('object');",
+									"});",
+									"",
+									"pm.test('Save tokens to collection variables', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
+									"    pm.collectionVariables.set('refreshToken', jsonData.data.refreshToken);",
+									"    pm.collectionVariables.set('userId', jsonData.data.utilisateur.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifiant\": \"+237699999999\",\n    \"motDePasse\": \"OMGBAFOUDa1!\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "login"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Current User (Me)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains user info', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.id).to.be.a('string');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/auth/me",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "me"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains new access token', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.accessToken).to.be.a('string');",
+									"});",
+									"",
+									"pm.test('Update access token', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/refresh",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "refresh"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Active Sessions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains sessions array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/auth/sessions",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "sessions"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Logout successful', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"toutesLesSessions\": false\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/logout",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "logout"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "ðŸ‘¥ Utilisateurs",
+			"item": [
+				{
+					"name": "Get All Utilisateurs",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains users array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/utilisateurs",
+							"host": ["{{baseUrl}}"],
+							"path": ["utilisateurs"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Utilisateur",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('User created successfully', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.id).to.be.a('string');",
+									"    pm.collectionVariables.set('newUserId', jsonData.data.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"prenom\": \"Jean\",\n    \"nom\": \"Dupont\",\n    \"telephone1\": \"+237690000001\",\n    \"password\": \"Password123!\",\n    \"telephone2\": \"+237690000002\",\n    \"adresseResidence\": \"Douala, Cameroun\",\n    \"nomContactUrgence\": \"Marie Dupont\",\n    \"telContactUrgence\": \"+237690000003\",\n    \"numeroMobileMoney\": \"+237690000001\",\n    \"numeroOrangeMoney\": \"+237690000001\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/utilisateurs",
+							"host": ["{{baseUrl}}"],
+							"path": ["utilisateurs"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Utilisateur By ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains user data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.id).to.be.a('string');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/utilisateurs/{{userId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["utilisateurs", "{{userId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Utilisateur",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('User updated successfully', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"adresseResidence\": \"Douala, Cameroun\",\n    \"telephone2\": \"+237690000099\",\n    \"nomContactUrgence\": \"Contact Urgence\",\n    \"telContactUrgence\": \"+237690000088\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/utilisateurs/{{userId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["utilisateurs", "{{userId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Change Password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Password changed successfully', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"ancienMotDePasse\": \"OMGBAFOUDa1!\",\n    \"nouveauMotDePasse\": \"NewPassword123!\",\n    \"confirmationMotDePasse\": \"NewPassword123!\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/utilisateurs/{{userId}}/password",
+							"host": ["{{baseUrl}}"],
+							"path": ["utilisateurs", "{{userId}}", "password"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "ðŸ›ï¸ Types de Tontine",
+			"item": [
+				{
+					"name": "Get All Tontine Types",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains types array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"    if (jsonData.data.length > 0) {",
+									"        pm.collectionVariables.set('tontineTypeId', jsonData.data[0].id);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"auth": {
+							"type": "noauth"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/tontines/types",
+							"host": ["{{baseUrl}}"],
+							"path": ["tontines", "types"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Tontine Type",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Type created successfully', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.id).to.be.a('string');",
+									"    pm.collectionVariables.set('tontineTypeId', jsonData.data.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"code\": \"STANDARD\",\n    \"libelle\": \"Tontine Standard\",\n    \"description\": \"Tontine avec cotisation mensuelle simple\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/tontines/types",
+							"host": ["{{baseUrl}}"],
+							"path": ["tontines", "types"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tontine Type By ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains type data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.id).to.be.a('string');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/tontines/types/{{tontineTypeId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["tontines", "types", "{{tontineTypeId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tontine Type By Code",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/tontines/types/code/STANDARD",
+							"host": ["{{baseUrl}}"],
+							"path": ["tontines", "types", "code", "STANDARD"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Tontine Type",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"libelle\": \"Tontine Standard ModifiÃ©e\",\n    \"description\": \"Description mise Ã  jour\",\n    \"estActif\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/tontines/types/{{tontineTypeId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["tontines", "types", "{{tontineTypeId}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "ðŸ  Tontines",
+			"item": [
+				{
+					"name": "Get All Tontines",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains tontines array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"auth": {
+							"type": "noauth"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/tontines",
+							"host": ["{{baseUrl}}"],
+							"path": ["tontines"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Tontine",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Tontine created successfully', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.id).to.be.a('string');",
+									"    pm.collectionVariables.set('tontineId', jsonData.data.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nom\": \"Tontine Famille Nkapay\",\n    \"nomCourt\": \"TFN\",\n    \"tontineTypeId\": \"{{tontineTypeId}}\",\n    \"anneeFondation\": 2025,\n    \"motto\": \"L'union fait la force\",\n    \"estOfficiellementDeclaree\": false\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/tontines",
+							"host": ["{{baseUrl}}"],
+							"path": ["tontines"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tontine By ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains tontine data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.id).to.be.a('string');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/tontines/{{tontineId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["tontines", "{{tontineId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tontine By NomCourt",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/tontines/code/TFN",
+							"host": ["{{baseUrl}}"],
+							"path": ["tontines", "code", "TFN"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Tontine",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Tontine updated successfully', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nom\": \"Tontine Famille Nkapay ModifiÃ©e\",\n    \"motto\": \"Ensemble, nous sommes plus forts\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/tontines/{{tontineId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["tontines", "{{tontineId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Suspend Tontine",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/tontines/{{tontineId}}/suspend",
+							"host": ["{{baseUrl}}"],
+							"path": ["tontines", "{{tontineId}}", "suspend"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Activate Tontine",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/tontines/{{tontineId}}/activate",
+							"host": ["{{baseUrl}}"],
+							"path": ["tontines", "{{tontineId}}", "activate"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "ðŸ“… Exercices",
+			"item": [
+				{
+					"name": "Get All Exercices",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains exercices array', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/exercices?tontineId={{tontineId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["exercices"],
+							"query": [
+								{
+									"key": "tontineId",
+									"value": "{{tontineId}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Exercice",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Exercice created successfully', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.id).to.be.a('string');",
+									"    pm.collectionVariables.set('exerciceId', jsonData.data.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"tontineId\": \"{{tontineId}}\",\n    \"libelle\": \"Exercice 2025\",\n    \"anneeDebut\": 2025,\n    \"moisDebut\": 1,\n    \"dureeMois\": 12\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/exercices",
+							"host": ["{{baseUrl}}"],
+							"path": ["exercices"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Exercice By ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains exercice data', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.id).to.be.a('string');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/exercices/{{exerciceId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["exercices", "{{exerciceId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Exercice",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"libelle\": \"Exercice 2025 - ModifiÃ©\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/exercices/{{exerciceId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["exercices", "{{exerciceId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Ouvrir Exercice",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"dateOuverture\": \"2025-01-01\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/exercices/{{exerciceId}}/ouvrir",
+							"host": ["{{baseUrl}}"],
+							"path": ["exercices", "{{exerciceId}}", "ouvrir"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Suspendre Exercice",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/exercices/{{exerciceId}}/suspendre",
+							"host": ["{{baseUrl}}"],
+							"path": ["exercices", "{{exerciceId}}", "suspendre"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reprendre Exercice",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/exercices/{{exerciceId}}/reprendre",
+							"host": ["{{baseUrl}}"],
+							"path": ["exercices", "{{exerciceId}}", "reprendre"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Fermer Exercice",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/exercices/{{exerciceId}}/fermer",
+							"host": ["{{baseUrl}}"],
+							"path": ["exercices", "{{exerciceId}}", "fermer"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Exercice Ouvert",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 or 404', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/exercices/tontine/{{tontineId}}/ouvert",
+							"host": ["{{baseUrl}}"],
+							"path": ["exercices", "tontine", "{{tontineId}}", "ouvert"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "ðŸ’° Transactions",
+			"item": [
+				{
+					"name": "Get All Transactions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains transactions', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/transactions",
+							"host": ["{{baseUrl}}"],
+							"path": ["transactions"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transaction Summary",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/transactions/summary",
+							"host": ["{{baseUrl}}"],
+							"path": ["transactions", "summary"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transaction By ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 or 404', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/transactions/{{transactionId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["transactions", "{{transactionId}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "ðŸ¢ OpÃ©rateurs Paiement",
+			"item": [
+				{
+					"name": "Get All Operateurs",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains operateurs', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    if (jsonData.data && jsonData.data.length > 0) {",
+									"        pm.collectionVariables.set('operateurPaiementId', jsonData.data[0].id);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/operateurs-paiement",
+							"host": ["{{baseUrl}}"],
+							"path": ["operateurs-paiement"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Operateur",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Operateur created successfully', function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.id).to.be.a('string');",
+									"    pm.collectionVariables.set('operateurPaiementId', jsonData.data.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"code\": \"MTN_MOMO\",\n    \"nom\": \"MTN Mobile Money\",\n    \"logoUrl\": \"https://example.com/mtn-logo.png\",\n    \"estActif\": true,\n    \"fraisFixe\": 0,\n    \"fraisPourcentage\": 0.01\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/operateurs-paiement",
+							"host": ["{{baseUrl}}"],
+							"path": ["operateurs-paiement"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Operateur By ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/operateurs-paiement/{{operateurPaiementId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["operateurs-paiement", "{{operateurPaiementId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Operateur By Code",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 or 404', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/operateurs-paiement/code/MTN_MOMO",
+							"host": ["{{baseUrl}}"],
+							"path": ["operateurs-paiement", "code", "MTN_MOMO"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Operateur",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nom\": \"MTN Mobile Money - Cameroun\",\n    \"fraisPourcentage\": 0.015\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/operateurs-paiement/{{operateurPaiementId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["operateurs-paiement", "{{operateurPaiementId}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "ðŸ“± Paiements Mobile",
+			"item": [
+				{
+					"name": "Get All Paiements Mobile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/paiements-mobile",
+							"host": ["{{baseUrl}}"],
+							"path": ["paiements-mobile"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Paiements Pending",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/paiements-mobile/pending",
+							"host": ["{{baseUrl}}"],
+							"path": ["paiements-mobile", "pending"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Paiements Stats",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/paiements-mobile/stats",
+							"host": ["{{baseUrl}}"],
+							"path": ["paiements-mobile", "stats"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Initier Paiement Mobile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('Paiement created', function () {",
+									"    const jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.id) {",
+									"        pm.collectionVariables.set('paiementMobileId', jsonData.data.id);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"transactionId\": \"{{transactionId}}\",\n    \"operateur\": \"MTN_MOBILE_MONEY\",\n    \"numeroTelephone\": \"+237690000001\",\n    \"montant\": 5000\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/paiements-mobile",
+							"host": ["{{baseUrl}}"],
+							"path": ["paiements-mobile"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Paiement By ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 or 404', function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/paiements-mobile/{{paiementMobileId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["paiements-mobile", "{{paiementMobileId}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Marquer Paiement EnvoyÃ©",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"referenceOperateur\": \"MTN-REF-123456\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/paiements-mobile/{{paiementMobileId}}/envoyer",
+							"host": ["{{baseUrl}}"],
+							"path": ["paiements-mobile", "{{paiementMobileId}}", "envoyer"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Confirmer Paiement",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"referenceOperateur\": \"MTN-CONF-789012\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/paiements-mobile/{{paiementMobileId}}/confirmer",
+							"host": ["{{baseUrl}}"],
+							"path": ["paiements-mobile", "{{paiementMobileId}}", "confirmer"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Marquer Paiement Ã‰chouÃ©",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"messageOperateur\": \"Solde insuffisant\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/paiements-mobile/{{paiementMobileId}}/echouer",
+							"host": ["{{baseUrl}}"],
+							"path": ["paiements-mobile", "{{paiementMobileId}}", "echouer"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Annuler Paiement",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"motif\": \"Annulation demandÃ©e par l'utilisateur\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/paiements-mobile/{{paiementMobileId}}/annuler",
+							"host": ["{{baseUrl}}"],
+							"path": ["paiements-mobile", "{{paiementMobileId}}", "annuler"]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
+
+

@@ -1,0 +1,281 @@
+<div class="page">
+  <a routerLink="/dashboard/admin/organisations" class="back-link">
+    <span class="material-icons">arrow_back</span>
+    Retour aux organisations
+  </a>
+
+  <!-- Loading -->
+  <div class="loading-container" *ngIf="isLoading()">
+    <div class="spinner"></div>
+    <p>Chargement...</p>
+  </div>
+
+  <!-- Erreur -->
+  <div class="error-state" *ngIf="!isLoading() && hasError()">
+    <span class="material-icons">error_outline</span>
+    <p>Impossible de charger cette organisation.</p>
+    <a routerLink="/dashboard/admin/organisations" class="btn-secondary">Retour à la liste</a>
+  </div>
+
+  <!-- Contenu -->
+  <ng-container *ngIf="!isLoading() && !hasError() && organisation() as org">
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="header-left">
+        <div class="org-avatar-lg">{{ getInitials(org.nom) }}</div>
+        <div class="header-info">
+          <h1>{{ org.nom }}</h1>
+          <div class="header-meta">
+            <code class="slug-tag">{{ org.slug }}</code>
+            <span class="plan-badge">{{ org.planCode }}</span>
+            <span class="status-badge" [class]="getStatutColor(org.statut)">
+              {{ getStatutLabel(org.statut) }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-actions" *ngIf="!actionInProgress()">
+        <button
+          *ngIf="canSuspendre()"
+          class="btn-action orange"
+          (click)="suspendre()"
+          aria-label="Suspendre l'organisation">
+          <span class="material-icons">pause_circle</span>
+          Suspendre
+        </button>
+        <button
+          *ngIf="canReactiver()"
+          class="btn-action green"
+          (click)="reactiver()"
+          aria-label="Réactiver l'organisation">
+          <span class="material-icons">play_circle</span>
+          Réactiver
+        </button>
+      </div>
+
+      <div class="action-loading" *ngIf="actionInProgress()">
+        <div class="spinner-sm"></div>
+        <span>Action en cours...</span>
+      </div>
+    </div>
+
+    <!-- Suspension notice -->
+    <div class="notice warning" *ngIf="org.statut === 'SUSPENDUE'">
+      <span class="material-icons">warning</span>
+      <div>
+        <strong>Organisation suspendue</strong>
+        <p>Les membres de cette organisation ne peuvent plus accéder à la plateforme.</p>
+      </div>
+    </div>
+
+    <div class="notice danger" *ngIf="org.statut === 'EXPIREE'">
+      <span class="material-icons">error</span>
+      <div>
+        <strong>Abonnement expiré</strong>
+        <p>L'abonnement de cette organisation a expiré. Renouvelez le plan pour rétablir l'accès.</p>
+      </div>
+    </div>
+
+    <!-- Onglets -->
+    <div class="tabs">
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'apercu'"
+        (click)="setTab('apercu')">
+        <span class="material-icons">info</span>
+        Aperçu
+      </button>
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'membres'"
+        (click)="setTab('membres')">
+        <span class="material-icons">group</span>
+        Membres
+      </button>
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'tontines'"
+        (click)="setTab('tontines')">
+        <span class="material-icons">savings</span>
+        Tontines
+      </button>
+    </div>
+
+    <!-- ─── Tab : Aperçu ─────────────────────────────────────────────────────── -->
+    <div class="tab-content" *ngIf="activeTab() === 'apercu'">
+      <div class="detail-grid">
+
+        <!-- Informations générales -->
+        <div class="info-card">
+          <h3>Informations générales</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="label">Nom</span>
+              <span class="value">{{ org.nom }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Identifiant (slug)</span>
+              <code class="value mono">{{ org.slug }}</code>
+            </div>
+            <div class="info-item">
+              <span class="label">Email de contact</span>
+              <span class="value">{{ org.emailContact }}</span>
+            </div>
+            <div class="info-item" *ngIf="org.telephoneContact">
+              <span class="label">Téléphone</span>
+              <span class="value">{{ org.telephoneContact }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Pays</span>
+              <span class="value">{{ org.pays }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Devise</span>
+              <span class="value">{{ org.devise }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Fuseau horaire</span>
+              <span class="value">{{ org.fuseauHoraire }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Créée le</span>
+              <span class="value">{{ org.creeLe | date:'dd MMMM yyyy':'':'fr' }}</span>
+            </div>
+            <div class="info-item" *ngIf="org.modifieLe">
+              <span class="label">Modifiée le</span>
+              <span class="value">{{ org.modifieLe | date:'dd MMMM yyyy':'':'fr' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Abonnement -->
+        <div class="info-card">
+          <h3>Abonnement</h3>
+          <div class="plan-card">
+            <div class="plan-header">
+              <span class="plan-code">{{ org.planCode }}</span>
+              <span class="plan-libelle">{{ org.planLibelle }}</span>
+            </div>
+          </div>
+          <div class="info-grid plan-dates-grid">
+            <div class="info-item" *ngIf="org.abonnementDebutLe">
+              <span class="label">Début</span>
+              <span class="value">{{ org.abonnementDebutLe | date:'dd MMMM yyyy':'':'fr' }}</span>
+            </div>
+            <div class="info-item" *ngIf="org.abonnementFinLe">
+              <span class="label">Fin</span>
+              <span class="value">{{ org.abonnementFinLe | date:'dd MMMM yyyy':'':'fr' }}</span>
+            </div>
+            <div class="info-item" *ngIf="!org.abonnementDebutLe && !org.abonnementFinLe">
+              <span class="label">Période</span>
+              <span class="value text-muted">Aucun abonnement actif</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Tab : Membres ────────────────────────────────────────────────────── -->
+    <div class="tab-content" *ngIf="activeTab() === 'membres'">
+      <div class="section-card">
+        <div class="section-header">
+          <h3>
+            <span class="material-icons">group</span>
+            Membres de l'organisation
+          </h3>
+        </div>
+
+        <div class="loading-inline" *ngIf="isLoadingMembres()">
+          <div class="spinner-sm"></div>
+          <span>Chargement des membres...</span>
+        </div>
+
+        <div class="empty-state" *ngIf="!isLoadingMembres() && membres().length === 0">
+          <span class="material-icons">person_off</span>
+          <p>Aucun membre disponible depuis la vue SuperAdmin.</p>
+          <span class="hint">La liste des membres est accessible depuis le contexte de l'organisation.</span>
+        </div>
+
+        <div class="table-wrapper" *ngIf="!isLoadingMembres() && membres().length > 0">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Membre</th>
+                <th>Téléphone</th>
+                <th>Email</th>
+                <th>Rôle</th>
+                <th>Statut</th>
+                <th>Ajouté le</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let m of membres()">
+                <td>
+                  <div class="membre-cell">
+                    <div class="avatar-sm">{{ getInitials(m.prenom + ' ' + m.nom) }}</div>
+                    <span class="membre-name">{{ m.prenom }} {{ m.nom }}</span>
+                  </div>
+                </td>
+                <td><code>{{ m.telephone1 }}</code></td>
+                <td>{{ m.email ?? '—' }}</td>
+                <td>
+                  <span class="role-badge" [class.admin]="m.role === 'ORG_ADMIN'">
+                    {{ getRoleLabel(m.role) }}
+                  </span>
+                </td>
+                <td>{{ m.statut }}</td>
+                <td>{{ m.creeLe | date:'dd/MM/yyyy' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Tab : Tontines ───────────────────────────────────────────────────── -->
+    <div class="tab-content" *ngIf="activeTab() === 'tontines'">
+      <div class="section-card">
+        <div class="section-header">
+          <h3>
+            <span class="material-icons">savings</span>
+            Tontines
+          </h3>
+          <span class="count-chip">{{ tontines().length }}</span>
+        </div>
+
+        <div class="loading-inline" *ngIf="isLoadingTontines()">
+          <div class="spinner-sm"></div>
+          <span>Chargement des tontines...</span>
+        </div>
+
+        <div class="empty-state" *ngIf="!isLoadingTontines() && tontines().length === 0">
+          <span class="material-icons">savings</span>
+          <p>Aucune tontine trouvée pour cette organisation.</p>
+        </div>
+
+        <div class="tontines-grid" *ngIf="!isLoadingTontines() && tontines().length > 0">
+          <div class="tontine-card" *ngFor="let t of tontines()">
+            <div class="tontine-card-header">
+              <div class="tontine-icon">
+                <span class="material-icons">savings</span>
+              </div>
+              <div class="tontine-info">
+                <a [routerLink]="['/dashboard/tontines', t.id]" class="tontine-name">{{ t.nom }}</a>
+                <code class="tontine-slug" *ngIf="t.slug">{{ t.slug }}</code>
+              </div>
+            </div>
+            <div class="tontine-card-footer">
+              <span class="status-badge" [class]="getTontineStatutColor(t.statut)">
+                {{ t.statut }}
+              </span>
+              <span class="date-text">{{ t.creeLe | date:'dd/MM/yyyy' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </ng-container>
+</div>

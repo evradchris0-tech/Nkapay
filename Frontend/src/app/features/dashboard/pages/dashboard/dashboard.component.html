@@ -1,0 +1,176 @@
+<div class="dashboard">
+  <!-- Welcome Section -->
+  <div class="welcome-section">
+    <div class="welcome-text">
+      <h1>Bonjour, {{ currentUser()?.prenom }} 👋</h1>
+      <p>Voici un aperçu de vos tontines</p>
+    </div>
+    <div class="date-info">
+      <span class="material-icons">calendar_today</span>
+      {{ today | date:'EEEE d MMMM yyyy':'':'fr' }}
+    </div>
+  </div>
+
+  <ng-container *ngIf="isLoading(); else statsTpl">
+    <div class="loading-container">
+      <div class="spinner-large"></div>
+      <p>Chargement...</p>
+    </div>
+  </ng-container>
+
+  <ng-template #statsTpl>
+    <!-- Erreur -->
+    <div class="error-state" *ngIf="hasError()">
+      <span class="material-icons">error_outline</span>
+      <p>Impossible de charger le tableau de bord.</p>
+    </div>
+
+    <ng-container *ngIf="!hasError() && stats() as s">
+      <!-- Stats Cards -->
+      <div class="stats-grid">
+        <div class="stat-card purple">
+          <div class="stat-icon">
+            <span class="material-icons">account_balance</span>
+          </div>
+          <div class="stat-content">
+            <span class="stat-label">Tontines</span>
+            <span class="stat-value">{{ s.tontines.total }}</span>
+            <span class="stat-detail">{{ s.tontines.actives }} actives</span>
+          </div>
+        </div>
+
+        <div class="stat-card blue">
+          <div class="stat-icon">
+            <span class="material-icons">people</span>
+          </div>
+          <div class="stat-content">
+            <span class="stat-label">Membres</span>
+            <span class="stat-value">{{ s.membres.total }}</span>
+            <span class="stat-detail">+{{ s.membres.nouveauxMois }} ce mois</span>
+          </div>
+        </div>
+
+        <div class="stat-card green">
+          <div class="stat-icon">
+            <span class="material-icons">payments</span>
+          </div>
+          <div class="stat-content">
+            <span class="stat-label">Cotisations</span>
+            <span class="stat-value">{{ s.transactions.totalCotisations | currency:'XAF':'symbol':'1.0-0':'fr' }}</span>
+            <span class="stat-detail">{{ s.transactions.cotisationsMois | currency:'XAF':'symbol':'1.0-0':'fr' }} ce mois</span>
+          </div>
+        </div>
+
+        <div class="stat-card orange">
+          <div class="stat-icon">
+            <span class="material-icons">credit_score</span>
+          </div>
+          <div class="stat-content">
+            <span class="stat-label">Prêts en cours</span>
+            <span class="stat-value">{{ s.transactions.pretsEnCours | currency:'XAF':'symbol':'1.0-0':'fr' }}</span>
+            <span class="stat-detail">À rembourser</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div class="main-grid">
+        <!-- Next Meeting -->
+        <ng-container *ngIf="s.reunions.prochaine as reunion">
+          <div class="card next-meeting">
+            <div class="card-header">
+              <h3><span class="material-icons">event</span> Prochaine réunion</h3>
+              <a routerLink="/dashboard/reunions" class="view-all">Voir toutes</a>
+            </div>
+            <div class="meeting-info">
+              <div class="meeting-date">
+                <span class="day">{{ reunion.date | date:'d' }}</span>
+                <span class="month">{{ reunion.date | date:'MMM':'':'fr' }}</span>
+              </div>
+              <div class="meeting-details">
+                <h4>{{ reunion.tontine }}</h4>
+                <p><span class="material-icons">schedule</span> {{ reunion.date | date:'HH:mm' }}</p>
+                <p><span class="material-icons">place</span> {{ reunion.lieu }}</p>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- Quick Actions -->
+        <div class="card quick-actions">
+          <div class="card-header">
+            <h3><span class="material-icons">flash_on</span> Actions rapides</h3>
+          </div>
+          <div class="actions-grid">
+            <a routerLink="/dashboard/transactions" [queryParams]="{action: 'add'}" class="action-btn">
+              <span class="material-icons">add_circle</span>
+              <span>Nouvelle cotisation</span>
+            </a>
+            <a routerLink="/dashboard/prets" [queryParams]="{action: 'add'}" class="action-btn">
+              <span class="material-icons">request_quote</span>
+              <span>Accorder un prêt</span>
+            </a>
+            <a routerLink="/dashboard/reunions" [queryParams]="{action: 'add'}" class="action-btn">
+              <span class="material-icons">event_note</span>
+              <span>Planifier réunion</span>
+            </a>
+            <a routerLink="/dashboard/rapports" class="action-btn">
+              <span class="material-icons">download</span>
+              <span>Exporter rapport</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Recent Activities -->
+        <div class="card activities">
+          <div class="card-header">
+            <h3><span class="material-icons">history</span> Activités récentes</h3>
+          </div>
+          <div class="activities-list">
+            <ng-container *ngIf="activities().length > 0; else emptyActivities">
+              <div *ngFor="let activity of activities()" class="activity-item">
+                <div class="activity-icon" [class]="getActivityColor(activity.type)">
+                  <span class="material-icons">{{ getActivityIcon(activity.type) }}</span>
+                </div>
+                <div class="activity-content">
+                  <p class="activity-desc">{{ activity.description }}</p>
+                  <span *ngIf="activity.user" class="activity-user">{{ activity.user }}</span>
+                  <span *ngIf="activity.montant" class="activity-amount">{{ activity.montant | currency:'XAF':'symbol':'1.0-0':'fr' }}</span>
+                </div>
+                <span class="activity-time">{{ activity.date | date:'dd/MM HH:mm' }}</span>
+              </div>
+            </ng-container>
+            <ng-template #emptyActivities>
+              <p class="empty-message">Aucune activité récente</p>
+            </ng-template>
+          </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="card summary">
+          <div class="card-header">
+            <h3><span class="material-icons">analytics</span> Résumé financier</h3>
+          </div>
+          <div class="summary-items">
+            <div class="summary-item">
+              <span class="label">Total distribué</span>
+              <span class="value green">{{ s.transactions.totalDistribue | currency:'XAF':'symbol':'1.0-0':'fr' }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="label">Pénalités collectées</span>
+              <span class="value red">{{ s.transactions.totalPenalites | currency:'XAF':'symbol':'1.0-0':'fr' }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="label">Exercices en cours</span>
+              <span class="value">{{ s.exercices.enCours }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="label">Réunions ce mois</span>
+              <span class="value">{{ s.reunions.totalMois }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+  </ng-template>
+</div>

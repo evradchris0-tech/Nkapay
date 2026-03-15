@@ -1,0 +1,204 @@
+<div class="page">
+  <a routerLink="/dashboard/membres" class="back-link">
+    <span class="material-icons">arrow_back</span>
+    Retour aux membres
+  </a>
+
+  <!-- Loading -->
+  <div class="loading-container" *ngIf="isLoading()">
+    <div class="spinner"></div>
+    <p>Chargement...</p>
+  </div>
+
+  <!-- Erreur -->
+  <div class="error-state" *ngIf="!isLoading() && hasError()">
+    <span class="material-icons">error_outline</span>
+    <p>Impossible de charger ce membre.</p>
+    <a routerLink="/dashboard/membres" class="btn-secondary">Retour à la liste</a>
+  </div>
+
+  <!-- Contenu principal -->
+  <ng-container *ngIf="!isLoading() && !hasError() && adhesion() as a">
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="header-left">
+        <div class="membre-avatar-lg">
+          <span class="material-icons">person</span>
+        </div>
+        <div class="header-info">
+          <h1>{{ getMembreNom(a) }}</h1>
+          <div class="header-meta">
+            <span class="matricule-badge">
+              <span class="material-icons">badge</span>
+              {{ a.matricule }}
+            </span>
+            <span class="role-badge">{{ getRoleLabel(a.role) }}</span>
+            <span class="status-badge" [class]="getStatutColor(a.statut)">
+              {{ getStatutLabel(a.statut) }}
+            </span>
+            <span class="tontine-badge" *ngIf="a.tontine">
+              <span class="material-icons">savings</span>
+              {{ a.tontine.nom }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="header-actions" *ngIf="!actionInProgress()">
+        <button
+          *ngIf="canDesactiver()"
+          class="btn-action red-outline"
+          (click)="desactiver()"
+          aria-label="Désactiver le membre">
+          <span class="material-icons">person_off</span>
+          Désactiver
+        </button>
+        <button
+          *ngIf="canReactiver()"
+          class="btn-action green"
+          (click)="reactiver()"
+          aria-label="Réactiver le membre">
+          <span class="material-icons">person</span>
+          Réactiver
+        </button>
+      </div>
+
+      <div class="action-loading" *ngIf="actionInProgress()">
+        <div class="spinner-sm"></div>
+        <span>Action en cours...</span>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button [class.active]="activeTab() === 'apercu'" (click)="setTab('apercu')">
+        <span class="material-icons">info</span>
+        Aperçu
+      </button>
+      <button [class.active]="activeTab() === 'exercices'" (click)="setTab('exercices')">
+        <span class="material-icons">calendar_month</span>
+        Exercices
+        <span class="tab-count" *ngIf="exercicesActifs() > 0">{{ exercicesActifs() }}</span>
+      </button>
+    </div>
+
+    <!-- ─── Tab Aperçu ─────────────────────────────────────────────────── -->
+    <div class="tab-content" *ngIf="activeTab() === 'apercu'">
+      <div class="overview-grid">
+
+        <!-- Informations personnelles -->
+        <div class="info-card">
+          <h3>Informations personnelles</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="label">Nom complet</span>
+              <span class="value">{{ getMembreNom(a) }}</span>
+            </div>
+            <div class="info-item" *ngIf="a.utilisateur?.telephone1">
+              <span class="label">Téléphone principal</span>
+              <span class="value">{{ a.utilisateur?.telephone1 }}</span>
+            </div>
+            <div class="info-item" *ngIf="a.utilisateur?.telephone2">
+              <span class="label">Téléphone secondaire</span>
+              <span class="value">{{ a.utilisateur?.telephone2 }}</span>
+            </div>
+            <div class="info-item" *ngIf="a.quartierResidence">
+              <span class="label">Quartier de résidence</span>
+              <span class="value">{{ a.quartierResidence }}</span>
+            </div>
+            <div class="info-item" *ngIf="a.utilisateur?.adresseResidence">
+              <span class="label">Adresse</span>
+              <span class="value">{{ a.utilisateur?.adresseResidence }}</span>
+            </div>
+            <div class="info-item" *ngIf="a.utilisateur?.dateInscription">
+              <span class="label">Inscrit le</span>
+              <span class="value">{{ a.utilisateur?.dateInscription | date:'dd MMMM yyyy':'':'fr' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Adhésion -->
+        <div class="info-card">
+          <h3>Adhésion à la tontine</h3>
+          <div class="info-grid">
+            <div class="info-item" *ngIf="a.tontine">
+              <span class="label">Tontine</span>
+              <span class="value">{{ a.tontine.nom }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Matricule</span>
+              <span class="value mono">{{ a.matricule }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Rôle</span>
+              <span class="value">{{ getRoleLabel(a.role) }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Statut</span>
+              <span class="status-badge" [class]="getStatutColor(a.statut)">
+                {{ getStatutLabel(a.statut) }}
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="label">Date d'adhésion</span>
+              <span class="value">{{ a.dateAdhesionTontine | date:'dd MMMM yyyy':'':'fr' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Membre depuis</span>
+              <span class="value">{{ a.creeLe | date:'dd MMMM yyyy':'':'fr' }}</span>
+            </div>
+          </div>
+
+          <!-- Alerte si inactif -->
+          <div class="inactive-notice" *ngIf="a.statut === 'INACTIVE'">
+            <span class="material-icons">warning</span>
+            Ce membre est inactif — il ne participe pas aux activités en cours.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Tab Exercices ───────────────────────────────────────────────── -->
+    <div class="tab-content" *ngIf="activeTab() === 'exercices'">
+
+      <!-- Chargement -->
+      <div class="loading-small" *ngIf="isExercicesLoading()">
+        <div class="spinner"></div>
+      </div>
+
+      <ng-container *ngIf="!isExercicesLoading()">
+
+        <!-- Empty state -->
+        <div class="empty-state" *ngIf="isExercicesEmpty()">
+          <span class="material-icons">calendar_month</span>
+          <p>Ce membre n'a participé à aucun exercice</p>
+        </div>
+
+        <!-- Liste des exercices -->
+        <div class="exercices-list" *ngIf="exercices().length > 0">
+          <div class="exercice-card" *ngFor="let ex of exercices()">
+            <div class="exercice-icon" [class.actif]="ex.estActif">
+              <span class="material-icons">{{ ex.estActif ? 'calendar_today' : 'event_available' }}</span>
+            </div>
+            <div class="exercice-info">
+              <span class="exercice-libelle">{{ ex.exercice?.libelle ?? 'Exercice' }}</span>
+              <span class="exercice-meta">
+                {{ getRoleLabel(ex.role) }}
+                <ng-container *ngIf="ex.ordreDistribution"> · Ordre {{ ex.ordreDistribution }}</ng-container>
+              </span>
+              <span class="exercice-date">Adhésion : {{ ex.dateAdhesion | date:'dd/MM/yyyy' }}</span>
+            </div>
+            <div class="exercice-statut">
+              <span class="status-badge" [class]="ex.estActif ? 'green' : 'gray'">
+                {{ ex.estActif ? 'Actif' : 'Inactif' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+    </div>
+
+  </ng-container>
+</div>

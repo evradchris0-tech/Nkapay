@@ -1,0 +1,392 @@
+{
+  "info": {
+    "name": "Nkapay - Gestion des Règles Tontine",
+    "description": "Test CRUD des règles de tontine par un Super Admin",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "baseUrl", "value": "http://localhost:3000/api/v1"},
+    {"key": "accessToken", "value": ""},
+    {"key": "tontineId", "value": ""},
+    {"key": "ruleDefId1", "value": ""},
+    {"key": "ruleDefId2", "value": ""},
+    {"key": "regleTontineId1", "value": ""},
+    {"key": "regleTontineId2", "value": ""},
+    {"key": "ts", "value": ""}
+  ],
+  "item": [
+    {
+      "name": "1. Setup",
+      "item": [
+        {
+          "name": "1.1 Login Super Admin",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {"exec": ["pm.collectionVariables.set('ts', Date.now().toString().slice(-6));"], "type": "text/javascript"}
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login OK', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "    var json = pm.response.json();",
+                  "    pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "    console.log('✅ Super Admin connecté');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"identifiant\": \"690000001\", \"motDePasse\": \"Admin123!\"}"},
+            "url": {"raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"]}
+          }
+        },
+        {
+          "name": "1.2 Créer Tontine de Test",
+          "event": [
+            {"listen": "prerequest", "script": {"exec": ["pm.variables.set('tontName', 'Tontine Regles ' + pm.collectionVariables.get('ts'));"], "type": "text/javascript"}},
+            {"listen": "test", "script": {"exec": [
+              "pm.test('OK', function() { pm.response.to.have.status(201); });",
+              "var json = pm.response.json();",
+              "var id = json.data ? json.data.id : json.id;",
+              "pm.collectionVariables.set('tontineId', id);",
+              "console.log('✅ Tontine créée:', id);"
+            ], "type": "text/javascript"}}
+          ],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{accessToken}}"}]},
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"nom\": \"{{tontName}}\", \"nomCourt\": \"TRG{{ts}}\", \"tontineTypeId\": \"0ec7e39c-a22a-4e90-837e-576a161bf7eb\", \"anneeFondation\": 2026}"},
+            "url": {"raw": "{{baseUrl}}/tontines", "host": ["{{baseUrl}}"], "path": ["tontines"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Définitions de Règles (CRUD)",
+      "item": [
+        {
+          "name": "2.1 Lister toutes les définitions",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('OK', function() { pm.response.to.have.status(200); });",
+            "var json = pm.response.json();",
+            "var defs = json.data ? json.data : json;",
+            "console.log('📋 Définitions existantes:', Array.isArray(defs) ? defs.length : 'N/A');"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{accessToken}}"}]},
+            "method": "GET",
+            "header": [],
+            "url": {"raw": "{{baseUrl}}/tontines/rule-definitions", "host": ["{{baseUrl}}"], "path": ["tontines", "rule-definitions"]}
+          }
+        },
+        {
+          "name": "2.2 Créer Définition: MONTANT_COTISATION",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('OK', function() { pm.response.to.have.status(201); });",
+            "var json = pm.response.json();",
+            "var id = json.data ? json.data.id : json.id;",
+            "pm.collectionVariables.set('ruleDefId1', id);",
+            "console.log('✅ Définition MONTANT_COTISATION créée:', id);"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{accessToken}}"}]},
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"cle\": \"MONTANT_COTISATION_{{ts}}\", \"libelle\": \"Montant de la cotisation mensuelle\", \"description\": \"Le montant fixe que chaque membre doit cotiser par mois\", \"typeValeur\": \"NUMBER\", \"valeurDefaut\": \"10000\", \"categorie\": \"COTISATION\", \"estModifiableParTontine\": true, \"estModifiableParExercice\": false}"},
+            "url": {"raw": "{{baseUrl}}/tontines/rule-definitions", "host": ["{{baseUrl}}"], "path": ["tontines", "rule-definitions"]}
+          }
+        },
+        {
+          "name": "2.3 Créer Définition: TAUX_INTERET_PRET",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('OK', function() { pm.response.to.have.status(201); });",
+            "var json = pm.response.json();",
+            "var id = json.data ? json.data.id : json.id;",
+            "pm.collectionVariables.set('ruleDefId2', id);",
+            "console.log('✅ Définition TAUX_INTERET créée:', id);"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{accessToken}}"}]},
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"cle\": \"TAUX_INTERET_PRET_{{ts}}\", \"libelle\": \"Taux d'intérêt sur les prêts\", \"description\": \"Le pourcentage d'intérêt appliqué aux prêts\", \"typeValeur\": \"NUMBER\", \"valeurDefaut\": \"5\", \"categorie\": \"PRET\", \"estModifiableParTontine\": true, \"estModifiableParExercice\": true}"},
+            "url": {"raw": "{{baseUrl}}/tontines/rule-definitions", "host": ["{{baseUrl}}"], "path": ["tontines", "rule-definitions"]}
+          }
+        },
+        {
+          "name": "2.4 Lire une définition",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('OK', function() { pm.response.to.have.status(200); });",
+            "var json = pm.response.json();",
+            "var def = json.data ? json.data : json;",
+            "console.log('📖 Définition:', def.cle, '=', def.valeurDefaut);"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{accessToken}}"}]},
+            "method": "GET",
+            "header": [],
+            "url": {"raw": "{{baseUrl}}/tontines/rule-definitions/{{ruleDefId1}}", "host": ["{{baseUrl}}"], "path": ["tontines", "rule-definitions", "{{ruleDefId1}}"]}
+          }
+        },
+        {
+          "name": "2.5 Modifier une définition",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('OK', function() { pm.response.to.have.status(200); });",
+            "console.log('✏️ Définition modifiée: valeurDefaut = 15000');"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{accessToken}}"}]},
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"valeurDefaut\": \"15000\", \"description\": \"Montant cotisation mis à jour\"}"},
+            "url": {"raw": "{{baseUrl}}/tontines/rule-definitions/{{ruleDefId1}}", "host": ["{{baseUrl}}"], "path": ["tontines", "rule-definitions", "{{ruleDefId1}}"]}
+          }
+        },
+        {
+          "name": "2.6 Lister définitions modifiables par tontine",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('OK', function() { pm.response.to.have.status(200); });",
+            "var json = pm.response.json();",
+            "var defs = json.data ? json.data : json;",
+            "console.log('🔧 Définitions modifiables par tontine:', Array.isArray(defs) ? defs.length : 'N/A');"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{accessToken}}"}]},
+            "method": "GET",
+            "header": [],
+            "url": {"raw": "{{baseUrl}}/tontines/rule-definitions/modifiables/tontine", "host": ["{{baseUrl}}"], "path": ["tontines", "rule-definitions", "modifiables", "tontine"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Règles Tontine (CRUD)",
+      "item": [
+        {
+          "name": "3.1 Initialiser règles par défaut",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('OK', function() { var s = pm.response.code; pm.expect(s).to.be.oneOf([200, 201]); });",
+            "console.log('🚀 Règles par défaut initialisées');"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{accessToken}}"}]},
+            "method": "POST",
+            "header": [],
+            "url": {"raw": "{{baseUrl}}/tontines/regles-tontine/tontine/{{tontineId}}/initialize", "host": ["{{baseUrl}}"], "path": ["tontines", "regles-tontine", "tontine", "{{tontineId}}", "initialize"]}
+          }
+        },
+        {
+          "name": "3.2 Ajouter règle MONTANT_COTISATION",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('OK', function() { var s = pm.response.code; pm.expect(s).to.be.oneOf([200, 201]); });",
+            "var json = pm.response.json();",
+            "var id = json.data ? json.data.id : json.id;",
+            "pm.collectionVariables.set('regleTontineId1', id);",
+            "console.log('✅ Règle COTISATION ajoutée:', id);"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{accessToken}}"}]},
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"tontineId\": \"{{tontineId}}\", \"ruleDefinitionId\": \"{{ruleDefId1}}\", \"valeur\": \"25000\"}"},
+            "url": {"raw": "{{baseUrl}}/tontines/regles-tontine", "host": ["{{baseUrl}}"], "path": ["tontines", "regles-tontine"]}
+          }
+        },
+        {
+          "name": "3.3 Ajouter règle TAUX_INTERET",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('OK', function() { var s = pm.response.code; pm.expect(s).to.be.oneOf([200, 201]); });",
+            "var json = pm.response.json();",
+            "var id = json.data ? json.data.id : json.id;",
+            "pm.collectionVariables.set('regleTontineId2', id);",
+            "console.log('✅ Règle TAUX_INTERET ajoutée:', id);"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{accessToken}}"}]},
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"tontineId\": \"{{tontineId}}\", \"ruleDefinitionId\": \"{{ruleDefId2}}\", \"valeur\": \"7\"}"},
+            "url": {"raw": "{{baseUrl}}/tontines/regles-tontine", "host": ["{{baseUrl}}"], "path": ["tontines", "regles-tontine"]}
+          }
+        },
+        {
+          "name": "3.4 Lister règles de la tontine",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('OK', function() { pm.response.to.have.status(200); });",
+            "var json = pm.response.json();",
+            "var regles = json.data ? json.data : json;",
+            "console.log('📋 Règles de la tontine:', Array.isArray(regles) ? regles.length : 'N/A');"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{accessToken}}"}]},
+            "method": "GET",
+            "header": [],
+            "url": {"raw": "{{baseUrl}}/tontines/regles-tontine/tontine/{{tontineId}}", "host": ["{{baseUrl}}"], "path": ["tontines", "regles-tontine", "tontine", "{{tontineId}}"]}
+          }
+        },
+        {
+          "name": "3.5 Lire une règle",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('OK', function() { pm.response.to.have.status(200); });",
+            "var json = pm.response.json();",
+            "var regle = json.data ? json.data : json;",
+            "console.log('📖 Règle:', regle.valeur);"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{accessToken}}"}]},
+            "method": "GET",
+            "header": [],
+            "url": {"raw": "{{baseUrl}}/tontines/regles-tontine/{{regleTontineId1}}", "host": ["{{baseUrl}}"], "path": ["tontines", "regles-tontine", "{{regleTontineId1}}"]}
+          }
+        },
+        {
+          "name": "3.6 Modifier règle (valeur 25000 → 30000)",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('OK', function() { pm.response.to.have.status(200); });",
+            "console.log('✏️ Règle modifiée: 25000 → 30000 FCFA');"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{accessToken}}"}]},
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"valeur\": \"30000\"}"},
+            "url": {"raw": "{{baseUrl}}/tontines/regles-tontine/{{regleTontineId1}}", "host": ["{{baseUrl}}"], "path": ["tontines", "regles-tontine", "{{regleTontineId1}}"]}
+          }
+        },
+        {
+          "name": "3.7 Vérifier modification",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('OK', function() { pm.response.to.have.status(200); });",
+            "var json = pm.response.json();",
+            "var regle = json.data ? json.data : json;",
+            "pm.test('Valeur = 30000', function() {",
+            "    pm.expect(regle.valeur).to.equal('30000');",
+            "});",
+            "console.log('✅ Valeur confirmée:', regle.valeur);"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{accessToken}}"}]},
+            "method": "GET",
+            "header": [],
+            "url": {"raw": "{{baseUrl}}/tontines/regles-tontine/{{regleTontineId1}}", "host": ["{{baseUrl}}"], "path": ["tontines", "regles-tontine", "{{regleTontineId1}}"]}
+          }
+        },
+        {
+          "name": "3.8 Obtenir règles effectives",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('OK', function() { pm.response.to.have.status(200); });",
+            "var json = pm.response.json();",
+            "console.log('📊 Règles effectives récupérées');"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{accessToken}}"}]},
+            "method": "GET",
+            "header": [],
+            "url": {"raw": "{{baseUrl}}/tontines/regles-tontine/tontine/{{tontineId}}/effectives", "host": ["{{baseUrl}}"], "path": ["tontines", "regles-tontine", "tontine", "{{tontineId}}", "effectives"]}
+          }
+        },
+        {
+          "name": "3.9 Supprimer règle TAUX_INTERET",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('OK', function() { var s = pm.response.code; pm.expect(s).to.be.oneOf([200, 204]); });",
+            "console.log('🗑️ Règle TAUX_INTERET supprimée');"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{accessToken}}"}]},
+            "method": "DELETE",
+            "header": [],
+            "url": {"raw": "{{baseUrl}}/tontines/regles-tontine/{{regleTontineId2}}", "host": ["{{baseUrl}}"], "path": ["tontines", "regles-tontine", "{{regleTontineId2}}"]}
+          }
+        },
+        {
+          "name": "3.10 Vérifier suppression",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('Règle supprimée (404)', function() { pm.response.to.have.status(404); });",
+            "console.log('✅ Règle bien supprimée (404)');"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{accessToken}}"}]},
+            "method": "GET",
+            "header": [],
+            "url": {"raw": "{{baseUrl}}/tontines/regles-tontine/{{regleTontineId2}}", "host": ["{{baseUrl}}"], "path": ["tontines", "regles-tontine", "{{regleTontineId2}}"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Cleanup",
+      "item": [
+        {
+          "name": "4.1 Supprimer définition 1",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('OK', function() { var s = pm.response.code; pm.expect(s).to.be.oneOf([200, 204]); });",
+            "console.log('🗑️ Définition 1 supprimée');"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{accessToken}}"}]},
+            "method": "DELETE",
+            "header": [],
+            "url": {"raw": "{{baseUrl}}/tontines/rule-definitions/{{ruleDefId1}}", "host": ["{{baseUrl}}"], "path": ["tontines", "rule-definitions", "{{ruleDefId1}}"]}
+          }
+        },
+        {
+          "name": "4.2 Supprimer définition 2",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('OK', function() { var s = pm.response.code; pm.expect(s).to.be.oneOf([200, 204]); });",
+            "console.log('🗑️ Définition 2 supprimée');"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{accessToken}}"}]},
+            "method": "DELETE",
+            "header": [],
+            "url": {"raw": "{{baseUrl}}/tontines/rule-definitions/{{ruleDefId2}}", "host": ["{{baseUrl}}"], "path": ["tontines", "rule-definitions", "{{ruleDefId2}}"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Bilan",
+      "item": [
+        {
+          "name": "5.1 Résumé Final",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('OK', function() { pm.response.to.have.status(200); });",
+            "console.log('');",
+            "console.log('═══════════════════════════════════════════════════');",
+            "console.log('📊 BILAN TEST GESTION DES RÈGLES PAR SUPER ADMIN');",
+            "console.log('═══════════════════════════════════════════════════');",
+            "console.log('');",
+            "console.log('✅ Définitions de règles:');",
+            "console.log('   - Création: OK');",
+            "console.log('   - Lecture: OK');",
+            "console.log('   - Modification: OK');",
+            "console.log('   - Suppression: OK');",
+            "console.log('');",
+            "console.log('✅ Règles Tontine:');",
+            "console.log('   - Initialisation défaut: OK');",
+            "console.log('   - Ajout règle: OK');",
+            "console.log('   - Lecture: OK');",
+            "console.log('   - Modification valeur: OK');",
+            "console.log('   - Suppression: OK');",
+            "console.log('');",
+            "console.log('🎉 SUPER ADMIN PEUT GÉRER TOUTES LES RÈGLES!');"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{accessToken}}"}]},
+            "method": "GET",
+            "header": [],
+            "url": {"raw": "{{baseUrl}}/tontines/{{tontineId}}", "host": ["{{baseUrl}}"], "path": ["tontines", "{{tontineId}}"]}
+          }
+        }
+      ]
+    }
+  ]
+}

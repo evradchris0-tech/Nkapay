@@ -1,1 +1,1 @@
-# Module Utilisateurs
+export * from './entities';

@@ -1,0 +1,301 @@
+<div class="page">
+  <a routerLink="/dashboard/penalites" class="back-link">
+    <span class="material-icons">arrow_back</span>
+    Retour aux pénalités
+  </a>
+
+  <!-- Loading -->
+  <div class="loading-container" *ngIf="isLoading()">
+    <div class="spinner"></div>
+    <p>Chargement...</p>
+  </div>
+
+  <!-- Erreur -->
+  <div class="error-state" *ngIf="!isLoading() && hasError()">
+    <span class="material-icons">error_outline</span>
+    <p>Impossible de charger cette pénalité.</p>
+    <a routerLink="/dashboard/penalites" class="btn-secondary">Retour à la liste</a>
+  </div>
+
+  <!-- Contenu -->
+  <ng-container *ngIf="!isLoading() && !hasError() && penalite() as p">
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="header-left">
+        <h1>{{ getMembreNom(p) }}</h1>
+        <div class="header-meta">
+          <span class="type-badge" *ngIf="p.typePenalite">{{ p.typePenalite.libelle }}</span>
+          <span class="amount-badge">
+            {{ p.montant | currency:'XAF':'symbol':'1.0-0':'fr' }}
+          </span>
+          <span class="status-badge" [class]="getStatutColor(p.statut)">
+            {{ getStatutLabel(p.statut) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Actions state machine -->
+      <div class="header-actions" *ngIf="!actionInProgress()">
+        <button
+          *ngIf="canPayer()"
+          class="btn-action green"
+          (click)="openPayerModal()"
+          aria-label="Marquer comme payée">
+          <span class="material-icons">payments</span>
+          Payer
+        </button>
+        <button
+          *ngIf="canPardonner()"
+          class="btn-action blue"
+          (click)="pardonner()"
+          aria-label="Pardonner la pénalité">
+          <span class="material-icons">handshake</span>
+          Pardonner
+        </button>
+        <button
+          *ngIf="canAnnuler()"
+          class="btn-action red-outline"
+          (click)="openAnnulerModal()"
+          aria-label="Annuler la pénalité">
+          <span class="material-icons">cancel</span>
+          Annuler
+        </button>
+      </div>
+
+      <div class="action-loading" *ngIf="actionInProgress()">
+        <div class="spinner-sm"></div>
+        <span>Action en cours...</span>
+      </div>
+    </div>
+
+    <!-- Corps -->
+    <div class="detail-grid">
+
+      <!-- Informations -->
+      <div class="info-card">
+        <h3>Détail de la pénalité</h3>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="label">Membre</span>
+            <span class="value">{{ getMembreNom(p) }}</span>
+          </div>
+          <div class="info-item" *ngIf="p.exerciceMembre?.matricule">
+            <span class="label">Matricule</span>
+            <span class="value">{{ p.exerciceMembre!.matricule }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Type de pénalité</span>
+            <span class="value">{{ p.typePenalite?.libelle ?? '—' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Montant</span>
+            <span class="value amount">{{ p.montant | currency:'XAF':'symbol':'1.0-0':'fr' }}</span>
+          </div>
+          <div class="info-item" *ngIf="p.motif">
+            <span class="label">Motif</span>
+            <span class="value">{{ p.motif }}</span>
+          </div>
+          <div class="info-item" *ngIf="p.reunion">
+            <span class="label">Réunion concernée</span>
+            <span class="value">
+              Réunion n°{{ p.reunion.numeroReunion }}
+              — {{ p.reunion.dateReunion | date:'dd/MM/yyyy' }}
+            </span>
+          </div>
+          <div class="info-item">
+            <span class="label">Date d'application</span>
+            <span class="value">{{ p.dateApplication | date:'dd MMMM yyyy':'':'fr' }}</span>
+          </div>
+        </div>
+
+        <!-- Paiement effectué -->
+        <div class="payment-info" *ngIf="p.statut === 'PAYEE'">
+          <div class="payment-badge">
+            <span class="material-icons">check_circle</span>
+            Pénalité réglée
+          </div>
+          <div class="info-grid">
+            <div class="info-item" *ngIf="p.datePaiement">
+              <span class="label">Date de paiement</span>
+              <span class="value">{{ p.datePaiement | date:'dd MMMM yyyy':'':'fr' }}</span>
+            </div>
+            <div class="info-item" *ngIf="p.transactionId">
+              <span class="label">Référence transaction</span>
+              <span class="value mono">{{ p.transactionId }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Annulée -->
+        <div class="cancel-info" *ngIf="p.statut === 'ANNULEE'">
+          <div class="cancel-badge">
+            <span class="material-icons">cancel</span>
+            Pénalité annulée
+          </div>
+          <div class="info-item" *ngIf="p.motifAnnulation">
+            <span class="label">Motif d'annulation</span>
+            <span class="value">{{ p.motifAnnulation }}</span>
+          </div>
+          <div class="info-item" *ngIf="p.dateAnnulation">
+            <span class="label">Date d'annulation</span>
+            <span class="value">{{ p.dateAnnulation | date:'dd MMMM yyyy':'':'fr' }}</span>
+          </div>
+        </div>
+
+        <!-- Pardonnée -->
+        <div class="pardon-info" *ngIf="p.statut === 'PARDONNEE'">
+          <div class="pardon-badge">
+            <span class="material-icons">handshake</span>
+            Pénalité pardonnée
+          </div>
+        </div>
+      </div>
+
+      <!-- Timeline statut -->
+      <div class="info-card">
+        <h3>Historique du statut</h3>
+        <div class="timeline">
+
+          <!-- Application -->
+          <div class="timeline-item done">
+            <div class="timeline-icon">
+              <span class="material-icons">warning</span>
+            </div>
+            <div class="timeline-content">
+              <span class="timeline-label">Appliquée</span>
+              <span class="timeline-date">
+                {{ p.dateApplication | date:'dd MMM yyyy':'':'fr' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- En attente / terminal -->
+          <ng-container *ngIf="p.statut === 'EN_ATTENTE'">
+            <div class="timeline-item pending">
+              <div class="timeline-icon">
+                <span class="material-icons">hourglass_empty</span>
+              </div>
+              <div class="timeline-content">
+                <span class="timeline-label">En attente de règlement</span>
+                <span class="timeline-pending">À payer, annuler ou pardonner</span>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- Payée -->
+          <div class="timeline-item done" *ngIf="p.statut === 'PAYEE'">
+            <div class="timeline-icon">
+              <span class="material-icons">payments</span>
+            </div>
+            <div class="timeline-content">
+              <span class="timeline-label">Payée</span>
+              <span class="timeline-date" *ngIf="p.datePaiement">
+                {{ p.datePaiement | date:'dd MMM yyyy':'':'fr' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Annulée -->
+          <div class="timeline-item done-red" *ngIf="p.statut === 'ANNULEE'">
+            <div class="timeline-icon">
+              <span class="material-icons">cancel</span>
+            </div>
+            <div class="timeline-content">
+              <span class="timeline-label">Annulée</span>
+              <span class="timeline-date" *ngIf="p.dateAnnulation">
+                {{ p.dateAnnulation | date:'dd MMM yyyy':'':'fr' }}
+              </span>
+              <span class="motif-annulation" *ngIf="p.motifAnnulation">
+                {{ p.motifAnnulation }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Pardonnée -->
+          <div class="timeline-item done-blue" *ngIf="p.statut === 'PARDONNEE'">
+            <div class="timeline-icon">
+              <span class="material-icons">handshake</span>
+            </div>
+            <div class="timeline-content">
+              <span class="timeline-label">Pardonnée</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>
+
+<!-- ─── Modal Payer ────────────────────────────────────────────────────────── -->
+<div class="modal-overlay" *ngIf="showPayerModal()" (click)="closePayerModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <span class="material-icons">payments</span>
+        Enregistrer le paiement
+      </h2>
+      <button class="close-btn" (click)="closePayerModal()" aria-label="Fermer">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-info">
+        Liez optionnellement cette pénalité à une transaction existante.
+      </p>
+      <div class="form-group">
+        <label for="transaction-id">ID transaction (optionnel)</label>
+        <input
+          id="transaction-id"
+          type="text"
+          [(ngModel)]="transactionId"
+          placeholder="UUID de la transaction"
+        />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closePayerModal()">Annuler</button>
+      <button class="btn-submit green" (click)="confirmerPayer()">
+        <span class="material-icons">payments</span>
+        Confirmer le paiement
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Modal Annuler ─────────────────────────────────────────────────────── -->
+<div class="modal-overlay" *ngIf="showAnnulerModal()" (click)="closeAnnulerModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <span class="material-icons">cancel</span>
+        Annuler la pénalité
+      </h2>
+      <button class="close-btn" (click)="closeAnnulerModal()" aria-label="Fermer">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="motif-annulation">Motif de l'annulation *</label>
+        <textarea
+          id="motif-annulation"
+          rows="3"
+          [(ngModel)]="motifAnnulation"
+          placeholder="Expliquez la raison de l'annulation..."
+        ></textarea>
+        <span class="field-error" *ngIf="!motifAnnulation.trim()">Le motif est requis</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closeAnnulerModal()">Retour</button>
+      <button
+        class="btn-submit red"
+        [disabled]="!motifAnnulation.trim()"
+        (click)="confirmerAnnuler()">
+        <span class="material-icons">cancel</span>
+        Confirmer l'annulation
+      </button>
+    </div>
+  </div>
+</div>

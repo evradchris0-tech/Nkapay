@@ -1,0 +1,404 @@
+<div class="page">
+  <a routerLink="/dashboard/prets" class="back-link">
+    <span class="material-icons">arrow_back</span>
+    Retour aux prêts
+  </a>
+
+  <!-- Loading -->
+  <ng-container *ngIf="isLoading()">
+    <div class="loading-container">
+      <div class="spinner"></div>
+      <p>Chargement...</p>
+    </div>
+  </ng-container>
+
+  <!-- Erreur -->
+  <div class="error-state" *ngIf="!isLoading() && hasError()">
+    <span class="material-icons">error_outline</span>
+    <p>Impossible de charger ce prêt.</p>
+    <a routerLink="/dashboard/prets" class="btn-secondary">Retour à la liste</a>
+  </div>
+
+  <!-- Contenu principal -->
+  <ng-container *ngIf="!isLoading() && !hasError() && pret() as p">
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="header-left">
+        <h1>{{ getMembreNom(p) }}</h1>
+        <div class="header-meta">
+          <span class="amount-badge">
+            {{ p.montantCapital | currency:'XAF':'symbol':'1.0-0':'fr' }}
+          </span>
+          <span class="status-badge" [class]="getStatutColor(p.statut)">
+            {{ getStatutLabel(p.statut) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Actions state machine -->
+      <div class="header-actions" *ngIf="!actionInProgress()">
+        <button
+          *ngIf="canApprouver()"
+          class="btn-action green"
+          (click)="openApprouverModal()"
+          aria-label="Approuver le prêt">
+          <span class="material-icons">check_circle</span>
+          Approuver
+        </button>
+        <button
+          *ngIf="canRefuser()"
+          class="btn-action red-outline"
+          (click)="openRefuserModal()"
+          aria-label="Refuser le prêt">
+          <span class="material-icons">cancel</span>
+          Refuser
+        </button>
+        <button
+          *ngIf="canDecaisser()"
+          class="btn-action blue"
+          (click)="decaisser()"
+          aria-label="Décaisser le prêt">
+          <span class="material-icons">payments</span>
+          Décaisser
+        </button>
+        <button
+          *ngIf="canSolder()"
+          class="btn-action green"
+          (click)="solder()"
+          aria-label="Solder le prêt">
+          <span class="material-icons">task_alt</span>
+          Solder
+        </button>
+        <button
+          *ngIf="canMettreEnDefaut()"
+          class="btn-action red-outline"
+          (click)="mettreEnDefaut()"
+          aria-label="Mettre en défaut">
+          <span class="material-icons">warning</span>
+          Mettre en défaut
+        </button>
+      </div>
+
+      <div class="action-loading" *ngIf="actionInProgress()">
+        <div class="spinner-sm"></div>
+        <span>Action en cours...</span>
+      </div>
+    </div>
+
+    <!-- Corps -->
+    <div class="detail-grid">
+
+      <!-- Informations du prêt -->
+      <div class="info-card">
+        <h3>Informations du prêt</h3>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="label">Membre emprunteur</span>
+            <span class="value">{{ getMembreNom(p) }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Matricule</span>
+            <span class="value">{{ p.exerciceMembre?.matricule ?? '—' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Montant capital</span>
+            <span class="value amount">{{ p.montantCapital | currency:'XAF':'symbol':'1.0-0':'fr' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Taux d'intérêt</span>
+            <span class="value">{{ p.tauxInteret }} %</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Intérêts</span>
+            <span class="value">{{ p.montantInteret | currency:'XAF':'symbol':'1.0-0':'fr' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Total dû</span>
+            <span class="value amount">{{ p.montantTotalDu | currency:'XAF':'symbol':'1.0-0':'fr' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Durée</span>
+            <span class="value">{{ p.dureeMois }} mois</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Capital restant</span>
+            <span class="value" [class.danger]="p.capitalRestant > 0">
+              {{ p.capitalRestant | currency:'XAF':'symbol':'1.0-0':'fr' }}
+            </span>
+          </div>
+          <div class="info-item" *ngIf="p.reunion">
+            <span class="label">Réunion de demande</span>
+            <span class="value">Réunion n°{{ p.reunion.numeroReunion }}
+              — {{ p.reunion.dateReunion | date:'dd/MM/yyyy' }}
+            </span>
+          </div>
+          <div class="info-item" *ngIf="p.commentaire">
+            <span class="label">Commentaire</span>
+            <span class="value">{{ p.commentaire }}</span>
+          </div>
+          <div class="info-item" *ngIf="p.motifRefus">
+            <span class="label">Motif de refus</span>
+            <span class="value danger">{{ p.motifRefus }}</span>
+          </div>
+        </div>
+
+        <!-- Barre de progression (si en cours) -->
+        <div class="progress-section" *ngIf="p.statut === 'EN_COURS' || p.statut === 'DECAISSE'">
+          <div class="progress-header">
+            <span>Remboursement</span>
+            <span class="progress-pct">{{ avancement() }} %</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width.%]="avancement()"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="info-card">
+        <h3>Historique du statut</h3>
+        <div class="timeline">
+
+          <!-- Demande -->
+          <div class="timeline-item done">
+            <div class="timeline-icon">
+              <span class="material-icons">request_quote</span>
+            </div>
+            <div class="timeline-content">
+              <span class="timeline-label">Demandé</span>
+              <span class="timeline-date">{{ p.dateDemande | date:'dd MMM yyyy':'':'fr' }}</span>
+            </div>
+          </div>
+
+          <!-- Approbation / Refus -->
+          <ng-container *ngIf="p.statut !== 'DEMANDE'">
+            <div class="timeline-item"
+                 [class.done]="p.statut !== 'REFUSE'"
+                 [class.done-red]="p.statut === 'REFUSE'">
+              <div class="timeline-icon">
+                <span class="material-icons">
+                  {{ p.statut === 'REFUSE' ? 'cancel' : 'check_circle' }}
+                </span>
+              </div>
+              <div class="timeline-content">
+                <span class="timeline-label">{{ p.statut === 'REFUSE' ? 'Refusé' : 'Approuvé' }}</span>
+                <span class="timeline-date" *ngIf="p.dateApprobation">
+                  {{ p.dateApprobation | date:'dd MMM yyyy':'':'fr' }}
+                </span>
+                <span class="motif-refus" *ngIf="p.statut === 'REFUSE' && p.motifRefus">
+                  Motif : {{ p.motifRefus }}
+                </span>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- Décaissement -->
+          <ng-container *ngIf="p.statut === 'DECAISSE' || p.statut === 'EN_COURS' || p.statut === 'SOLDE' || p.statut === 'DEFAUT'">
+            <div class="timeline-item done">
+              <div class="timeline-icon">
+                <span class="material-icons">payments</span>
+              </div>
+              <div class="timeline-content">
+                <span class="timeline-label">Décaissé</span>
+                <span class="timeline-date" *ngIf="p.dateDecaissement">
+                  {{ p.dateDecaissement | date:'dd MMM yyyy':'':'fr' }}
+                </span>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- En cours -->
+          <ng-container *ngIf="p.statut === 'EN_COURS' || p.statut === 'SOLDE' || p.statut === 'DEFAUT'">
+            <div class="timeline-item done">
+              <div class="timeline-icon">
+                <span class="material-icons">schedule</span>
+              </div>
+              <div class="timeline-content">
+                <span class="timeline-label">En cours de remboursement</span>
+                <span class="timeline-date" *ngIf="p.dateEcheance">
+                  Échéance : {{ p.dateEcheance | date:'dd MMM yyyy':'':'fr' }}
+                </span>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- Soldé -->
+          <div class="timeline-item done" *ngIf="p.statut === 'SOLDE'">
+            <div class="timeline-icon">
+              <span class="material-icons">task_alt</span>
+            </div>
+            <div class="timeline-content">
+              <span class="timeline-label">Soldé</span>
+              <span class="timeline-date" *ngIf="p.dateSolde">
+                {{ p.dateSolde | date:'dd MMM yyyy':'':'fr' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Défaut -->
+          <div class="timeline-item done-red" *ngIf="p.statut === 'DEFAUT'">
+            <div class="timeline-icon">
+              <span class="material-icons">warning</span>
+            </div>
+            <div class="timeline-content">
+              <span class="timeline-label">Mis en défaut</span>
+            </div>
+          </div>
+
+          <!-- Prochain statut attendu -->
+          <div class="timeline-item pending" *ngIf="p.statut === 'DEMANDE'">
+            <div class="timeline-icon"><span class="material-icons">hourglass_empty</span></div>
+            <div class="timeline-content">
+              <span class="timeline-label">En attente d'approbation</span>
+              <span class="timeline-pending">À décider</span>
+            </div>
+          </div>
+          <div class="timeline-item pending" *ngIf="p.statut === 'APPROUVE'">
+            <div class="timeline-icon"><span class="material-icons">hourglass_empty</span></div>
+            <div class="timeline-content">
+              <span class="timeline-label">En attente de décaissement</span>
+              <span class="timeline-pending">À décaisser</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section remboursements -->
+    <div class="remboursements-section" *ngIf="p.statut === 'EN_COURS' || p.statut === 'DECAISSE' || p.statut === 'SOLDE' || p.statut === 'DEFAUT'">
+      <h3>
+        <span class="material-icons">receipt_long</span>
+        Remboursements
+      </h3>
+
+      <ng-container *ngIf="isRembLoading()">
+        <div class="loading-small"><div class="spinner"></div></div>
+      </ng-container>
+
+      <ng-container *ngIf="!isRembLoading()">
+        <div class="empty-state-small" *ngIf="remboursements().length === 0">
+          <span class="material-icons">inbox</span>
+          <p>Aucun remboursement enregistré</p>
+        </div>
+
+        <div class="table-container" *ngIf="remboursements().length > 0">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Capital</th>
+                <th>Intérêts</th>
+                <th>Total</th>
+                <th>Capital restant</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let r of remboursements()">
+                <td>{{ r.dateRemboursement | date:'dd/MM/yyyy' }}</td>
+                <td>{{ r.montantCapital | currency:'XAF':'symbol':'1.0-0':'fr' }}</td>
+                <td>{{ r.montantInteret | currency:'XAF':'symbol':'1.0-0':'fr' }}</td>
+                <td class="total">{{ r.montantTotal | currency:'XAF':'symbol':'1.0-0':'fr' }}</td>
+                <td class="restant">{{ r.capitalRestantApres | currency:'XAF':'symbol':'1.0-0':'fr' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </ng-container>
+    </div>
+
+  </ng-container>
+</div>
+
+<!-- ─── Modal Approuver ────────────────────────────────────────────────────── -->
+<div class="modal-overlay" *ngIf="showApprouverModal()" (click)="closeApprouverModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <span class="material-icons">check_circle</span>
+        Approuver le prêt
+      </h2>
+      <button class="close-btn" (click)="closeApprouverModal()" aria-label="Fermer">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-info">
+        Indiquez l'identifiant du membre approbateur (exerciceMembreId).
+      </p>
+      <div class="form-group">
+        <label for="approuve-par">ID membre approbateur *</label>
+        <input
+          id="approuve-par"
+          type="text"
+          [(ngModel)]="approuveParExerciceMembreId"
+          placeholder="UUID de l'exercice membre"
+        />
+        <span class="field-error" *ngIf="!approuveParExerciceMembreId.trim()">
+          Ce champ est requis pour approuver le prêt
+        </span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closeApprouverModal()">Annuler</button>
+      <button
+        class="btn-submit green"
+        [disabled]="!approuveParExerciceMembreId.trim()"
+        (click)="confirmerApprouver()">
+        <span class="material-icons">check_circle</span>
+        Approuver
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Modal Refuser ──────────────────────────────────────────────────────── -->
+<div class="modal-overlay" *ngIf="showRefuserModal()" (click)="closeRefuserModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <span class="material-icons">cancel</span>
+        Refuser le prêt
+      </h2>
+      <button class="close-btn" (click)="closeRefuserModal()" aria-label="Fermer">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="rejete-par">ID membre rejetant *</label>
+        <input
+          id="rejete-par"
+          type="text"
+          [(ngModel)]="rejeteParExerciceMembreId"
+          placeholder="UUID de l'exercice membre"
+        />
+        <span class="field-error" *ngIf="!rejeteParExerciceMembreId.trim()">
+          Ce champ est requis
+        </span>
+      </div>
+      <div class="form-group">
+        <label for="motif">Motif du refus *</label>
+        <textarea
+          id="motif"
+          rows="3"
+          [(ngModel)]="motifRefus"
+          placeholder="Expliquez la raison du refus..."
+        ></textarea>
+        <span class="field-error" *ngIf="!motifRefus.trim()">
+          Le motif de refus est obligatoire
+        </span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closeRefuserModal()">Annuler</button>
+      <button
+        class="btn-submit red"
+        [disabled]="!rejeteParExerciceMembreId.trim() || !motifRefus.trim()"
+        (click)="confirmerRefuser()">
+        <span class="material-icons">cancel</span>
+        Refuser
+      </button>
+    </div>
+  </div>
+</div>
