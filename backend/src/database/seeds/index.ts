@@ -7,6 +7,7 @@ import { AppDataSource, initializeDatabase, closeDatabase } from '../../config';
 import { logger } from '../../shared/utils/logger.util';
 import { seedRuleDefinitions } from './rule-definition.seeder';
 import { seedTypeEvenementSecours } from './type-evenement-secours.seeder';
+import { seedTontineTypes } from './tontine-type.seeder';
 
 async function runSeeds(): Promise<void> {
   try {
@@ -15,10 +16,7 @@ async function runSeeds(): Promise<void> {
 
     logger.info('Execution des seeders...');
 
-    // Les seeders seront ajoutes ici au fur et a mesure
-    // await seedLangues();
-    // await seedTontineTypes();
-    // await seedTontineTypes();
+    await seedTontineTypes();
     await seedRuleDefinitions();
     await seedTypeEvenementSecours(AppDataSource);
     // await seedTypePenalite();
