@@ -4,6 +4,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { exerciceService } from '../services/exercice.service';
+import { ApiResponse } from '../../../shared';
 
 export class ExerciceController {
   /**
@@ -12,7 +13,7 @@ export class ExerciceController {
   async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await exerciceService.create(req.body);
-      res.status(201).json(result);
+      res.status(201).json(ApiResponse.created(result, 'Exercice créé avec succès'));
     } catch (error) {
       next(error);
     }
@@ -24,7 +25,7 @@ export class ExerciceController {
   async ouvrir(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await exerciceService.ouvrir(req.params.id, req.body);
-      res.json(result);
+      res.json(ApiResponse.success(result, 'Exercice ouvert'));
     } catch (error) {
       next(error);
     }
@@ -36,7 +37,7 @@ export class ExerciceController {
   async suspendre(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await exerciceService.suspendre(req.params.id);
-      res.json(result);
+      res.json(ApiResponse.success(result, 'Exercice suspendu'));
     } catch (error) {
       next(error);
     }
@@ -48,7 +49,7 @@ export class ExerciceController {
   async reprendre(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await exerciceService.reprendre(req.params.id);
-      res.json(result);
+      res.json(ApiResponse.success(result, 'Exercice repris'));
     } catch (error) {
       next(error);
     }
@@ -60,7 +61,7 @@ export class ExerciceController {
   async fermer(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await exerciceService.fermer(req.params.id);
-      res.json(result);
+      res.json(ApiResponse.success(result, 'Exercice fermé'));
     } catch (error) {
       next(error);
     }
@@ -72,7 +73,12 @@ export class ExerciceController {
   async findAll(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await exerciceService.findAll(req.query as any);
-      res.json(result);
+      res.json(ApiResponse.paginated(result, {
+        page: 1,
+        limit: result.length,
+        total: result.length,
+        totalPages: 1,
+      }));
     } catch (error) {
       next(error);
     }
@@ -84,7 +90,7 @@ export class ExerciceController {
   async findExerciceOuvert(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await exerciceService.findExerciceOuvert(req.params.tontineId);
-      res.json(result);
+      res.json(ApiResponse.success(result));
     } catch (error) {
       next(error);
     }
@@ -96,7 +102,7 @@ export class ExerciceController {
   async findById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await exerciceService.findById(req.params.id);
-      res.json(result);
+      res.json(ApiResponse.success(result));
     } catch (error) {
       next(error);
     }
@@ -108,7 +114,7 @@ export class ExerciceController {
   async update(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await exerciceService.update(req.params.id, req.body);
-      res.json(result);
+      res.json(ApiResponse.success(result, 'Exercice mis à jour'));
     } catch (error) {
       next(error);
     }

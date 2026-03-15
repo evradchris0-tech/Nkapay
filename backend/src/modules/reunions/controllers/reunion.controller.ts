@@ -4,6 +4,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { reunionService } from '../services/reunion.service';
+import { ApiResponse } from '../../../shared';
 
 export class ReunionController {
   /**
@@ -12,7 +13,7 @@ export class ReunionController {
   async planifier(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await reunionService.planifier(req.body);
-      res.status(201).json(result);
+      res.status(201).json(ApiResponse.created(result, 'Réunion planifiée avec succès'));
     } catch (error) {
       next(error);
     }
@@ -24,7 +25,7 @@ export class ReunionController {
   async ouvrir(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await reunionService.ouvrir(req.params.id, req.body);
-      res.json(result);
+      res.json(ApiResponse.success(result, 'Réunion ouverte'));
     } catch (error) {
       next(error);
     }
@@ -36,7 +37,7 @@ export class ReunionController {
   async cloturer(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await reunionService.cloturer(req.params.id, req.body);
-      res.json(result);
+      res.json(ApiResponse.success(result, 'Réunion clôturée'));
     } catch (error) {
       next(error);
     }
@@ -48,7 +49,7 @@ export class ReunionController {
   async annuler(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await reunionService.annuler(req.params.id);
-      res.json(result);
+      res.json(ApiResponse.success(result, 'Réunion annulée'));
     } catch (error) {
       next(error);
     }
@@ -60,7 +61,12 @@ export class ReunionController {
   async findAll(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await reunionService.findAll(req.query as any);
-      res.json(result);
+      res.json(ApiResponse.paginated(result, {
+        page: 1,
+        limit: result.length,
+        total: result.length,
+        totalPages: 1,
+      }));
     } catch (error) {
       next(error);
     }
@@ -72,7 +78,7 @@ export class ReunionController {
   async findById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await reunionService.findById(req.params.id);
-      res.json(result);
+      res.json(ApiResponse.success(result));
     } catch (error) {
       next(error);
     }
@@ -84,7 +90,7 @@ export class ReunionController {
   async update(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await reunionService.update(req.params.id, req.body);
-      res.json(result);
+      res.json(ApiResponse.success(result, 'Réunion mise à jour'));
     } catch (error) {
       next(error);
     }

@@ -5,6 +5,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ruleDefinitionService } from '../services/rule-definition.service';
 import { CategorieRegle } from '../entities/rule-definition.entity';
+import { ApiResponse } from '../../../shared';
 
 export class RuleDefinitionController {
   /**
@@ -46,7 +47,7 @@ export class RuleDefinitionController {
   async create(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await ruleDefinitionService.create(req.body);
-      res.status(201).json(result);
+      res.status(201).json(ApiResponse.created(result));
     } catch (error) {
       next(error);
     }
@@ -76,7 +77,7 @@ export class RuleDefinitionController {
   async findAll(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await ruleDefinitionService.findAll(req.query);
-      res.json(result);
+      res.json(ApiResponse.success(result));
     } catch (error) {
       next(error);
     }
@@ -104,7 +105,7 @@ export class RuleDefinitionController {
     try {
       const categorie = req.params.categorie as CategorieRegle;
       const result = await ruleDefinitionService.findByCategorie(categorie);
-      res.json(result);
+      res.json(ApiResponse.success(result));
     } catch (error) {
       next(error);
     }
@@ -125,7 +126,7 @@ export class RuleDefinitionController {
   async findModifiablesByTontine(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await ruleDefinitionService.findModifiablesByTontine();
-      res.json(result);
+      res.json(ApiResponse.success(result));
     } catch (error) {
       next(error);
     }
@@ -146,7 +147,7 @@ export class RuleDefinitionController {
   async findModifiablesByExercice(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await ruleDefinitionService.findModifiablesByExercice();
-      res.json(result);
+      res.json(ApiResponse.success(result));
     } catch (error) {
       next(error);
     }
@@ -173,7 +174,7 @@ export class RuleDefinitionController {
   async findById(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await ruleDefinitionService.findById(req.params.id);
-      res.json(result);
+      res.json(ApiResponse.success(result));
     } catch (error) {
       next(error);
     }
@@ -200,7 +201,7 @@ export class RuleDefinitionController {
   async findByCle(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await ruleDefinitionService.findByCle(req.params.cle);
-      res.json(result);
+      res.json(ApiResponse.success(result));
     } catch (error) {
       next(error);
     }
@@ -233,7 +234,7 @@ export class RuleDefinitionController {
   async update(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await ruleDefinitionService.update(req.params.id, req.body);
-      res.json(result);
+      res.json(ApiResponse.success(result));
     } catch (error) {
       next(error);
     }

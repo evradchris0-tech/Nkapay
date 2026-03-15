@@ -4,6 +4,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { regleTontineService } from '../services/regle-tontine.service';
+import { ApiResponse } from '../../../shared';
 
 export class RegleTontineController {
   /**
@@ -38,7 +39,7 @@ export class RegleTontineController {
   async upsert(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await regleTontineService.upsert(req.body);
-      res.json(result);
+      res.json(ApiResponse.success(result));
     } catch (error) {
       next(error);
     }
@@ -65,7 +66,7 @@ export class RegleTontineController {
   async findByTontine(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await regleTontineService.findByTontine(req.params.tontineId);
-      res.json(result);
+      res.json(ApiResponse.success(result));
     } catch (error) {
       next(error);
     }
@@ -92,7 +93,7 @@ export class RegleTontineController {
   async getEffectiveRules(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await regleTontineService.getEffectiveRules(req.params.tontineId);
-      res.json(result);
+      res.json(ApiResponse.success(result));
     } catch (error) {
       next(error);
     }
@@ -127,7 +128,7 @@ export class RegleTontineController {
         req.params.tontineId, 
         req.params.cle
       );
-      res.json({ cle: req.params.cle, valeur });
+      res.json(ApiResponse.success({ cle: req.params.cle, valeur }));
     } catch (error) {
       next(error);
     }
@@ -154,7 +155,7 @@ export class RegleTontineController {
   async findById(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await regleTontineService.findById(req.params.id);
-      res.json(result);
+      res.json(ApiResponse.success(result));
     } catch (error) {
       next(error);
     }
@@ -187,7 +188,7 @@ export class RegleTontineController {
   async update(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await regleTontineService.update(req.params.id, req.body);
-      res.json(result);
+      res.json(ApiResponse.success(result));
     } catch (error) {
       next(error);
     }
