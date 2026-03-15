@@ -21,6 +21,8 @@ export interface Transaction {
   reference: string;
   description?: string;
   statut: StatutTransaction;
+  modeCreation?: 'MANUEL' | 'MOBILE' | 'IMPORT' | 'AUTOMATIQUE';
+  motifRejet?: string;
   creeLe: string;
   soumisLe?: string;
   valideLe?: string;

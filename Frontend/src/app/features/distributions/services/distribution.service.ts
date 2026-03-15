@@ -82,8 +82,8 @@ export class DistributionService {
     return this.api.delete<ApiResponse<void>>(`${this.basePath}/${id}`);
   }
 
-  distribuer(id: string): Observable<ApiResponse<Distribution>> {
-    return this.api.post<ApiResponse<Distribution>>(`${this.basePath}/${id}/distribuer`, {});
+  distribuer(id: string, transactionId?: string): Observable<ApiResponse<Distribution>> {
+    return this.api.post<ApiResponse<Distribution>>(`${this.basePath}/${id}/distribuer`, { transactionId });
   }
 
   annuler(id: string): Observable<ApiResponse<Distribution>> {

@@ -82,7 +82,7 @@ export class PretService {
     return this.api.post<ApiResponse<Pret>>(`${this.basePath}/${id}/approuver`, { approuveParExerciceMembreId });
   }
 
-  refuser(id: string, data: { motifRefus: string }): Observable<ApiResponse<Pret>> {
+  refuser(id: string, data: { rejeteParExerciceMembreId: string; motifRefus: string }): Observable<ApiResponse<Pret>> {
     return this.api.post<ApiResponse<Pret>>(`${this.basePath}/${id}/refuser`, data);
   }
 

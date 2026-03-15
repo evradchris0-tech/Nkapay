@@ -24,6 +24,7 @@ export interface Penalite {
   montant: number;
   motif?: string;
   statut: StatutPenalite;
+  transactionId?: string;
   dateApplication: string;
   datePaiement?: string;
   dateAnnulation?: string;

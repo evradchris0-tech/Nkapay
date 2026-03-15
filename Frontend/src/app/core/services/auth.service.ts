@@ -152,7 +152,18 @@ export class AuthService {
    * Change password
    */
   changePassword(request: ChangePasswordRequest): Observable<ApiResponse<void>> {
-    return this.api.post<ApiResponse<void>>('/auth/change-password', request);
+    return this.api.post<ApiResponse<void>>('/auth/change-password', request).pipe(
+      tap(response => {
+        if (response.success) {
+          const currentUser = this._authState().user;
+          if (currentUser) {
+            const updatedUser = { ...currentUser, doitChangerMotDePasse: false };
+            this.storage.setUser(updatedUser);
+            this._authState.update(state => ({ ...state, user: updatedUser }));
+          }
+        }
+      })
+    );
   }
 
   /**

@@ -8,5 +8,9 @@ export const TRANSACTIONS_ROUTES: Routes = [
   {
     path: 'create',
     loadComponent: () => import('./pages/transaction-form/transaction-form.component').then(m => m.TransactionFormComponent)
+  },
+  {
+    path: ':id',
+    loadComponent: () => import('./pages/transaction-detail/transaction-detail.component').then(m => m.TransactionDetailComponent)
   }
 ];

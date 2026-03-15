@@ -8,5 +8,9 @@ export const PENALITES_ROUTES: Routes = [
   {
     path: 'create',
     loadComponent: () => import('./pages/penalite-form/penalite-form.component').then(m => m.PenaliteFormComponent)
+  },
+  {
+    path: ':id',
+    loadComponent: () => import('./pages/penalite-detail/penalite-detail.component').then(m => m.PenaliteDetailComponent)
   }
 ];
